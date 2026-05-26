@@ -1,0 +1,25 @@
+# Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
+# Status values: backlog | ready-for-dev | in-progress | review | done
+
+last_updated: 2026-05-26
+project: nirman-crm
+repo: https://github.com/RudraO2/Nirman-crm
+supabase_project_id: vhgruadourflpxuzuxfn
+
+development_status:
+  epic-1: in-progress
+  1-1-initialize-multi-tenant-schema-with-rls: done
+  1-2-bootstrap-initial-admin-account: review
+  1-3-admin-creates-employee-accounts: backlog
+  1-4-employee-logs-in-platform-segregation: backlog
+  1-5-force-password-change-self-service: backlog
+  1-6-admin-deactivates-reactivates-employee: backlog
+  1-7-login-rate-limiting-and-lockout: backlog
+  1-8-android-screenshot-prevention-ios-blur: backlog
+
+# STATUS DEFINITIONS
+# backlog        — story drafted in epics.md, not yet expanded
+# ready-for-dev  — bmad-create-story produced full story spec
+# in-progress    — bmad-dev-story actively implementing
+# review         — implementation complete; awaiting bmad-code-review
+# done           — code-review approved and merged
