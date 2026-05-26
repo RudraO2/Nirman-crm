@@ -7,7 +7,7 @@ github_branch: feat/1.2-bootstrap-admin
 
 # Story 1.2: Bootstrap initial Admin account
 
-Status: review
+Status: done
 
 epic: 1
 story: 2
@@ -278,6 +278,30 @@ Parse response JWT payload (split on `.`, base64-decode middle section). Verify:
 - **`npm:bcryptjs`** works in Deno Edge Function environment (pure JS, no native bindings). Cost factor 12 at ~300-500ms per hash — acceptable for a one-time bootstrap call.
 - **`auth.users` queryable via `execute_sql`**: `SELECT id, email, raw_app_meta_data FROM auth.users WHERE email = 'x'`. Requires service-role context (MCP execute_sql uses service role by default).
 
+### Review Findings (AI — 2026-05-26)
+
+**Patch findings (all applied in same PR commit):**
+- [x] [Review][Patch] Idempotency check incomplete — auth.users not queried; orphaned auth user from partial failure causes 500 on retry instead of 409 [bootstrap-admin/index.ts:88-101]
+- [x] [Review][Patch] deleteUser rollback result not captured — silent failure orphans auth.users entry [bootstrap-admin/index.ts:129,148]
+- [x] [Review][Patch] BOOTSTRAP_SECRET compared with !== (not constant-time) — use XOR loop for timing-safe comparison [bootstrap-admin/index.ts:51]
+- [x] [Review][Patch] Email not normalized to lowercase before storage — Supabase Auth normalizes; stored value may mismatch login input [bootstrap-admin/index.ts:141]
+- [x] [Review][Patch] Email echoed in 201 response — unnecessary disclosure; remove from success body [bootstrap-admin/index.ts:162]
+- [x] [Review][Patch] authErr.message and profileErr.message returned verbatim in 500 — log detail server-side, return generic message to caller [bootstrap-admin/index.ts:117,150]
+- [x] [Review][Patch] Authorization header double-check redundant — Fetch API normalizes to lowercase; second .get() never differs [bootstrap-admin/index.ts:49]
+- [x] [Review][Patch] BOOTSTRAP_SECRET minimum length not enforced — add guard of 32 chars [bootstrap-admin/index.ts:43-46]
+
+**Deferred findings:**
+- [x] [Review][Defer] Dual password storage credential sync risk — Story 1.4/1.5 responsibility; documented in Dev Notes as intentional [bootstrap-admin/index.ts] — deferred, architectural decision
+- [x] [Review][Defer] validatePasswordStrength redundant with Zod min(8) — cosmetic, behavior correct [bootstrap-admin/index.ts:28-34] — deferred, pre-existing
+- [x] [Review][Defer] Race condition concurrent bootstrap calls — one-time endpoint, low probability; partial unique index on users (tenant_id) WHERE role='admin' recommended [bootstrap-admin/index.ts:88] — deferred, pre-existing
+- [x] [Review][Defer] _shared/errors.ts duplicated — known MCP bundler workaround; resolve when switching to Supabase CLI deploy [bootstrap-admin/_shared/errors.ts] — deferred, known workaround
+- [x] [Review][Defer] Content-Type not validated — low risk for server-to-server bootstrap endpoint [bootstrap-admin/index.ts:63] — deferred, pre-existing
+- [x] [Review][Defer] No rate limiting — acceptable for one-time bootstrap endpoint [bootstrap-admin/index.ts] — deferred, pre-existing
+- [x] [Review][Defer] No max body size check — low risk [bootstrap-admin/index.ts:63] — deferred, pre-existing
+- [x] [Review][Defer] SEED_TENANT_ID existence not pre-checked — documented dependency on seed.sql running first [bootstrap-admin/index.ts:20] — deferred, pre-existing
+- [x] [Review][Defer] app_metadata role vs users.role drift risk — Story 1.4/1.5 ownership [bootstrap-admin/index.ts:109] — deferred, architectural
+- [x] [Review][Defer] must_change_password=false — spec-required by AC-1; Story 1.5 may revisit [bootstrap-admin/index.ts:143] — deferred, spec-conformant
+
 ## Dev Agent Record
 
 ### Implementation Plan
@@ -303,6 +327,7 @@ Implemented all 8 ACs in single session via Supabase MCP + GitHub MCP:
 - JWT confirmed carries `app_metadata.role = "admin"` and correct `tenant_id` (AC-4 verified)
 - `BOOTSTRAP_SECRET` set to env var in Supabase Dashboard (never committed to repo)
 - Local copy of `_shared/errors.ts` at `bootstrap-admin/_shared/errors.ts` must stay in sync with canonical `functions/_shared/errors.ts` going forward
+- Code review complete: 8 patches applied, 10 items deferred to later stories
 
 ### File List
 
@@ -315,11 +340,12 @@ Implemented all 8 ACs in single session via Supabase MCP + GitHub MCP:
 - `nirman-crm/supabase/functions/_shared/errors.ts` — added `user_already_exists` to `ErrorCode` and `HTTP_STATUS_FOR_CODE`
 - `nirman-crm/.env.example` — added `BOOTSTRAP_SECRET` placeholder
 - `nirman-crm/packages/shared-types/index.ts` — regenerated (no schema change)
-- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story marked `review`
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — story marked `done`
+- `_bmad-output/implementation-artifacts/deferred-work.md` — 10 deferred items logged
 
 ## Story Completion Status
 
-All ACs satisfied. Implementation deployed and verified in production. Story marked `review`.
+All ACs satisfied. Implementation deployed and verified in production. Code review complete. Story marked `done`.
 
 ## Change Log
 
@@ -327,3 +353,4 @@ All ACs satisfied. Implementation deployed and verified in production. Story mar
 |------|--------|--------|
 | 2026-05-26 | Claude (create-story) | Initial story spec created |
 | 2026-05-26 | Claude (dev-story) | Implementation complete — all 8 ACs verified in production |
+| 2026-05-26 | Claude (code-review) | 8 patches applied, 10 items deferred, status set to done |
