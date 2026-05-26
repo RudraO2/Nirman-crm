@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.turbo/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+flutter_*.png
+linked_*.ds
+unlinked.ds
+unlinked_spec.ds
+ios/Pods/
+ios/.symlinks/
+android/.gradle/
+android/local.properties
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Supabase
+supabase/.branches
+supabase/.temp
+supabase/.env
+
+# IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Testing
+coverage/
+*.lcov
+
+# Misc
+*.tsbuildinfo
+.next/
