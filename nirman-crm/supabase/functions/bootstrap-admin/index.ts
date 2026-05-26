@@ -33,8 +33,34 @@ function validatePasswordStrength(password: string): string | null {
   return null;
 }
 
+// P3: XOR-based constant-time string comparison to prevent timing attacks on the secret
+function secureCompare(a: string, b: string): boolean {
+  const ta = new TextEncoder().encode(a);
+  const tb = new TextEncoder().encode(b);
+  if (ta.length !== tb.length) return false;
+  let result = 0;
+  for (let i = 0; i < ta.length; i++) result |= ta[i] ^ tb[i];
+  return result === 0;
+}
+
+// P2: Attempt auth user cleanup on partial failure; log if rollback itself fails
+async function rollbackAuthUser(
+  adminClient: ReturnType<typeof createClient>,
+  authUserId: string,
+  reason: string,
+): Promise<void> {
+  const { error: deleteErr } = await adminClient.auth.admin.deleteUser(authUserId);
+  if (deleteErr) {
+    console.error(JSON.stringify({
+      ts: new Date().toISOString(), level: "critical",
+      event: "auth_user_rollback_failed", auth_user_id: authUserId,
+      reason, error: deleteErr.message,
+    }));
+  }
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
-  // Only accept POST
+  // Only accept POST — no CORS needed (server-to-server endpoint only)
   if (req.method !== "POST") {
     return errorResponse("validation_error", "Method not allowed — use POST");
   }
@@ -42,13 +68,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // ── AC-7: Verify BOOTSTRAP_SECRET ──────────────────────────────────────────
   const bootstrapSecret = Deno.env.get("BOOTSTRAP_SECRET");
   if (!bootstrapSecret) {
-    // Env var not configured — refuse to run to prevent accidental exposure
     return errorResponse("internal_error", "BOOTSTRAP_SECRET is not configured in Edge Function secrets");
   }
+  // P8: Enforce minimum secret length to reject weak values
+  if (bootstrapSecret.length < 32) {
+    return errorResponse("internal_error", "BOOTSTRAP_SECRET must be at least 32 characters");
+  }
 
-  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
+  // P7: Fetch API normalizes header names to lowercase — single .get() is sufficient
+  const authHeader = req.headers.get("authorization") ?? "";
   const provided = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-  if (!provided || provided !== bootstrapSecret) {
+  // P3: Timing-safe comparison to prevent secret-guessing via timing side-channel
+  if (!provided || !secureCompare(provided, bootstrapSecret)) {
     return errorResponse("unauthorised", "Invalid or missing bootstrap secret");
   }
 
@@ -71,7 +102,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!parsed.success) {
     return errorResponse("validation_error", "Invalid input", parsed.error.flatten().fieldErrors);
   }
-  const { email, password } = parsed.data;
+  const { password } = parsed.data;
+  // P4: Normalize email to lowercase — Supabase Auth normalizes on its side; align storage
+  const email = parsed.data.email.toLowerCase();
 
   // ── AC-6: Password strength ────────────────────────────────────────────────
   const strengthError = validatePasswordStrength(password);
@@ -113,8 +146,15 @@ Deno.serve(async (req: Request): Promise<Response> => {
   });
 
   if (authErr || !authData?.user) {
+    // P1: Handle duplicate-email from Auth as 409 — covers partial-failure retry case
+    // where auth.users exists but public.users doesn't (idempotency check only queries public.users)
+    const msg = authErr?.message?.toLowerCase() ?? "";
+    if (msg.includes("already registered") || msg.includes("email_exists") || msg.includes("already exists")) {
+      return errorResponse("user_already_exists", "An admin account already exists for this tenant");
+    }
     console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "auth_user_creation_failed", error: authErr?.message }));
-    return errorResponse("internal_error", `Failed to create auth user: ${authErr?.message ?? "unknown error"}`);
+    // P6: Generic message to caller; detail already logged above
+    return errorResponse("internal_error", "Failed to create auth user");
   }
 
   const authUserId = authData.user.id;
@@ -122,11 +162,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // ── AC-1: Hash password + create public.users profile ────────────────────
   let bcryptHash: string;
   try {
-    // npm:bcryptjs — pure JS, reliable in Deno Edge runtime
     bcryptHash = await bcrypt.hash(password, 12);
   } catch (hashErr) {
-    // Roll back auth user before returning error
-    await adminClient.auth.admin.deleteUser(authUserId);
+    await rollbackAuthUser(adminClient, authUserId, "bcrypt_hash_failed");
     console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "bcrypt_hash_failed", error: String(hashErr) }));
     return errorResponse("internal_error", "Failed to hash password");
   }
@@ -144,10 +182,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     });
 
   if (profileErr) {
-    // Roll back auth user to prevent orphaned entries
-    await adminClient.auth.admin.deleteUser(authUserId);
+    await rollbackAuthUser(adminClient, authUserId, "profile_insert_failed");
     console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "profile_insert_failed", error: profileErr.message }));
-    return errorResponse("internal_error", `Failed to create user profile: ${profileErr.message}`);
+    // P6: Generic message to caller; full error already logged above
+    return errorResponse("internal_error", "Failed to create user profile");
   }
 
   console.log(JSON.stringify({
@@ -158,6 +196,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     user_id: authUserId,
   }));
 
+  // P5: Omit email from response — caller already knows it; no need to echo it back
   // AC-4: login verified via callers calling supabase.auth.signInWithPassword after this
-  return successResponse({ user_id: authUserId, email, role: "admin" }, 201);
+  return successResponse({ user_id: authUserId, role: "admin" }, 201);
 });
