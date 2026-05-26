@@ -3,13 +3,15 @@
 // Every Edge Function follows this contract:
 //   1. Read Authorization: Bearer <jwt> header
 //   2. Verify JWT via Supabase Auth
-//   3. Extract tenant_id + role from app_metadata
-//   4. Open a request-scoped Supabase client with the user's JWT (RLS will see `authenticated`)
-//   5. Bind app.current_tenant via the `set_current_tenant` RPC so the RLS policy
-//      `tenant_id = current_setting('app.current_tenant', true)::uuid` evaluates correctly
-//   6. Return { supabase, tenantId, actorId, role } for the function handler
+//   3. Extract tenant_id + role from app_metadata; validate UUID format
+//   4. Open a request-scoped Supabase client with the user's JWT (RLS sees `authenticated`)
+//   5. Return { supabase, tenantId, actorId, role } for the function handler
 //
-// Reject 401 if JWT missing or invalid; 403 if tenant_id claim is absent.
+// RLS scoping is handled by the JWT-claim branch in the policy via auth_tenant_id():
+//   ((auth.jwt() -> 'app_metadata') ->> 'tenant_id')::uuid
+// No GUC binding needed — PostgREST reads the JWT directly per request.
+//
+// Reject 401 if JWT missing or invalid; 403 if tenant_id claim is absent or malformed.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { errorResponse, type ApiError } from "./errors.ts";
@@ -36,10 +38,11 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
   );
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
- * Verify the request's JWT and bind app.current_tenant for the duration of any
- * subsequent SQL the returned client issues. Returns either an AuthedContext or
- * an AuthFailure carrying the 401/403 Response the caller should return immediately.
+ * Verify the request's JWT and return a request-scoped Supabase client.
+ * RLS policies scope queries to the caller's tenant via the JWT claim — no GUC binding needed.
  *
  * Usage:
  *   const result = await verifyJwtAndScope(req);
@@ -87,25 +90,19 @@ export async function verifyJwtAndScope(
       ),
     };
   }
+  if (!UUID_RE.test(tenantId)) {
+    return {
+      response: errorResponse(
+        "forbidden_role",
+        "Tenant claim (app_metadata.tenant_id) is not a valid UUID",
+      ),
+    };
+  }
   if (role !== "admin" && role !== "employee") {
     return {
       response: errorResponse(
         "forbidden_role",
         "Role claim (app_metadata.role) missing or invalid",
-      ),
-    };
-  }
-
-  // Bind app.current_tenant for the current transaction. RLS policies will now resolve.
-  const { error: rpcErr } = await supabase.rpc("set_current_tenant", {
-    tenant_id: tenantId,
-  });
-  if (rpcErr) {
-    return {
-      response: errorResponse(
-        "internal_error",
-        "Failed to bind tenant context",
-        rpcErr.message,
       ),
     };
   }
