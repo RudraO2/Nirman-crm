@@ -10,7 +10,7 @@ development_status:
   epic-1: in-progress
   1-1-initialize-multi-tenant-schema-with-rls: done
   1-2-bootstrap-initial-admin-account: done
-  1-3-admin-creates-employee-accounts: backlog
+  1-3-admin-creates-employee-accounts: ready-for-dev
   1-4-employee-logs-in-platform-segregation: backlog
   1-5-force-password-change-self-service: backlog
   1-6-admin-deactivates-reactivates-employee: backlog
