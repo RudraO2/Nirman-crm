@@ -1,17 +1,20 @@
 -- Story 1.1 (AC-4, AC-5, AC-7, AC-8) — tenant isolation contract test
 --
--- After migration 0002, policies use:
---   COALESCE(NULLIF(current_setting('app.current_tenant', true), '')::uuid,
---            ((auth.jwt() -> 'app_metadata') ->> 'tenant_id')::uuid)
+-- After migration 0003, policies use JWT-only via auth_tenant_id():
+--   CASE WHEN tenant_id ~ uuid_regex THEN tenant_id::uuid ELSE NULL END
+-- GUC (app.current_tenant) branch removed; auth.jwt() reads from request.jwt.claims GUC.
 --
 -- Asserts:
---   1. anon role with no JWT + no GUC          → 0 rows
---   2. authenticated + GUC set to seed         → seed-tenant rows only
---   3. authenticated + GUC set to nonexistent  → 0 rows
---   4. authenticated + empty GUC + no JWT      → 0 rows
---   5. set_current_tenant RPC is service_role-only (authenticated must be denied EXECUTE)
+--   1. anon role + no JWT claims            → 0 rows on users
+--   2. anon role + no JWT claims            → 0 rows on tenants
+--   3. authenticated + valid JWT tenant     → seed-tenant row visible
+--   4. authenticated + valid JWT tenant     → correct tenant id returned
+--   5. authenticated + nonexistent tenant   → 0 rows
+--   6. authenticated + missing tenant claim → 0 rows
+--   7. set_current_tenant RPC is service_role-only (authenticated denied EXECUTE)
+--   8. service_role can execute set_current_tenant and GUC is bound
 --
--- Run via: `supabase test db` (pgTAP-based runner). Requires pgtap extension.
+-- Run via: `supabase test db` (pgTAP runner). Requires pgtap extension.
 
 BEGIN;
 
@@ -25,7 +28,7 @@ VALUES ('00000000-0000-0000-0000-000000000001'::uuid, 'Nirman Media (test)', 'As
 ON CONFLICT (id) DO NOTHING;
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 1 + 2: anon role, no JWT, no GUC → 0 rows everywhere
+-- 1 + 2: anon role, no JWT claims → 0 rows everywhere
 -- ────────────────────────────────────────────────────────────────────────────
 SET LOCAL ROLE anon;
 SELECT is(
@@ -40,62 +43,67 @@ SELECT is(
 );
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 3 + 4: authenticated + seed-tenant GUC → seed tenant visible
+-- 3 + 4: authenticated + valid JWT tenant claim → seed tenant visible
+-- auth.jwt() reads from request.jwt.claims GUC (set by PostgREST per-request)
 -- ────────────────────────────────────────────────────────────────────────────
 SET LOCAL ROLE authenticated;
-SELECT set_config('app.current_tenant', '00000000-0000-0000-0000-000000000001', true);
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000000002","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000001","role":"employee"}}',
+  true);
 SELECT is(
   (SELECT count(*)::int FROM public.tenants),
   1,
-  'authenticated + seed GUC sees exactly 1 tenant row'
+  'authenticated + valid JWT tenant claim sees exactly 1 tenant row'
 );
 SELECT is(
   (SELECT id FROM public.tenants LIMIT 1),
   '00000000-0000-0000-0000-000000000001'::uuid,
-  'visible tenant row is the seed tenant'
+  'visible tenant row matches JWT claim'
 );
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 5: authenticated + nonexistent-tenant GUC → 0 rows
+-- 5: authenticated + nonexistent tenant in JWT → 0 rows
 -- ────────────────────────────────────────────────────────────────────────────
-SELECT set_config('app.current_tenant', '00000000-0000-0000-0000-000000000099', true);
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000000002","app_metadata":{"tenant_id":"00000000-0000-0000-0000-000000000099","role":"employee"}}',
+  true);
 SELECT is(
   (SELECT count(*)::int FROM public.tenants),
   0,
-  'authenticated + nonexistent GUC sees 0 tenants'
+  'authenticated + nonexistent tenant JWT sees 0 tenants'
 );
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 6: authenticated + empty GUC + no JWT → 0 rows (COALESCE-both-NULL path)
+-- 6: authenticated + missing tenant_id claim → 0 rows (auth_tenant_id() → NULL)
 -- ────────────────────────────────────────────────────────────────────────────
-SELECT set_config('app.current_tenant', '', true);
+SELECT set_config('request.jwt.claims',
+  '{"sub":"00000000-0000-0000-0000-000000000002","app_metadata":{"role":"employee"}}',
+  true);
 SELECT is(
   (SELECT count(*)::int FROM public.tenants),
   0,
-  'authenticated + empty GUC + no JWT sees 0 tenants'
+  'authenticated + missing tenant_id claim sees 0 tenants'
 );
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 7: authenticated role must NOT be able to execute set_current_tenant
---    (post-0002 lockdown — service_role only)
+-- 7: authenticated role must NOT execute set_current_tenant (service_role only)
 -- ────────────────────────────────────────────────────────────────────────────
 SELECT throws_ok(
   $$ SELECT public.set_current_tenant('00000000-0000-0000-0000-000000000001'::uuid) $$,
-  '42501',  -- insufficient_privilege
+  '42501',
   NULL,
   'authenticated role is denied EXECUTE on set_current_tenant'
 );
 
 -- ────────────────────────────────────────────────────────────────────────────
--- 8: service_role CAN execute set_current_tenant and bind the GUC
+-- 8: service_role CAN execute set_current_tenant and GUC is bound
 -- ────────────────────────────────────────────────────────────────────────────
 SET LOCAL ROLE service_role;
 SELECT public.set_current_tenant('00000000-0000-0000-0000-000000000001'::uuid);
--- service_role bypasses RLS, but the GUC should still be set:
 SELECT is(
   current_setting('app.current_tenant', true),
   '00000000-0000-0000-0000-000000000001',
-  'service_role can execute set_current_tenant and the GUC is bound'
+  'service_role can execute set_current_tenant and GUC is bound'
 );
 
 SELECT * FROM finish();

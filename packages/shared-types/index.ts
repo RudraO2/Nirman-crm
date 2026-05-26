@@ -39,6 +39,58 @@ export type Database = {
         }
         Relationships: []
       }
+      user_events: {
+        Row: {
+          actor_id: string | null
+          event_type: Database["public"]["Enums"]["user_event_type"]
+          id: string
+          occurred_at: string
+          payload: Json
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          event_type: Database["public"]["Enums"]["user_event_type"]
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          event_type?: Database["public"]["Enums"]["user_event_type"]
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_events_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           bcrypt_password_hash: string
@@ -85,9 +137,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auth_tenant_id: { Args: never; Returns: string }
       set_current_tenant: { Args: { tenant_id: string }; Returns: undefined }
     }
     Enums: {
+      user_event_type:
+        | "account_created"
+        | "account_deactivated"
+        | "account_reactivated"
+        | "password_changed"
+        | "password_reset_by_admin"
       user_role: "admin" | "employee"
     }
     CompositeTypes: {
@@ -216,12 +275,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      user_event_type: [
+        "account_created",
+        "account_deactivated",
+        "account_reactivated",
+        "password_changed",
+        "password_reset_by_admin",
+      ],
       user_role: ["admin", "employee"],
     },
   },
 } as const
-
-// Convenience re-exports
-export type Tenant = Database["public"]["Tables"]["tenants"]["Row"]
-export type User = Database["public"]["Tables"]["users"]["Row"]
-export type UserRole = Database["public"]["Enums"]["user_role"]
