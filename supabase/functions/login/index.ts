@@ -1,13 +1,17 @@
 // Story 1.4 — Platform-segregated login
+// Story 1.7 — Rate limiting: 5 fails in 10 min → 15-min lockout (FR-38, Architecture Decision #15)
 // FR-30: Employee credentials rejected on web dashboard (HTTP 403). Server-side enforcement.
 // NFR-6: JWT tokens expire 24h; refresh tokens valid 30 days.
 // NFR-9: Password verified via bcrypt (Supabase Auth holds the authoritative hash).
 //
 // Security design:
-//   1. Service-role lookup of public.users to get role/is_active — before any JWT issuance.
-//   2. Bcrypt verify (constant-time) to prevent user-enumeration timing oracle.
-//   3. Platform check: role=employee + platform=web → 403 BEFORE Supabase Auth is called.
-//   4. Only then call anonClient.auth.signInWithPassword — issues the official JWT.
+//   1. Service-role lookup of public.users — before any JWT issuance.
+//   2. Lockout check: if locked_until > now() → 429 immediately (no bcrypt needed).
+//   3. Bcrypt verify (constant-time) to prevent user-enumeration timing oracle.
+//   4. On failure: record attempt; if 5+ fails in 10 min → set locked_until = now()+15min.
+//   5. Platform check: role=employee + platform=web → 403 BEFORE Supabase Auth is called.
+//   6. Only then call anonClient.auth.signInWithPassword — issues the official JWT.
+//   7. On success: clear locked_until; record success attempt.
 //
 // NEVER log: username, password, access_token, refresh_token, or any substring thereof.
 
@@ -28,7 +32,6 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-// Constant-time dummy hash — used when username not found so timing matches a real bcrypt compare.
 const DUMMY_HASH = "$2b$12$invalidhashfornonexistentusers0000000000000000000000";
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -55,14 +58,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { username, password, platform } = parsed.data;
   const normalizedUsername = username.toLowerCase().trim();
 
-  // Service-role client — bypasses RLS to look up user by username
+  // Extract source IP for audit logging
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    ?? req.headers.get("x-real-ip")
+    ?? null;
+
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
   const { data: userProfile, error: profileErr } = await adminClient
     .from("users")
-    .select("id, role, is_active, bcrypt_password_hash, must_change_password")
+    .select("id, role, is_active, bcrypt_password_hash, must_change_password, locked_until")
     .eq("tenant_id", SEED_TENANT_ID)
     .ilike("email_or_username", normalizedUsername)
     .maybeSingle();
@@ -79,7 +86,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse("internal_error", "Login unavailable");
   }
 
-  // Always run bcrypt — constant time whether user exists or not (no enumeration timing leak)
+  // AC-2: Lockout check — BEFORE bcrypt. Early return for locked accounts.
+  // (Attacker triggered lockout themselves; revealing account existence here is acceptable.)
+  if (userProfile?.locked_until && new Date(userProfile.locked_until) > new Date()) {
+    // Fire-and-forget: record this locked attempt for audit
+    adminClient.from("auth_failed_attempts").insert({
+      tenant_id: SEED_TENANT_ID,
+      user_id: userProfile.id,
+      ip_address: ip,
+      outcome: "locked",
+    }).then(({ error }) => {
+      if (error) {
+        console.error(JSON.stringify({
+          ts: new Date().toISOString(), level: "error",
+          event: "attempt_record_failed", error: error.message,
+        }));
+      }
+    });
+    return errorResponse("account_locked", "Account temporarily locked. Try again later or contact your admin.");
+  }
+
+  // AC-6: Always run bcrypt — constant time whether user exists or not (no enumeration timing leak)
   const hashToVerify = userProfile?.bcrypt_password_hash ?? DUMMY_HASH;
 
   let passwordValid = false;
@@ -89,12 +116,59 @@ Deno.serve(async (req: Request): Promise<Response> => {
     passwordValid = false;
   }
 
-  // Same 401 for "user not found" and "wrong password" — no user enumeration
   if (!userProfile || !passwordValid) {
+    const outcome = !userProfile ? "unknown_user" : "failed_credentials";
+
+    // AC-3/AC-4: Fire-and-forget — record attempt; maybe trigger lockout for known users
+    ;(async () => {
+      await adminClient.from("auth_failed_attempts").insert({
+        tenant_id: SEED_TENANT_ID,
+        user_id: userProfile?.id ?? null,
+        ip_address: ip,
+        outcome,
+      });
+
+      // Only count and potentially lock if user exists (can't lock unknown usernames)
+      if (userProfile) {
+        const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        const { count } = await adminClient
+          .from("auth_failed_attempts")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", userProfile.id)
+          .neq("outcome", "success")
+          .gte("attempted_at", tenMinAgo);
+
+        if ((count ?? 0) >= 5) {
+          await adminClient
+            .from("users")
+            .update({
+              locked_until: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+            })
+            .eq("id", userProfile.id);
+
+          console.log(JSON.stringify({
+            ts: new Date().toISOString(),
+            level: "warn",
+            event: "account_locked_triggered",
+            tenant_id: SEED_TENANT_ID,
+            user_id: userProfile.id,
+          }));
+        }
+      }
+    })().catch((err) => {
+      console.error(JSON.stringify({
+        ts: new Date().toISOString(),
+        level: "error",
+        event: "attempt_record_failed",
+        error: (err as Error)?.message,
+      }));
+    });
+
+    // Same 401 for "user not found" and "wrong password" — no user enumeration
     return errorResponse("unauthorised", "Invalid username or password");
   }
 
-  // is_active check AFTER bcrypt (prevents timing oracle: active vs inactive accounts)
+  // is_active check AFTER bcrypt (prevents timing oracle)
   if (!userProfile.is_active) {
     return errorResponse("unauthorised", "Account deactivated");
   }
@@ -109,7 +183,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
         tenant_id: SEED_TENANT_ID,
         user_id: userProfile.id,
         platform,
-        // Do NOT log username or password
       }),
     );
     return errorResponse(
@@ -118,14 +191,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  // All checks passed — call Supabase Auth to issue the official JWT + refresh token
+  // All checks passed — issue official JWT + refresh token
   const anonClient = createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
   const { data: authData, error: signInErr } =
     await anonClient.auth.signInWithPassword({
-      email: normalizedUsername, // auth.users.email was set to username in create-employee
+      email: normalizedUsername,
       password,
     });
 
@@ -136,11 +209,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
         level: "error",
         event: "login_supabase_auth_failed",
         error: signInErr?.message,
-        // Do NOT log username or password
       }),
     );
     return errorResponse("internal_error", "Authentication service error");
   }
+
+  // AC-5: Success — clear lockout if set; record success (fire-and-forget)
+  ;(async () => {
+    if (userProfile.locked_until) {
+      await adminClient
+        .from("users")
+        .update({ locked_until: null })
+        .eq("id", userProfile.id);
+    }
+    await adminClient.from("auth_failed_attempts").insert({
+      tenant_id: SEED_TENANT_ID,
+      user_id: userProfile.id,
+      ip_address: ip,
+      outcome: "success",
+    });
+  })().catch((err) => {
+    console.error(JSON.stringify({
+      ts: new Date().toISOString(),
+      level: "error",
+      event: "success_cleanup_failed",
+      error: (err as Error)?.message,
+    }));
+  });
 
   console.log(
     JSON.stringify({
@@ -151,7 +246,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
       user_id: userProfile.id,
       role: userProfile.role,
       platform,
-      // Do NOT log username, password, or tokens
     }),
   );
 
