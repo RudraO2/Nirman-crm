@@ -17,7 +17,7 @@ development_status:
   1-7-login-rate-limiting-and-lockout: done
   1-8-android-screenshot-prevention-ios-blur: done
   epic-2: in-progress
-  2-1-lead-schema-normalized-phone-encrypted-pii: review
+  2-1-lead-schema-normalized-phone-encrypted-pii: done
   2-2-lead-timeline-schema-write-helper: backlog
   2-3-employee-creates-lead-quick-capture-status-first: backlog
   2-4-employee-edits-lead-complete-update-fields: backlog
