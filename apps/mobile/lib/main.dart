@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
+import 'shared/services/screen_security_service.dart';
 
 // Supabase credentials injected at build time via --dart-define.
 // flutter run \
@@ -20,6 +21,13 @@ Future<void> main() async {
     url: _supabaseUrl,
     anonKey: _supabaseAnonKey,
   );
+
+  // Story 1.8: restore screen security when a session survives app restart
+  final existingSession = Supabase.instance.client.auth.currentSession;
+  if (existingSession != null) {
+    final role = existingSession.user.appMetadata['role'] as String? ?? 'employee';
+    await ScreenSecurityService.applyForRole(role);
+  }
 
   runApp(const ProviderScope(child: NirmanApp()));
 }
