@@ -49,6 +49,30 @@ export type Database = {
           },
         ]
       }
+      domain_events: {
+        Row: {
+          event_type: string
+          id: string
+          occurred_at: string
+          payload: Json
+          tenant_id: string
+        }
+        Insert: {
+          event_type: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          tenant_id: string
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          payload?: Json
+          tenant_id?: string
+        }
+        Relationships: []
+      }
       lead_projects: {
         Row: {
           lead_id: string
@@ -82,6 +106,61 @@ export type Database = {
           },
           {
             foreignKeyName: "lead_projects_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_timeline: {
+        Row: {
+          actor_role: string | null
+          actor_user_id: string | null
+          event_type: Database["public"]["Enums"]["timeline_event_type"]
+          id: string
+          lead_id: string
+          occurred_at: string
+          payload: Json
+          tenant_id: string
+        }
+        Insert: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          event_type: Database["public"]["Enums"]["timeline_event_type"]
+          id?: string
+          lead_id: string
+          occurred_at?: string
+          payload?: Json
+          tenant_id: string
+        }
+        Update: {
+          actor_role?: string | null
+          actor_user_id?: string | null
+          event_type?: Database["public"]["Enums"]["timeline_event_type"]
+          id?: string
+          lead_id?: string
+          occurred_at?: string
+          payload?: Json
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_timeline_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_timeline_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_timeline_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "tenants"
@@ -340,12 +419,42 @@ export type Database = {
     }
     Functions: {
       auth_tenant_id: { Args: never; Returns: string }
+      log_timeline_event: {
+        Args: {
+          p_event_type: Database["public"]["Enums"]["timeline_event_type"]
+          p_lead_id: string
+          p_payload?: Json
+        }
+        Returns: string
+      }
       normalize_phone: { Args: { raw: string }; Returns: string }
       set_current_tenant: { Args: { tenant_id: string }; Returns: undefined }
     }
     Enums: {
       lead_source: "walk_in" | "referral" | "associate" | "ad"
       lead_status: "warm" | "cold" | "hot" | "dead" | "sold" | "future"
+      timeline_event_type:
+        | "lead_created"
+        | "field_updated"
+        | "status_changed"
+        | "call_initiated"
+        | "call_outcome_cleared"
+        | "whatsapp_sent"
+        | "followup_set"
+        | "followup_rescheduled"
+        | "followup_overdue"
+        | "followup_completed"
+        | "visit_date_set"
+        | "visit_rescheduled"
+        | "assigned"
+        | "reassigned"
+        | "shared"
+        | "share_revoked"
+        | "archived"
+        | "restored"
+        | "duplicate_override"
+        | "remark_added"
+        | "imported"
       user_event_type:
         | "account_created"
         | "account_deactivated"
@@ -483,6 +592,29 @@ export const Constants = {
     Enums: {
       lead_source: ["walk_in", "referral", "associate", "ad"],
       lead_status: ["warm", "cold", "hot", "dead", "sold", "future"],
+      timeline_event_type: [
+        "lead_created",
+        "field_updated",
+        "status_changed",
+        "call_initiated",
+        "call_outcome_cleared",
+        "whatsapp_sent",
+        "followup_set",
+        "followup_rescheduled",
+        "followup_overdue",
+        "followup_completed",
+        "visit_date_set",
+        "visit_rescheduled",
+        "assigned",
+        "reassigned",
+        "shared",
+        "share_revoked",
+        "archived",
+        "restored",
+        "duplicate_override",
+        "remark_added",
+        "imported",
+      ],
       user_event_type: [
         "account_created",
         "account_deactivated",
@@ -496,7 +628,6 @@ export const Constants = {
   },
 } as const
 
-// ─── Convenience aliases ────────────────────────────────────────────────────
 // Story 1.1
 export type Tenant = Tables<"tenants">
 export type User = Tables<"users">
@@ -513,3 +644,8 @@ export type LeadSource = Database["public"]["Enums"]["lead_source"]
 export type Project = Tables<"projects">
 export type ProjectInsert = TablesInsert<"projects">
 export type LeadProject = Tables<"lead_projects">
+
+// Story 2.2
+export type LeadTimeline = Tables<"lead_timeline">
+export type DomainEvent = Tables<"domain_events">
+export type TimelineEventType = Database["public"]["Enums"]["timeline_event_type"]
