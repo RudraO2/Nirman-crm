@@ -11,11 +11,19 @@ import {
 
 export default async function TeamPage() {
   const supabase = await createClient()
-  const { data: employees } = await supabase
+  const { data: employees, error: employeesErr } = await supabase
     .from('users')
     .select('id, email_or_username, is_active, created_at')
     .eq('role', 'employee')
     .order('created_at', { ascending: false })
+
+  if (employeesErr) {
+    return (
+      <div className="p-6">
+        <p className="text-destructive">Failed to load team data. Please refresh the page.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-6">

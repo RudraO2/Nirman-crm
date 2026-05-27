@@ -4,28 +4,51 @@ import { z } from "npm:zod";
 import { errorResponse, successResponse } from "./_shared/errors.ts";
 import { verifyJwtAndScope, isAuthFailure } from "./_shared/auth.ts";
 
-const CHARSET = "ABCDEFGHIJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%^&*";
+const UPPER   = "ABCDEFGHIJKLMNPQRSTUVWXYZ"; // 25: no O
+const LOWER   = "abcdefghjkmnpqrstuvwxyz";   // 23: no i, l, o
+const DIGITS  = "23456789";                  // 8: no 0, 1
+const SYMBOLS = "!@#$%^&*";                 // 8
+const CHARSET = UPPER + LOWER + DIGITS + SYMBOLS; // 64 (256 % 64 === 0, no bias)
+
+function pickUnbiased(pool: string): string {
+  const limit = Math.floor(256 / pool.length) * pool.length;
+  for (;;) {
+    const [b] = crypto.getRandomValues(new Uint8Array(1));
+    if (b < limit) return pool[b % pool.length];
+  }
+}
 
 function generateSecurePassword(length = 12): string {
-  const bytes = new Uint8Array(length * 2);
-  crypto.getRandomValues(bytes);
-  let result = "";
-  for (let i = 0; i < bytes.length && result.length < length; i++) {
-    const idx = bytes[i] % CHARSET.length;
-    if (bytes[i] < Math.floor(256 / CHARSET.length) * CHARSET.length) {
-      result += CHARSET[idx];
+  const limit = Math.floor(256 / CHARSET.length) * CHARSET.length;
+  // Guarantee ≥1 char from each required class (AC-1)
+  const chars = [
+    pickUnbiased(UPPER),
+    pickUnbiased(LOWER),
+    pickUnbiased(DIGITS),
+    pickUnbiased(SYMBOLS),
+  ];
+  // Fill remaining positions from full CHARSET via rejection sampling
+  const buf = new Uint8Array(length * 4);
+  while (chars.length < length) {
+    crypto.getRandomValues(buf);
+    for (let i = 0; i < buf.length && chars.length < length; i++) {
+      if (buf[i] < limit) chars.push(CHARSET[buf[i] % CHARSET.length]);
     }
   }
-  while (result.length < length) {
-    const extra = new Uint8Array(4);
-    crypto.getRandomValues(extra);
-    result += CHARSET[extra[0] % CHARSET.length];
+  // Fisher-Yates shuffle — rejection-sampling for unbiased index
+  for (let i = chars.length - 1; i > 0; i--) {
+    const range = i + 1;
+    const shuffleLimit = Math.floor(256 / range) * range;
+    let r: number;
+    do { [r] = crypto.getRandomValues(new Uint8Array(1)); } while (r >= shuffleLimit);
+    const j = r % range;
+    [chars[i], chars[j]] = [chars[j], chars[i]];
   }
-  return result;
+  return chars.join("");
 }
 
 const CreateEmployeeInput = z.object({
-  username: z.string().min(3).max(100),
+  username: z.string().trim().min(3).max(100).regex(/^[\x20-\x7E]+$/, "Username must contain only printable ASCII characters"),
 });
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -89,7 +112,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
   try {
     bcryptHash = await bcrypt.hash(tempPassword, 12);
   } catch (e) {
-    await adminClient.auth.admin.deleteUser(authUserId);
+    const { error: delErr } = await adminClient.auth.admin.deleteUser(authUserId);
+    if (delErr) {
+      console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "auth_user_delete_failed", trigger: "bcrypt_failure", user_id: authUserId, error: delErr.message }));
+    }
     console.error(
       JSON.stringify({
         ts: new Date().toISOString(),
@@ -111,7 +137,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     is_active: true,
   });
   if (profileErr) {
-    await adminClient.auth.admin.deleteUser(authUserId);
+    const { error: delErr } = await adminClient.auth.admin.deleteUser(authUserId);
+    if (delErr) {
+      console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "auth_user_delete_failed", trigger: "profile_insert_failure", user_id: authUserId, error: delErr.message }));
+    }
     if (profileErr.code === "23505") {
       return errorResponse("user_already_exists", "An employee with this username already exists");
     }
@@ -126,15 +155,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return errorResponse("internal_error", "Failed to create employee profile");
   }
 
-  // Best-effort — do not fail the response if event insert fails
+  // Fetch actor name for AC-5 audit payload — fallback to "unknown" on lookup failure
+  const { data: actorData } = await adminClient
+    .from("users")
+    .select("email_or_username")
+    .eq("id", actorId)
+    .single();
+
+  // AC-5: mandatory — roll back user creation if event insert fails
   const { error: eventErr } = await adminClient.from("user_events").insert({
     tenant_id: tenantId,
     user_id: authUserId,
     actor_id: actorId,
     event_type: "account_created",
-    payload: {},
+    payload: { admin_name: actorData?.email_or_username ?? "unknown" },
   });
   if (eventErr) {
+    await adminClient.from("users").delete().eq("id", authUserId);
+    const { error: delErr } = await adminClient.auth.admin.deleteUser(authUserId);
+    if (delErr) {
+      console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "auth_user_delete_failed", trigger: "event_insert_failure", user_id: authUserId, error: delErr.message }));
+    }
     console.error(
       JSON.stringify({
         ts: new Date().toISOString(),
@@ -143,6 +184,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         error: eventErr.message,
       }),
     );
+    return errorResponse("internal_error", "Failed to record account creation");
   }
 
   console.log(

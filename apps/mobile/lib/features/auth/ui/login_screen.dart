@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import '../data/auth_repository.dart';
 
@@ -41,7 +42,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       if (!mounted) return;
       if (result.mustChangePassword) {
-        // Story 1.5 — force password change on first login
+        // Persist flag before navigating so the router guard survives app restarts (AC-7)
+        final userId = ref.read(authRepositoryProvider).currentSession?.user.id;
+        if (userId != null) {
+          const storage = FlutterSecureStorage();
+          await storage.write(key: 'must_change_password_$userId', value: 'true');
+        }
+        if (!mounted) return;
         context.go('/password-change');
       } else {
         context.go('/home');

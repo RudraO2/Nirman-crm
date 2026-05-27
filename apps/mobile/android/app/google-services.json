@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1051194648157",
+    "project_id": "crm-lms-57c5d",
+    "storage_bucket": "crm-lms-57c5d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1051194648157:android:09ff97c5c56ba6b017cfb4",
+        "android_client_info": {
+          "package_name": "com.nirmanmedia.nirman_crm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAcdjfVBhZZZa4FEIYTgBbxSXKv4J-RShU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -19,7 +19,7 @@ export function GeneratedPasswordModal({ password, onDismiss }: Props) {
   // onDismiss sets parent state to null — plaintext is garbage-collected immediately
   return (
     <Dialog open={password !== null} onOpenChange={(open) => { if (!open) onDismiss() }}>
-      <DialogContent onPointerDownOutside={(e) => e.preventDefault()}>
+      <DialogContent onPointerDownOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()} onInteractOutside={(e) => e.preventDefault()}>
         <DialogHeader>
           <DialogTitle>Employee Account Created</DialogTitle>
           <DialogDescription>

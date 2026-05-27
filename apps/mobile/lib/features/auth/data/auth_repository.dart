@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -28,32 +29,73 @@ class AuthRepository {
     );
 
     if (response.status != 200) {
-      final errCode =
-          (response.data as Map<String, dynamic>?)?['error']?['code']
-              as String? ??
-          'internal_error';
-      final errMsg =
-          (response.data as Map<String, dynamic>?)?['error']?['message']
-              as String? ??
-          'Login failed';
+      final body = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final err = body['error'] is Map
+          ? Map<String, dynamic>.from(body['error'] as Map)
+          : <String, dynamic>{};
+      final errMsg = err['message'] as String? ?? 'Login failed';
       throw AuthException(errMsg, statusCode: response.status.toString());
     }
 
-    final payload = (response.data as Map<String, dynamic>)['data']
-        as Map<String, dynamic>;
-    final accessToken = payload['access_token'] as String;
+    final body = Map<String, dynamic>.from(response.data as Map);
+    final payload = Map<String, dynamic>.from(body['data'] as Map);
     final refreshToken = payload['refresh_token'] as String;
 
-    // Initialise the local Supabase session from the Edge Function tokens.
-    // recoverSession() parses a JSON session object and sets the in-memory + persisted session.
-    await _supabase.auth.recoverSession(
-      '{"access_token":"$accessToken","refresh_token":"$refreshToken","token_type":"bearer","expires_in":86400}',
-    );
+    // setSession() exchanges refresh token for fresh access token + user.
+    // Persists session via GoTrueClient (auto-refresh enabled).
+    await _supabase.auth.setSession(refreshToken);
 
     return (
       role: payload['role'] as String,
       mustChangePassword: payload['must_change_password'] as bool,
     );
+  }
+
+  /// Calls the `change-password` Edge Function.
+  /// Verifies [currentPassword] against public.users bcrypt hash server-side.
+  /// On success, replaces Supabase session with new tokens and clears the
+  /// must_change_password flag from secure storage.
+  ///
+  /// Throws [AuthException] on 400 (wrong password / complexity) or 401.
+  /// Throws [Exception] on network/5xx.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await _supabase.functions.invoke(
+      'change-password',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+    );
+
+    if (response.status != 200) {
+      final body = response.data is Map
+          ? Map<String, dynamic>.from(response.data as Map)
+          : <String, dynamic>{};
+      final err = body['error'] is Map
+          ? Map<String, dynamic>.from(body['error'] as Map)
+          : <String, dynamic>{};
+      final msg = err['message'] as String? ?? 'Password change failed';
+      throw AuthException(msg, statusCode: response.status.toString());
+    }
+
+    final body = Map<String, dynamic>.from(response.data as Map);
+    final payload = Map<String, dynamic>.from(body['data'] as Map);
+    final refreshToken = payload['refresh_token'] as String;
+
+    // Replace session with new tokens (carries must_change_password=false in app_metadata)
+    await _supabase.auth.setSession(refreshToken);
+
+    // Clear forced-change flag from secure storage
+    final userId = _supabase.auth.currentSession?.user.id;
+    if (userId != null) {
+      const storage = FlutterSecureStorage();
+      await storage.delete(key: 'must_change_password_$userId');
+    }
   }
 
   Future<void> signOut() async {
