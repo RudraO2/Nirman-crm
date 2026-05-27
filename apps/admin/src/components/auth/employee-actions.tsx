@@ -21,12 +21,13 @@ export function EmployeeActions({ employeeId, isActive }: EmployeeActionsProps) 
     const { data, error: fnError } = await supabase.functions.invoke('manage-employee', {
       body: { action, targetUserId: employeeId },
     })
-    setLoading(false)
     if (fnError || data?.error) {
+      setLoading(false)
       setError(data?.error?.message ?? fnError?.message ?? 'Action failed')
       return
     }
     router.refresh()
+    setLoading(false)
   }
 
   return (

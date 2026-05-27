@@ -66,13 +66,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .eq("tenant_id", tenantId)
     .maybeSingle();
 
-  if (lookupErr || !targetUser) {
+  if (lookupErr) {
+    console.error(JSON.stringify({
+      ts: new Date().toISOString(), level: "error",
+      event: "manage_employee_lookup_failed",
+      target_user_id: targetUserId, error: lookupErr.message,
+    }));
+    return errorResponse("internal_error", "Failed to look up employee");
+  }
+  if (!targetUser) {
     return errorResponse("validation_error", "Employee not found in this organisation");
   }
 
   // 6. AC-9: cannot target another admin
   if (targetUser.role === "admin") {
-    return errorResponse("validation_error", "Only employee accounts can be deactivated.");
+    return errorResponse("validation_error", `Only employee accounts can be ${action}d.`);
   }
 
   // 7. Idempotency: already in desired state
@@ -115,21 +123,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // 10. AC-5/AC-6: append-only user_events — best-effort (non-fatal on failure)
   const eventType = action === "deactivate" ? "account_deactivated" : "account_reactivated";
-  const { error: eventErr } = await adminClient.from("user_events").insert({
+  adminClient.from("user_events").insert({
     tenant_id: tenantId,
     user_id: targetUserId,
     actor_id: actorId,
     event_type: eventType,
     payload: {},
+  }).then(({ error: eventErr }) => {
+    if (eventErr) {
+      console.error(JSON.stringify({
+        ts: new Date().toISOString(), level: "error",
+        event: "user_event_insert_failed",
+        action, target_user_id: targetUserId, error: eventErr.message,
+      }));
+    }
   });
-
-  if (eventErr) {
-    console.error(JSON.stringify({
-      ts: new Date().toISOString(), level: "error",
-      event: "user_event_insert_failed",
-      action, target_user_id: targetUserId, error: eventErr.message,
-    }));
-  }
 
   console.log(JSON.stringify({
     ts: new Date().toISOString(), level: "info",
