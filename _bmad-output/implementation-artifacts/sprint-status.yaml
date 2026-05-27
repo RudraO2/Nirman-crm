@@ -18,7 +18,7 @@ development_status:
   1-8-android-screenshot-prevention-ios-blur: done
   epic-2: in-progress
   2-1-lead-schema-normalized-phone-encrypted-pii: done
-  2-2-lead-timeline-schema-write-helper: in-progress
+  2-2-lead-timeline-schema-write-helper: done
   2-3-employee-creates-lead-quick-capture-status-first: backlog
   2-4-employee-edits-lead-complete-update-fields: backlog
   2-5-employee-views-lead-list-visibility-isolation: backlog
