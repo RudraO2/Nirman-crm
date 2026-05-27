@@ -1,0 +1,72 @@
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+part 'auth_repository.g.dart';
+
+/// Handles authentication via the custom `login` Edge Function.
+/// All login goes through the Edge Function (not supabase_flutter direct auth)
+/// so that platform segregation (FR-30) is enforced server-side before any JWT issues.
+class AuthRepository {
+  final SupabaseClient _supabase;
+
+  const AuthRepository(this._supabase);
+
+  /// Calls the `login` Edge Function with platform="mobile".
+  /// On success, initialises the Supabase session from the returned tokens.
+  /// Throws [AuthException] on 401/403, [Exception] on network/5xx.
+  Future<({String role, bool mustChangePassword})> login({
+    required String username,
+    required String password,
+  }) async {
+    final response = await _supabase.functions.invoke(
+      'login',
+      body: {
+        'username': username.trim().toLowerCase(),
+        'password': password,
+        'platform': 'mobile',
+      },
+    );
+
+    if (response.status != 200) {
+      final errCode =
+          (response.data as Map<String, dynamic>?)?['error']?['code']
+              as String? ??
+          'internal_error';
+      final errMsg =
+          (response.data as Map<String, dynamic>?)?['error']?['message']
+              as String? ??
+          'Login failed';
+      throw AuthException(errMsg, statusCode: response.status.toString());
+    }
+
+    final payload = (response.data as Map<String, dynamic>)['data']
+        as Map<String, dynamic>;
+    final accessToken = payload['access_token'] as String;
+    final refreshToken = payload['refresh_token'] as String;
+
+    // Initialise the local Supabase session from the Edge Function tokens.
+    // recoverSession() parses a JSON session object and sets the in-memory + persisted session.
+    await _supabase.auth.recoverSession(
+      '{"access_token":"$accessToken","refresh_token":"$refreshToken","token_type":"bearer","expires_in":86400}',
+    );
+
+    return (
+      role: payload['role'] as String,
+      mustChangePassword: payload['must_change_password'] as bool,
+    );
+  }
+
+  Future<void> signOut() async {
+    await _supabase.auth.signOut();
+  }
+
+  Session? get currentSession => _supabase.auth.currentSession;
+
+  Stream<AuthState> get authStateChanges =>
+      _supabase.auth.onAuthStateChange;
+}
+
+@riverpod
+AuthRepository authRepository(AuthRepositoryRef ref) {
+  return AuthRepository(Supabase.instance.client);
+}
