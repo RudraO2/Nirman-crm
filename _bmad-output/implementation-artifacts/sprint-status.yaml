@@ -1,21 +1,29 @@
 # Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
 # Status values: backlog | ready-for-dev | in-progress | review | done
 
-last_updated: 2026-05-26
+last_updated: 2026-05-27
 project: nirman-crm
 repo: https://github.com/RudraO2/Nirman-crm
 supabase_project_id: vhgruadourflpxuzuxfn
 
 development_status:
-  epic-1: in-progress
+  epic-1: done
   1-1-initialize-multi-tenant-schema-with-rls: done
   1-2-bootstrap-initial-admin-account: done
-  1-3-admin-creates-employee-accounts: review
-  1-4-employee-logs-in-platform-segregation: backlog
-  1-5-force-password-change-self-service: backlog
-  1-6-admin-deactivates-reactivates-employee: backlog
-  1-7-login-rate-limiting-and-lockout: backlog
-  1-8-android-screenshot-prevention-ios-blur: backlog
+  1-3-admin-creates-employee-accounts: done
+  1-4-employee-logs-in-platform-segregation: done
+  1-5-force-password-change-self-service: done
+  1-6-admin-deactivates-reactivates-employee: done
+  1-7-login-rate-limiting-and-lockout: done
+  1-8-android-screenshot-prevention-ios-blur: done
+  epic-2: in-progress
+  2-1-lead-schema-normalized-phone-encrypted-pii: review
+  2-2-lead-timeline-schema-write-helper: backlog
+  2-3-employee-creates-lead-quick-capture-status-first: backlog
+  2-4-employee-edits-lead-complete-update-fields: backlog
+  2-5-employee-views-lead-list-visibility-isolation: backlog
+  2-6-employee-reschedules-visit-one-tap-shortcuts: backlog
+  2-7-employee-changes-status-one-tap-dead-archive: backlog
 
 # STATUS DEFINITIONS
 # backlog        — story drafted in epics.md, not yet expanded
