@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../shared/services/screen_security_service.dart';
 import '../utils/auth_validators.dart';
 
 part 'auth_repository.g.dart';
@@ -50,7 +51,8 @@ class AuthRepository {
   }
 
   /// Calls the `login` Edge Function with platform="mobile".
-  /// On success, initialises the Supabase session from the returned tokens.
+  /// On success, initialises the Supabase session from the returned tokens
+  /// and applies screen security based on role (Story 1.8 — FR-31).
   /// Throws [AuthException] on 401/403, [Exception] on network/5xx.
   Future<({String role, bool mustChangePassword})> login({
     required String username,
@@ -77,8 +79,8 @@ class AuthRepository {
         as Map<String, dynamic>;
     final accessToken = payload['access_token'] as String;
     final refreshToken = payload['refresh_token'] as String;
+    final role = payload['role'] as String;
 
-    // Initialise the local Supabase session. Uses actual JWT exp claim for expiry.
     try {
       await _supabase.auth.recoverSession(
         _sessionJson(accessToken, refreshToken),
@@ -90,8 +92,11 @@ class AuthRepository {
       );
     }
 
+    // Story 1.8: apply FLAG_SECURE (Android) / blur (iOS) immediately after login
+    await ScreenSecurityService.applyForRole(role);
+
     return (
-      role: payload['role'] as String,
+      role: role,
       mustChangePassword: payload['must_change_password'] as bool,
     );
   }
@@ -127,35 +132,32 @@ class AuthRepository {
         as Map<String, dynamic>;
     final accessToken = payload['access_token'] as String;
     final refreshToken = payload['refresh_token'] as String;
-    // Server returns expires_at (epoch seconds) — use it directly
     final expiresAt = payload['expires_at'] as int?;
 
-    // Replace session with new tokens (carries must_change_password=false in app_metadata)
     try {
       await _supabase.auth.recoverSession(
         _sessionJson(accessToken, refreshToken, expiresAt: expiresAt),
       );
     } catch (e) {
-      // Password IS changed on the server. User must log in manually with the new password.
       throw AuthException(
         'Password changed but session refresh failed. Please log in again.',
         statusCode: '500',
       );
     }
 
-    // recoverSession succeeded — currentSession is now the new session
     final userId = _supabase.auth.currentSession?.user.id;
     if (userId != null) {
       const storage = FlutterSecureStorage();
       await storage.delete(key: mustChangePasswordKey(userId));
     } else {
-      // JWT app_metadata carries must_change_password=false — router will update on next eval
       debugPrint('[AuthRepository] userId null after changePassword recoverSession; '
           'relying on JWT claim for router guard update.');
     }
   }
 
+  /// Signs out the current user and clears screen security protection.
   Future<void> signOut() async {
+    await ScreenSecurityService.disable();
     await _supabase.auth.signOut();
   }
 

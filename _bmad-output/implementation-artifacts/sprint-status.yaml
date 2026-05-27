@@ -14,8 +14,8 @@ development_status:
   1-4-employee-logs-in-platform-segregation: done
   1-5-force-password-change-self-service: done
   1-6-admin-deactivates-reactivates-employee: done
-  1-7-login-rate-limiting-and-lockout: backlog
-  1-8-android-screenshot-prevention-ios-blur: backlog
+  1-7-login-rate-limiting-and-lockout: done
+  1-8-android-screenshot-prevention-ios-blur: review
 
 # STATUS DEFINITIONS
 # backlog        — story drafted in epics.md, not yet expanded
