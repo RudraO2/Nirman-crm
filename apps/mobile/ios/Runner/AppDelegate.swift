@@ -39,10 +39,12 @@ import Flutter
         if blurEnabled {
             addBlurOverlay()
         }
+        super.applicationWillResignActive(application)
     }
 
     override func applicationDidBecomeActive(_ application: UIApplication) {
         removeBlurOverlay()
+        super.applicationDidBecomeActive(application)
     }
 
     private func addBlurOverlay() {

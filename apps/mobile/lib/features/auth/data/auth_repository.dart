@@ -156,8 +156,12 @@ class AuthRepository {
   }
 
   /// Signs out the current user and clears screen security protection.
+  /// 2-second timeout on disable() guards against MethodChannel hang.
   Future<void> signOut() async {
-    await ScreenSecurityService.disable();
+    await ScreenSecurityService.disable().timeout(
+      const Duration(seconds: 2),
+      onTimeout: () {},
+    );
     await _supabase.auth.signOut();
   }
 

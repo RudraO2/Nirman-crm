@@ -1,7 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-/// Story 1.8 — FR-31: Android FLAG_SECURE + iOS app-switcher blur.
-/// Employee role: full protection. Admin role: unrestricted.
 class ScreenSecurityService {
   static const _channel = MethodChannel('com.nirmanmedia.crm/screen_security');
 
@@ -26,8 +25,10 @@ class ScreenSecurityService {
   static Future<void> _invoke(String method) async {
     try {
       await _channel.invokeMethod<void>(method);
-    } catch (_) {
-      // MissingPluginException on non-implementing platform — best-effort.
+    } on MissingPluginException {
+      // Non-implementing platform — best-effort.
+    } on Exception catch (e) {
+      debugPrint('[ScreenSecurityService] $method platform error: $e');
     }
   }
 }

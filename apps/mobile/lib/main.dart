@@ -25,7 +25,8 @@ Future<void> main() async {
   // Story 1.8: restore screen security when a session survives app restart
   final existingSession = Supabase.instance.client.auth.currentSession;
   if (existingSession != null) {
-    final role = existingSession.user.appMetadata['role'] as String? ?? 'employee';
+    final rawRole = existingSession.user.appMetadata['role'];
+    final role = rawRole is String ? rawRole : 'employee';
     await ScreenSecurityService.applyForRole(role);
   }
 
