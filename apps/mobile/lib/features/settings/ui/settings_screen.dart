@@ -14,7 +14,8 @@ class SettingsScreen extends StatelessWidget {
             leading: const Icon(Icons.lock_outline),
             title: const Text('Change Password'),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => context.go('/password-change', extra: {'isForced': false}),
+            // Query param survives OS-triggered route restoration; in-memory extra does not.
+            onTap: () => context.go('/password-change?forced=false'),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
 import '../data/auth_repository.dart';
+import '../utils/auth_validators.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -42,11 +43,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
       if (!mounted) return;
       if (result.mustChangePassword) {
-        // Persist flag before navigating so the router guard survives app restarts (AC-7)
+        // Persist flag before navigating so the router guard survives app restarts (AC-7).
+        // JWT app_metadata also carries must_change_password=true as a fallback (survives reinstall).
         final userId = ref.read(authRepositoryProvider).currentSession?.user.id;
         if (userId != null) {
           const storage = FlutterSecureStorage();
-          await storage.write(key: 'must_change_password_$userId', value: 'true');
+          await storage.write(key: mustChangePasswordKey(userId), value: 'true');
         }
         if (!mounted) return;
         context.go('/password-change');
@@ -54,9 +56,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         context.go('/home');
       }
     } on Exception catch (e) {
-      setState(() {
-        _errorMessage = _mapError(e.toString());
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = mapLoginError(e.toString());
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -64,16 +68,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         });
       }
     }
-  }
-
-  String _mapError(String raw) {
-    if (raw.toLowerCase().contains('deactivated')) {
-      return 'Your account has been deactivated. Contact your admin.';
-    }
-    if (raw.toLowerCase().contains('not authorised')) {
-      return 'This account is not authorised for this platform.';
-    }
-    return 'Invalid username or password.';
   }
 
   @override

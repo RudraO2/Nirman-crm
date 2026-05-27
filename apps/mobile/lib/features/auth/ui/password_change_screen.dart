@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../data/auth_repository.dart';
+import '../utils/auth_validators.dart';
 
 class PasswordChangeScreen extends ConsumerStatefulWidget {
   /// [isForced] = true when called from must_change_password flow.
@@ -33,25 +34,11 @@ class _PasswordChangeScreenState extends ConsumerState<PasswordChangeScreen> {
     super.dispose();
   }
 
-  String? _validateLocally() {
-    final newPw = _newPwController.text;
-    final confirm = _confirmPwController.text;
-    if (newPw.length < 8) return 'New password must be at least 8 characters';
-    if (!newPw.contains(RegExp(r'[A-Z]'))) {
-      return 'New password must contain at least one uppercase letter';
-    }
-    if (!newPw.contains(RegExp(r'[a-z]'))) {
-      return 'New password must contain at least one lowercase letter';
-    }
-    if (!newPw.contains(RegExp(r'[0-9]'))) {
-      return 'New password must contain at least one number';
-    }
-    if (newPw != confirm) return 'Passwords do not match';
-    return null;
-  }
-
   Future<void> _submit() async {
-    final localError = _validateLocally();
+    final localError = validateNewPassword(
+      newPassword: _newPwController.text,
+      confirm: _confirmPwController.text,
+    );
     if (localError != null) {
       setState(() => _errorMessage = localError);
       return;
@@ -68,19 +55,10 @@ class _PasswordChangeScreenState extends ConsumerState<PasswordChangeScreen> {
       if (!mounted) return;
       context.go('/home');
     } on Exception catch (e) {
-      setState(() => _errorMessage = _mapError(e.toString()));
+      if (mounted) setState(() => _errorMessage = mapChangeError(e.toString()));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  String _mapError(String raw) {
-    if (raw.contains('Current password is incorrect')) return 'Current password is incorrect.';
-    if (raw.contains('at least 8')) return 'New password must be at least 8 characters.';
-    if (raw.contains('uppercase')) return 'New password must contain at least one uppercase letter.';
-    if (raw.contains('lowercase')) return 'New password must contain at least one lowercase letter.';
-    if (raw.contains('number')) return 'New password must contain at least one number.';
-    return 'Password change failed. Please try again.';
   }
 
   Widget _obscuredField({
