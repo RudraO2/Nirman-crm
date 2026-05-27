@@ -17,6 +17,9 @@ String mapLoginError(String raw) {
   if (raw.toLowerCase().contains('not authorised')) {
     return 'This account is not authorised for this platform.';
   }
+  if (raw.toLowerCase().contains('locked')) {
+    return 'Your account has been temporarily locked. Try again in 15 minutes or contact your admin.';
+  }
   return 'Invalid username or password.';
 }
 
