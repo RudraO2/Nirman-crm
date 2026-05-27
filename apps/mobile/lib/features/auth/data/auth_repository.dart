@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/auth_validators.dart';
 
 part 'auth_repository.g.dart';
 
@@ -10,6 +14,40 @@ class AuthRepository {
   final SupabaseClient _supabase;
 
   const AuthRepository(this._supabase);
+
+  /// Decodes the `exp` claim from a JWT access token without external libraries.
+  /// Returns the expiry as epoch seconds, or null if decoding fails.
+  static int? _jwtExpiry(String accessToken) {
+    try {
+      final parts = accessToken.split('.');
+      if (parts.length != 3) return null;
+      String payload = parts[1];
+      while (payload.length % 4 != 0) {
+        payload += '=';
+      }
+      final decoded = utf8.decode(base64Url.decode(payload));
+      final json = jsonDecode(decoded) as Map<String, dynamic>;
+      return json['exp'] as int?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Builds a recoverSession JSON string using the actual token expiry.
+  /// Uses server-supplied expiresAt when available, falls back to JWT exp claim.
+  static String _sessionJson(
+    String accessToken,
+    String refreshToken, {
+    int? expiresAt,
+  }) {
+    final expAt = expiresAt ??
+        _jwtExpiry(accessToken) ??
+        (DateTime.now().millisecondsSinceEpoch ~/ 1000 + 3600);
+    final expIn = expAt - (DateTime.now().millisecondsSinceEpoch ~/ 1000);
+    final safeExpIn = expIn > 60 ? expIn : 3600;
+    return '{"access_token":"$accessToken","refresh_token":"$refreshToken"'
+        ',"token_type":"bearer","expires_in":$safeExpIn,"expires_at":$expAt}';
+  }
 
   /// Calls the `login` Edge Function with platform="mobile".
   /// On success, initialises the Supabase session from the returned tokens.
@@ -28,10 +66,6 @@ class AuthRepository {
     );
 
     if (response.status != 200) {
-      final errCode =
-          (response.data as Map<String, dynamic>?)?['error']?['code']
-              as String? ??
-          'internal_error';
       final errMsg =
           (response.data as Map<String, dynamic>?)?['error']?['message']
               as String? ??
@@ -44,16 +78,81 @@ class AuthRepository {
     final accessToken = payload['access_token'] as String;
     final refreshToken = payload['refresh_token'] as String;
 
-    // Initialise the local Supabase session from the Edge Function tokens.
-    // recoverSession() parses a JSON session object and sets the in-memory + persisted session.
-    await _supabase.auth.recoverSession(
-      '{"access_token":"$accessToken","refresh_token":"$refreshToken","token_type":"bearer","expires_in":86400}',
-    );
+    // Initialise the local Supabase session. Uses actual JWT exp claim for expiry.
+    try {
+      await _supabase.auth.recoverSession(
+        _sessionJson(accessToken, refreshToken),
+      );
+    } catch (e) {
+      throw AuthException(
+        'Session initialisation failed. Please log in again.',
+        statusCode: '500',
+      );
+    }
 
     return (
       role: payload['role'] as String,
       mustChangePassword: payload['must_change_password'] as bool,
     );
+  }
+
+  /// Calls the `change-password` Edge Function.
+  /// Verifies [currentPassword] against public.users bcrypt hash server-side.
+  /// On success, replaces Supabase session with new tokens and clears the
+  /// must_change_password flag from secure storage.
+  ///
+  /// Throws [AuthException] on 400 (wrong password / complexity) or 401.
+  /// Throws [Exception] on network/5xx.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await _supabase.functions.invoke(
+      'change-password',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+    );
+
+    if (response.status != 200) {
+      final msg =
+          (response.data as Map<String, dynamic>?)?['error']?['message']
+              as String? ??
+          'Password change failed';
+      throw AuthException(msg, statusCode: response.status.toString());
+    }
+
+    final payload = (response.data as Map<String, dynamic>)['data']
+        as Map<String, dynamic>;
+    final accessToken = payload['access_token'] as String;
+    final refreshToken = payload['refresh_token'] as String;
+    // Server returns expires_at (epoch seconds) — use it directly
+    final expiresAt = payload['expires_at'] as int?;
+
+    // Replace session with new tokens (carries must_change_password=false in app_metadata)
+    try {
+      await _supabase.auth.recoverSession(
+        _sessionJson(accessToken, refreshToken, expiresAt: expiresAt),
+      );
+    } catch (e) {
+      // Password IS changed on the server. User must log in manually with the new password.
+      throw AuthException(
+        'Password changed but session refresh failed. Please log in again.',
+        statusCode: '500',
+      );
+    }
+
+    // recoverSession succeeded — currentSession is now the new session
+    final userId = _supabase.auth.currentSession?.user.id;
+    if (userId != null) {
+      const storage = FlutterSecureStorage();
+      await storage.delete(key: mustChangePasswordKey(userId));
+    } else {
+      // JWT app_metadata carries must_change_password=false — router will update on next eval
+      debugPrint('[AuthRepository] userId null after changePassword recoverSession; '
+          'relying on JWT claim for router guard update.');
+    }
   }
 
   Future<void> signOut() async {
