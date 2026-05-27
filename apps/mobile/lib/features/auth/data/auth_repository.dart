@@ -1,3 +1,4 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -54,6 +55,51 @@ class AuthRepository {
       role: payload['role'] as String,
       mustChangePassword: payload['must_change_password'] as bool,
     );
+  }
+
+  /// Calls the `change-password` Edge Function.
+  /// Verifies [currentPassword] against public.users bcrypt hash server-side.
+  /// On success, replaces Supabase session with new tokens and clears the
+  /// must_change_password flag from secure storage.
+  ///
+  /// Throws [AuthException] on 400 (wrong password / complexity) or 401.
+  /// Throws [Exception] on network/5xx.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await _supabase.functions.invoke(
+      'change-password',
+      body: {
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      },
+    );
+
+    if (response.status != 200) {
+      final msg =
+          (response.data as Map<String, dynamic>?)?['error']?['message']
+              as String? ??
+          'Password change failed';
+      throw AuthException(msg, statusCode: response.status.toString());
+    }
+
+    final payload = (response.data as Map<String, dynamic>)['data']
+        as Map<String, dynamic>;
+    final accessToken = payload['access_token'] as String;
+    final refreshToken = payload['refresh_token'] as String;
+
+    // Replace session with new tokens (carries must_change_password=false in app_metadata)
+    await _supabase.auth.recoverSession(
+      '{"access_token":"$accessToken","refresh_token":"$refreshToken","token_type":"bearer","expires_in":86400}',
+    );
+
+    // Clear forced-change flag from secure storage
+    final userId = _supabase.auth.currentSession?.user.id;
+    if (userId != null) {
+      const storage = FlutterSecureStorage();
+      await storage.delete(key: 'must_change_password_$userId');
+    }
   }
 
   Future<void> signOut() async {
