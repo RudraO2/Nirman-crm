@@ -12,13 +12,21 @@ export default async function SecurityLogPage() {
   const supabase = await createClient()
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-  const { data: attempts } = await supabase
+  const { data: attempts, error: attemptsErr } = await supabase
     .from('auth_failed_attempts')
     .select('id, user_id, attempted_at, ip_address, outcome')
     .neq('outcome', 'success')
     .gte('attempted_at', since)
     .order('attempted_at', { ascending: false })
     .limit(100)
+
+  if (attemptsErr) {
+    return (
+      <div className="p-6">
+        <p className="text-destructive">Failed to load security log. Please refresh the page.</p>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 space-y-4">

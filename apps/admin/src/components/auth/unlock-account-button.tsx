@@ -26,8 +26,8 @@ export function UnlockAccountButton({ employeeId }: UnlockAccountButtonProps) {
       setError(data?.error?.message ?? fnError?.message ?? 'Unlock failed')
       return
     }
-    router.refresh()
     setLoading(false)
+    router.refresh()
   }
 
   return (

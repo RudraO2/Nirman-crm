@@ -8,7 +8,7 @@
 //   1. Service-role lookup of public.users — before any JWT issuance.
 //   2. Lockout check: if locked_until > now() → 429 immediately (no bcrypt needed).
 //   3. Bcrypt verify (constant-time) to prevent user-enumeration timing oracle.
-//   4. On failure: record attempt; if 5+ fails in 10 min → set locked_until = now()+15min.
+//   4. On failure: record attempt; if 5+ actual fails in 10 min → set locked_until = now()+15min.
 //   5. Platform check: role=employee + platform=web → 403 BEFORE Supabase Auth is called.
 //   6. Only then call anonClient.auth.signInWithPassword — issues the official JWT.
 //   7. On success: clear locked_until; record success attempt.
@@ -89,7 +89,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // AC-2: Lockout check — BEFORE bcrypt. Early return for locked accounts.
   // (Attacker triggered lockout themselves; revealing account existence here is acceptable.)
   if (userProfile?.locked_until && new Date(userProfile.locked_until) > new Date()) {
-    // Fire-and-forget: record this locked attempt for audit
     adminClient.from("auth_failed_attempts").insert({
       tenant_id: SEED_TENANT_ID,
       user_id: userProfile.id,
@@ -128,14 +127,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
         outcome,
       });
 
-      // Only count and potentially lock if user exists (can't lock unknown usernames)
       if (userProfile) {
         const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        // Count only actual credential failures, not 'locked' or 'success' outcomes.
+        // Excluding 'locked' prevents retries-while-locked from inflating the count
+        // and causing immediate re-lock after the lockout window expires.
         const { count } = await adminClient
           .from("auth_failed_attempts")
           .select("id", { count: "exact", head: true })
           .eq("user_id", userProfile.id)
-          .neq("outcome", "success")
+          .in("outcome", ["failed_credentials", "unknown_user"])
           .gte("attempted_at", tenMinAgo);
 
         if ((count ?? 0) >= 5) {
@@ -164,16 +165,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
       }));
     });
 
-    // Same 401 for "user not found" and "wrong password" — no user enumeration
     return errorResponse("unauthorised", "Invalid username or password");
   }
 
-  // is_active check AFTER bcrypt (prevents timing oracle)
   if (!userProfile.is_active) {
     return errorResponse("unauthorised", "Account deactivated");
   }
 
-  // Platform segregation — block BEFORE any JWT is issued (FR-30)
   if (userProfile.role === "employee" && platform === "web") {
     console.log(
       JSON.stringify({
@@ -191,7 +189,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
     );
   }
 
-  // All checks passed — issue official JWT + refresh token
   const anonClient = createClient(SUPABASE_URL, ANON_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
