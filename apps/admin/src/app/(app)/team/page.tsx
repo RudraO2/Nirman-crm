@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NewEmployeeForm } from '@/components/auth/new-employee-form'
+import { EmployeeActions } from '@/components/auth/employee-actions'
 import {
   Table,
   TableBody,
@@ -29,19 +30,27 @@ export default async function TeamPage() {
             <TableHead>Username</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Created</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {(employees ?? []).map((emp) => (
-            <TableRow key={emp.id}>
+            <TableRow key={emp.id} className={emp.is_active ? '' : 'opacity-60'}>
               <TableCell className="font-mono">{emp.email_or_username}</TableCell>
-              <TableCell>{emp.is_active ? 'Active' : 'Inactive'}</TableCell>
+              <TableCell>
+                <span className={emp.is_active ? 'text-green-600' : 'text-muted-foreground'}>
+                  {emp.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </TableCell>
               <TableCell>{new Date(emp.created_at).toLocaleDateString()}</TableCell>
+              <TableCell>
+                <EmployeeActions employeeId={emp.id} isActive={emp.is_active} />
+              </TableCell>
             </TableRow>
           ))}
           {(employees ?? []).length === 0 && (
             <TableRow>
-              <TableCell colSpan={3} className="text-center text-muted-foreground">
+              <TableCell colSpan={4} className="text-center text-muted-foreground">
                 No employees yet. Add one above.
               </TableCell>
             </TableRow>
