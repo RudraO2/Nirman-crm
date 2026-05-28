@@ -37,6 +37,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Future Pool
           </Link>
           <Link
+            href="/performance"
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            Performance
+          </Link>
+          <Link
             href="/projects"
             className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
