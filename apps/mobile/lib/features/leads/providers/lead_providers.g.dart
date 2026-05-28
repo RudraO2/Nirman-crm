@@ -477,5 +477,165 @@ class _ArchivedLeadsProviderElement
   String get query => (origin as ArchivedLeadsProvider).query;
 }
 
+String _$leadSharesHash() => r'6f893dad7b1c36dea1710ea4769ef1b01f717e56';
+
+/// Active share entries for [id] — owned-lead detail view (Story 4.4).
+/// Invalidate after share/revoke to refresh chips.
+///
+/// Copied from [leadShares].
+@ProviderFor(leadShares)
+const leadSharesProvider = LeadSharesFamily();
+
+/// Active share entries for [id] — owned-lead detail view (Story 4.4).
+/// Invalidate after share/revoke to refresh chips.
+///
+/// Copied from [leadShares].
+class LeadSharesFamily extends Family<AsyncValue<List<LeadShareEntry>>> {
+  /// Active share entries for [id] — owned-lead detail view (Story 4.4).
+  /// Invalidate after share/revoke to refresh chips.
+  ///
+  /// Copied from [leadShares].
+  const LeadSharesFamily();
+
+  /// Active share entries for [id] — owned-lead detail view (Story 4.4).
+  /// Invalidate after share/revoke to refresh chips.
+  ///
+  /// Copied from [leadShares].
+  LeadSharesProvider call(String id) {
+    return LeadSharesProvider(id);
+  }
+
+  @override
+  LeadSharesProvider getProviderOverride(
+    covariant LeadSharesProvider provider,
+  ) {
+    return call(provider.id);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'leadSharesProvider';
+}
+
+/// Active share entries for [id] — owned-lead detail view (Story 4.4).
+/// Invalidate after share/revoke to refresh chips.
+///
+/// Copied from [leadShares].
+class LeadSharesProvider
+    extends AutoDisposeFutureProvider<List<LeadShareEntry>> {
+  /// Active share entries for [id] — owned-lead detail view (Story 4.4).
+  /// Invalidate after share/revoke to refresh chips.
+  ///
+  /// Copied from [leadShares].
+  LeadSharesProvider(String id)
+    : this._internal(
+        (ref) => leadShares(ref as LeadSharesRef, id),
+        from: leadSharesProvider,
+        name: r'leadSharesProvider',
+        debugGetCreateSourceHash:
+            const bool.fromEnvironment('dart.vm.product')
+                ? null
+                : _$leadSharesHash,
+        dependencies: LeadSharesFamily._dependencies,
+        allTransitiveDependencies: LeadSharesFamily._allTransitiveDependencies,
+        id: id,
+      );
+
+  LeadSharesProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.id,
+  }) : super.internal();
+
+  final String id;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<LeadShareEntry>> Function(LeadSharesRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: LeadSharesProvider._internal(
+        (ref) => create(ref as LeadSharesRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        id: id,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<LeadShareEntry>> createElement() {
+    return _LeadSharesProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LeadSharesProvider && other.id == id;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, id.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LeadSharesRef on AutoDisposeFutureProviderRef<List<LeadShareEntry>> {
+  /// The parameter `id` of this provider.
+  String get id;
+}
+
+class _LeadSharesProviderElement
+    extends AutoDisposeFutureProviderElement<List<LeadShareEntry>>
+    with LeadSharesRef {
+  _LeadSharesProviderElement(super.provider);
+
+  @override
+  String get id => (origin as LeadSharesProvider).id;
+}
+
+String _$employeesForShareHash() => r'71d39fd5ccbf22325e32d268c76b353d499efc3e';
+
+/// Active employees in caller's tenant for the share picker (Story 4.4).
+///
+/// Copied from [employeesForShare].
+@ProviderFor(employeesForShare)
+final employeesForShareProvider =
+    AutoDisposeFutureProvider<List<EmployeeRef>>.internal(
+      employeesForShare,
+      name: r'employeesForShareProvider',
+      debugGetCreateSourceHash:
+          const bool.fromEnvironment('dart.vm.product')
+              ? null
+              : _$employeesForShareHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef EmployeesForShareRef = AutoDisposeFutureProviderRef<List<EmployeeRef>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

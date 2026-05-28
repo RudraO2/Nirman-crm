@@ -111,6 +111,34 @@ class _CardBody extends StatelessWidget {
           ),
         ],
 
+        // ── Shared badge (Story 4.4 — lead shared with caller) ────────
+        if (lead.isShared) ...[
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.navy.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppColors.navy.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.share_rounded, size: 10, color: AppColors.navy),
+                const SizedBox(width: 3),
+                Text(
+                  'Shared',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.navy,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         // ── Stale badge (urgency_score == 50 means 7+ days no action) ────
         if (lead.isStale && !lead.hasPendingOutcome) ...[
           const SizedBox(height: 4),

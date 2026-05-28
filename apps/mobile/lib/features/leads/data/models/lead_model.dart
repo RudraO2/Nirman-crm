@@ -69,6 +69,8 @@ class LeadListItem {
   final String? interestType;
   /// Story 2.8 — populated by get_my_archived_leads; null for active-list rows.
   final DateTime? archivedAt;
+  /// Story 4.4 — true when this lead was shared with the caller (not owned).
+  final bool isShared;
 
   const LeadListItem({
     required this.id,
@@ -90,6 +92,7 @@ class LeadListItem {
     required this.urgencyScore,
     this.interestType,
     this.archivedAt,
+    this.isShared = false,
   });
 
   factory LeadListItem.fromJson(Map<String, dynamic> j) {
@@ -114,6 +117,7 @@ class LeadListItem {
       urgencyScore:      j['urgency_score'] as int,
       interestType:      j['interest_type'] as String?,
       archivedAt:        _dt(j['archived_at'] as String?),
+      isShared:          j['is_shared'] as bool? ?? false,
     );
   }
 
@@ -158,6 +162,7 @@ class LeadDetail extends LeadListItem {
     required super.createdAt,
     required super.urgencyScore,
     super.interestType,
+    super.isShared,
     required this.projectIds,
     this.remarks,
   });
@@ -176,6 +181,7 @@ class LeadDetail extends LeadListItem {
       isIncomplete: base.isIncomplete, pendingOutcomeAt: base.pendingOutcomeAt,
       lastActionAt: base.lastActionAt, createdAt: base.createdAt,
       urgencyScore: base.urgencyScore, interestType: base.interestType,
+      isShared: base.isShared,
       projectIds: pids,
       remarks: j['remarks'] as String?,
     );
@@ -329,6 +335,29 @@ class WhatsAppTemplate {
   }
 }
 
+// ── Story 4.4 — Active share entry (owned-lead detail view) ──────────────────
+
+class LeadShareEntry {
+  final String id;
+  final String recipientUserId;
+  final String recipientUsername;
+  final DateTime grantedAt;
+
+  const LeadShareEntry({
+    required this.id,
+    required this.recipientUserId,
+    required this.recipientUsername,
+    required this.grantedAt,
+  });
+
+  factory LeadShareEntry.fromJson(Map<String, dynamic> j) => LeadShareEntry(
+        id:                j['id'] as String,
+        recipientUserId:   j['recipient_user_id'] as String,
+        recipientUsername: j['recipient_username'] as String? ?? j['recipient_user_id'] as String,
+        grantedAt:         DateTime.parse(j['granted_at'] as String),
+      );
+}
+
 // ── Project reference (lead form project picker) ───────────────────────────
 
 class ProjectRef {
@@ -343,4 +372,18 @@ class ProjectRef {
       name: json['name'] as String,
     );
   }
+}
+
+// ── Story 4.4 — Employee reference for share picker ───────────────────────
+
+class EmployeeRef {
+  final String id;
+  final String username;
+
+  const EmployeeRef({required this.id, required this.username});
+
+  factory EmployeeRef.fromJson(Map<String, dynamic> j) => EmployeeRef(
+        id:       j['id'] as String,
+        username: j['username'] as String,
+      );
 }

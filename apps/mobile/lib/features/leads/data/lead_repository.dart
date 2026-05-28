@@ -296,6 +296,56 @@ class LeadRepository {
         .map((row) => ProjectRef.fromJson(row as Map<String, dynamic>))
         .toList();
   }
+
+  /// Shares a lead with another employee (Story 4.4). Idempotent.
+  Future<void> shareLead(String leadId, String recipientUserId) async {
+    await _supabase.rpc('share_lead', params: {
+      'p_lead_id':            leadId,
+      'p_recipient_user_id':  recipientUserId,
+    });
+  }
+
+  /// Revokes a share (Story 4.4). Idempotent — no-op if share already gone.
+  Future<void> revokeLead(String leadId, String recipientUserId) async {
+    await _supabase.rpc('revoke_share', params: {
+      'p_lead_id':            leadId,
+      'p_recipient_user_id':  recipientUserId,
+    });
+  }
+
+  /// Active share entries for [leadId] with recipient username (Story 4.4).
+  /// Uses PostgREST FK join; tenant RLS ensures only caller's tenant rows.
+  Future<List<LeadShareEntry>> getLeadShares(String leadId) async {
+    final result = await _supabase
+        .from('lead_shares')
+        .select(
+          'id, recipient_user_id, granted_at, '
+          'recipient:users!lead_shares_recipient_user_id_fkey(email_or_username)',
+        )
+        .eq('lead_id', leadId)
+        .order('granted_at');
+
+    return (result as List).map((row) {
+      final r = Map<String, dynamic>.from(row as Map);
+      final recipientObj = r['recipient'] as Map<String, dynamic>?;
+      return LeadShareEntry(
+        id:                r['id'] as String,
+        recipientUserId:   r['recipient_user_id'] as String,
+        recipientUsername: recipientObj?['email_or_username'] as String?
+            ?? r['recipient_user_id'] as String,
+        grantedAt:         DateTime.parse(r['granted_at'] as String),
+      );
+    }).toList();
+  }
+
+  /// Active employees in caller's tenant for the share picker (Story 4.4).
+  /// Caller filters out self client-side using auth.uid().
+  Future<List<EmployeeRef>> listEmployeesForShare() async {
+    final result = await _supabase.rpc('list_employees_for_share');
+    return (result as List)
+        .map((r) => EmployeeRef.fromJson(Map<String, dynamic>.from(r as Map)))
+        .toList();
+  }
 }
 
 @riverpod

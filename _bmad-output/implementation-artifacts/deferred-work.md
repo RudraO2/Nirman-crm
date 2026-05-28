@@ -101,6 +101,14 @@ Not started. ~42% of total scope remains. All four require web admin dashboard (
 - **D2 (security): send-bulk-assignment-notification shares same verify_jwt=false exposure as D2 from 4.1** — same mitigation note applies; harden with caller role check in edge fn before V2.
 - **D3 (ux): keyboard navigation in Manual DnD canvas** — @dnd-kit/core supports accessibility via keyboard sensors; not enabled in current impl. Wire up `KeyboardSensor` + `screenReaderInstructions` before shipping to users with accessibility requirements.
 
+## Deferred from: code review of 4-4-employee-shares-lead (2026-05-28)
+
+- **D1 (ux): generic error message** — `share_lead_sheet._onTap` catch swallows all RPC error codes into "Could not share lead. Try again." Distinct codes (`cannot_share_with_self`, `recipient_not_eligible`) should map to human-readable variants. Schedule as UX polish pass.
+- **D2 (ux): revoke_share timeline payload omits revoker username** — logs only `revoked_by` (UUID), not username. Consistent reads require a JOIN at display time; add `revoked_by_username` to payload if timeline display needs it later.
+- **D3 (product): archived-lead visibility for recipients** — when owner archives (dead/sold/future) a shared lead, recipient silently loses sight of it (get_my_leads and get_my_archived_leads both exclude it). Confirm whether recipients should see archived shared leads; track as product backlog for Epic 4 or 4.5.
+- **D4 (minor): share_lead returns void — no "already shared" signal** — idempotent no-op is silent; UI invalidates providers on every call regardless. If UX needs to distinguish "new share" vs "already shared," change return type to boolean.
+- **D5 (minor): no client-side UUID format validation before RPC call** — malformed leadId caught by server-side Postgres cast error; catch block handles gracefully. Low risk.
+
 ## Deferred from: code review of 4-1-admin-assigns-single-lead-to-employee (2026-05-28)
 
 - **D1 (perf): list_assignable_leads decrypts every row's PII before filtering** — Same class as 2.8/D11. For tenants with >5k leads + a search query, the base CTE decrypts every lead before the ILIKE filter. Optimise via partial indexing on `(tenant_id, status)` + push the search down into a SQL function that scans the index, decrypts only the matching window, then filters. Not blocking for V1 (≤50k leads/org budget).

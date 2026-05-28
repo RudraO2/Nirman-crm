@@ -4,6 +4,7 @@ import '../data/models/lead_model.dart';
 
 part 'lead_providers.g.dart';
 
+
 /// Single lead by ID with PII decrypted + project_ids (Story 2.4).
 /// Returns null if not found / not owned by caller.
 @riverpod
@@ -35,4 +36,17 @@ Future<List<TimelineEntry>> leadTimeline(LeadTimelineRef ref, String id) {
 @riverpod
 Future<List<LeadListItem>> archivedLeads(ArchivedLeadsRef ref, String query) {
   return ref.watch(leadRepositoryProvider).getMyArchivedLeads(query: query);
+}
+
+/// Active share entries for [id] — owned-lead detail view (Story 4.4).
+/// Invalidate after share/revoke to refresh chips.
+@riverpod
+Future<List<LeadShareEntry>> leadShares(LeadSharesRef ref, String id) {
+  return ref.watch(leadRepositoryProvider).getLeadShares(id);
+}
+
+/// Active employees in caller's tenant for the share picker (Story 4.4).
+@riverpod
+Future<List<EmployeeRef>> employeesForShare(EmployeesForShareRef ref) {
+  return ref.watch(leadRepositoryProvider).listEmployeesForShare();
 }

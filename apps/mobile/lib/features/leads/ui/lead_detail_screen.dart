@@ -15,6 +15,7 @@ import '../providers/lead_providers.dart';
 import 'edit_lead_sheet.dart';
 import 'reschedule_visit_sheet.dart';
 import 'schedule_followup_sheet.dart';
+import 'share_lead_sheet.dart';
 import 'whatsapp_sheet.dart';
 
 class LeadDetailScreen extends ConsumerWidget {
@@ -275,8 +276,66 @@ class _LeadDetailView extends ConsumerWidget {
                 },
               ),
             ),
+            // Share button: only for owned leads (not when caller is recipient)
+            if (!lead.isShared) ...[
+              const SizedBox(width: 8),
+              Expanded(
+                child: _ActionButton(
+                  icon: Icons.share_rounded,
+                  label: 'Share',
+                  color: AppColors.navy,
+                  onTap: () async {
+                    final shared = await showShareLeadSheet(context, lead.id);
+                    if (shared == true) {
+                      ref.invalidate(leadSharesProvider(lead.id));
+                    }
+                  },
+                ),
+              ),
+            ],
           ],
         ),
+
+        // ── Shared-with chips (owned leads only) ───────────────────────
+        if (!lead.isShared)
+          Consumer(builder: (context, ref, _) {
+            final sharesAsync = ref.watch(leadSharesProvider(lead.id));
+            return sharesAsync.maybeWhen(
+              data: (shares) {
+                if (shares.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final share in shares)
+                        _ShareChip(
+                          username: share.recipientUsername,
+                          onRevoke: () async {
+                            try {
+                              await ref
+                                  .read(leadRepositoryProvider)
+                                  .revokeLead(lead.id, share.recipientUserId);
+                              ref.invalidate(leadSharesProvider(lead.id));
+                              ref.invalidate(myLeadsProvider);
+                              ref.invalidate(leadTimelineProvider(lead.id));
+                            } catch (_) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Could not revoke share.')),
+                                );
+                              }
+                            }
+                          },
+                        ),
+                    ],
+                  ),
+                );
+              },
+              orElse: () => const SizedBox.shrink(),
+            );
+          }),
 
         const SizedBox(height: 12),
 
@@ -596,6 +655,42 @@ class _DetailRow extends StatelessWidget {
           ),
           Expanded(
             child: Text(value, style: TextStyle(fontSize: 13, color: AppColors.inkPrimary, fontWeight: FontWeight.w500)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Share chip (owned-lead shared-with row) ────────────────────────────────
+
+class _ShareChip extends StatelessWidget {
+  final String username;
+  final VoidCallback onRevoke;
+  const _ShareChip({required this.username, required this.onRevoke});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(10, 4, 6, 4),
+      decoration: BoxDecoration(
+        color: AppColors.navy.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(9999),
+        border: Border.all(color: AppColors.navy.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.share_rounded, size: 12, color: AppColors.navy),
+          const SizedBox(width: 5),
+          Text(
+            username,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.navy),
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: onRevoke,
+            child: Icon(Icons.close_rounded, size: 14, color: AppColors.navy.withValues(alpha: 0.6)),
           ),
         ],
       ),
