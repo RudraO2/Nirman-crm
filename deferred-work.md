@@ -38,3 +38,11 @@
 - **F-3 (ux): No loading skeleton on filter navigation for Funnel page** — filter changes trigger a full server component re-fetch, causing a brief blank. Add `apps/admin/src/app/(app)/funnel/loading.tsx` with a card skeleton (same pattern as deferred for Performance page above).
 
 - **F-4 (accessibility): Filter selects and range buttons lack ARIA labels** — `<select>` elements have no `aria-label`, range toggle buttons have no `aria-pressed` state. Add `aria-label` and `aria-pressed` before any accessibility audit.
+
+## Deferred from: Story 6.1 — Excel Bulk Import (2026-05-28)
+
+- **D-6.1-1 (ux): No "Back" navigation in import wizard** — `import-wizard.tsx` is forward-only. Once on Preview or Assign, user cannot return to Map without restarting the file upload. Fix: add Back button to each step; restore prior state on back navigation (mappings, preview result).
+
+- **D-6.1-2 (security): xlsx@0.18.5 has known vulnerabilities** — `npm audit` reports 2 moderate + 1 high CVE in `xlsx`. Risk is reduced because xlsx runs server-side only (Server Action, never in client bundle). Fix before production: evaluate migration to `exceljs` (actively maintained, no known high CVEs) and swap `parseExcelAction` implementation. API is compatible enough for a drop-in replace.
+
+- **D-6.1-3 (ux): No loading skeleton for /import route** — navigating to `/import` causes a brief blank while the server component fetches `list_employees_for_assignment`. Add `apps/admin/src/app/(app)/import/loading.tsx` with a card skeleton (same pattern as deferred for Performance + Funnel pages).
