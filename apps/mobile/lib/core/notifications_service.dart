@@ -63,9 +63,13 @@ class NotificationsService {
   }
 
   static void _handleMessageTap(RemoteMessage message) {
+    // A specific lead wins; otherwise honour an explicit route (e.g. streak-at-risk → /home).
     final leadId = message.data['lead_id'] as String?;
+    final route = message.data['route'] as String?;
     if (leadId != null && leadId.isNotEmpty) {
       appRouter.go('/lead/$leadId');
+    } else if (route != null && route.isNotEmpty) {
+      appRouter.go(route);
     }
   }
 
