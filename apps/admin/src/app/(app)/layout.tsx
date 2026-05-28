@@ -49,6 +49,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Funnel
           </Link>
           <Link
+            href="/activity"
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            Activity
+          </Link>
+          <Link
             href="/projects"
             className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >
