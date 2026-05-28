@@ -85,7 +85,7 @@ export async function verifyJwtAndScope(
   if (!tenantId) {
     return {
       response: errorResponse(
-        "forbidden_role",
+        "forbidden_tenant",
         "Tenant claim (app_metadata.tenant_id) missing from JWT",
       ),
     };
@@ -93,7 +93,7 @@ export async function verifyJwtAndScope(
   if (!UUID_RE.test(tenantId)) {
     return {
       response: errorResponse(
-        "forbidden_role",
+        "forbidden_tenant",
         "Tenant claim (app_metadata.tenant_id) is not a valid UUID",
       ),
     };

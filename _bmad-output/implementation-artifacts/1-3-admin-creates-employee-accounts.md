@@ -7,7 +7,7 @@ story_id: 1.3
 
 # Story 1.3: Admin creates Employee accounts with one-time password modal
 
-Status: review
+Status: done
 
 ## Story
 
@@ -633,6 +633,61 @@ No `<DialogTrigger>` needed when managing open state externally.
 - `functions/_shared/auth.ts` — `verifyJwtAndScope()` source of truth
 - `bootstrap-admin/index.ts` — bcrypt + rollback pattern to reuse
 - Migration 0001 — `public.users` schema (no changes needed here)
+
+## Review Findings
+
+### Decision-Needed
+
+- [x] [Review][Decision] AC-6 conflated error codes — `forbidden_role` (403) returned for both "caller is not admin" AND "JWT has missing/invalid tenant_id claim". A client cannot distinguish a role violation from a broken/misconfigured token. AC-6 specifies non-admin → 403 and missing JWT → 401 as distinct, inspectable outcomes; the current implementation adds a third case (malformed token) that silently maps to 403/forbidden_role. Decision: introduce a distinct error code (e.g. `forbidden_tenant`) or keep single 403?
+
+### Patch
+
+- [x] [Review][Patch] user_events RLS policy uses raw UUID cast instead of auth_tenant_id() helper [`supabase/migrations/0004_create_user_events.sql:42-43`] — `((auth.jwt() -> 'app_metadata') ->> 'tenant_id')::uuid` throws a Postgres cast exception on malformed claim; `public.auth_tenant_id()` returns NULL (fail-closed). New migration 0005 needed to DROP and recreate the policy.
+- [x] [Review][Patch] AC-5 payload missing admin_name [`supabase/functions/create-employee/index.ts` user_events insert] — `payload: {}` sent; spec requires `payload: { admin_name: string }`. Fetch actor's `email_or_username` from `public.users` before insert.
+- [x] [Review][Patch] AC-1 password composition not enforced [`supabase/functions/create-employee/index.ts` generateSecurePassword] — no guarantee output contains ≥1 uppercase, ≥1 lowercase, ≥1 digit, ≥1 symbol. Low probability but possible; add composition check/retry loop.
+- [x] [Review][Patch] AC-3 Escape key dismissal not prevented [`apps/admin/src/components/auth/generated-password-modal.tsx:22`] — `onPointerDownOutside` prevents outside-click dismiss but Radix Dialog still closes on Escape by default. Add `onEscapeKeyDown={(e) => e.preventDefault()}` to DialogContent.
+- [x] [Review][Patch] Whitespace-only username passes Zod validation [`supabase/functions/create-employee/index.ts:27-28`] — `z.string().min(3)` passes for `"   "` (3 spaces); `.toLowerCase()` on line 50 does not trim first. Stored `email_or_username` becomes `"   "`. Fix: add `.trim()` to schema or validate after trim.
+- [x] [Review][Patch] user_events INSERT granted to authenticated role — any employee JWT can directly insert fabricated audit events as long as tenant_id matches RLS check. Event inserts should be service_role-only. New migration: REVOKE INSERT ON user_events FROM authenticated.
+- [x] [Review][Patch] deleteUser rollback result not checked [`supabase/functions/create-employee/index.ts:114,278`] — `await adminClient.auth.admin.deleteUser(authUserId)` result is discarded. If deletion fails, orphaned auth.users row persists; subsequent creation attempts hit "already registered" with no corresponding public.users row. Add result check + structured warning log.
+- [x] [Review][Patch] Team page swallows Supabase query errors [`apps/admin/src/app/(app)/team/page.tsx:14-18`] — `error` not destructured from query; on failure, page renders empty "No employees yet" state indistinguishable from genuinely empty team.
+- [x] [Review][Patch] Password generation fallback has modulo bias [`supabase/functions/create-employee/index.ts:18-24`] — primary rejection-sampling loop is correct; fallback `extra[0] % CHARSET.length` has bias (256 % CHARSET.length ≠ 0). Fallback path is astronomically unlikely but biased when reached. Fix: remove fallback; extend primary byte buffer or throw if sampling exhausted.
+
+### Defer
+
+- [x] [Review][Defer] Race condition concurrent duplicate creation [`supabase/functions/create-employee/index.ts:61-85`] — deferred, pre-existing; DB unique constraints handle worst-case duplicate; full serialization is future work
+- [x] [Review][Defer] Password irrecoverably lost if tab closes after response but before React state updates [`apps/admin/src/components/auth/new-employee-form.tsx:27-33`] — deferred, inherent to plaintext-once design; admin reset path available in story 1.5
+- [x] [Review][Defer] actor_id FK relies on story 1.2 bootstrap UUID alignment [`supabase/migrations/0004_create_user_events.sql:23`] — deferred, pre-existing; story 1.2 guarantees matching UUIDs; best-effort insert absorbs failure
+- [x] [Review][Defer] No per-tenant employee count limit — deferred, product decision; future story
+- [x] [Review][Defer] Middleware no 403 redirect for authenticated employees (redirects to /login instead) — deferred, UX improvement; future story
+- [x] [Review][Defer] Username lowercase in Edge Function but not displayed in UI pre-submit — deferred, cosmetic UX; future story
+- [x] [Review][Defer] No CSP/X-Frame-Options headers in middleware — deferred, security hardening epic; separate story
+- [x] [Review][Defer] No CSRF protection on Edge Function — deferred, Supabase CORS handles primary risk; deeper CSRF hardening deferred
+- [x] [Review][Defer] Tenant DB existence not validated against tenants table — deferred, JWT claim validity is sufficient guard; explicit DB check deferred
+
+## Review Findings (Round 2)
+
+### Decision-Needed
+
+- [x] [Review][Decision] AC-5 audit insert: mandatory vs best-effort — spec says "records account_created event" (mandatory phrasing). Current impl is best-effort: if the insert fails, HTTP 201 is still returned and no audit trail exists. Decision: make user_events insert block the response (fail 500 on insert failure) or keep best-effort?
+- [x] [Review][Decision] Unicode username restriction — `.toLowerCase()` in JS and Postgres `lower()` diverge for non-ASCII characters (e.g. Turkish dotless-i). Two usernames that look identical can collide or not collide depending on which layer normalises. Decision: restrict username to printable ASCII (`/^[\x20-\x7E]+$/`) or keep permissive (non-ASCII allowed but with known edge case)?
+
+### Patch
+
+- [x] [Review][Patch] Fisher-Yates shuffle uses biased modulo index [`supabase/functions/create-employee/index.ts:39-43`] — `j = r % (i + 1)` where `i+1 ∉ {1,2,4,8,…}` introduces modulo bias on shuffle position. `pickUnbiased` rejection-sampling was applied to character selection but not to the shuffle step. Fix: apply rejection sampling to draw shuffle index.
+- [x] [Review][Patch] user_events RLS policy still `FOR ALL` after INSERT revoked [`supabase/migrations/0005_fix_user_events_rls_and_grants.sql:8-12`] — REVOKE removed INSERT privilege from `authenticated` but policy is `FOR ALL TO authenticated`, which includes INSERT/UPDATE/DELETE in its scope. Only SELECT is now exercisable by `authenticated`; `FOR ALL` is a misleading footgun for future developers. New migration needed: change policy to `FOR SELECT`.
+- [x] [Review][Patch] auth_user_delete_failed log missing trigger context [`supabase/functions/create-employee/index.ts:112-125,136-152`] — both rollback paths emit identical `event: "auth_user_delete_failed"` with no field distinguishing bcrypt failure vs profile insert failure. Add `"trigger": "bcrypt_failure"` / `"trigger": "profile_insert_failure"` to log payload.
+- [x] [Review][Patch] onInteractOutside not blocked on modal — only `onPointerDownOutside` and `onEscapeKeyDown` are prevented; `onOpenChange(false)` can still be triggered by Radix focus-trap escape or programmatic parent trigger [`apps/admin/src/components/auth/generated-password-modal.tsx:21-22`]. Fix: also add `onInteractOutside={(e) => e.preventDefault()}` to DialogContent.
+- [x] [Review][Patch] Actor UUID in audit payload on lookup failure [`supabase/functions/create-employee/index.ts:168`] — `actorData?.email_or_username ?? actorId` falls back to raw UUID when actor row not found. UUID is an internal identifier that shouldn't appear as a display name in audit records. Fix: fallback to `"unknown"` instead of `actorId`.
+
+### Defer
+
+- [x] [Review][Defer] AC-7 unstable error string matching for auth.users duplicate — `authErr?.message?.toLowerCase()` checks for `"already registered"` etc.; these are internal Supabase GoTrue strings with no stability guarantee. Pre-existing code, not introduced by patches; deferred.
+- [x] [Review][Defer] Orphaned auth user no alerting path — when both createUser succeeds and deleteUser fails, no alert or dead-letter mechanism exists. Already deferred from round 1.
+- [x] [Review][Defer] Team page error state has no retry mechanism — static error message with no reload link or retry button. UX improvement; future story.
+- [x] [Review][Defer] No copy-to-clipboard button on password modal — `select-all` CSS insufficient on iOS Safari and some enterprise environments. UX improvement; future story.
+- [x] [Review][Defer] Username lowercasing not echoed in success response — admin submits `Alice`, response returns only `user_id`; no confirmation of stored name `alice`. UX; future story.
+- [x] [Review][Defer] Unicode normalisation divergence (JS vs Postgres lower()) — TC: Turkish dotless-i and similar. Deferred pending D2 decision above.
+- [x] [Review][Defer] REVOKE INSERT comment misleading — comment says "employees blocked" but also blocks admins; only Edge Function service_role can insert. Comment clarification; future migration.
 
 ## Dev Agent Record
 

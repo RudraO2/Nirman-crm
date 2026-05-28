@@ -12,6 +12,7 @@ export type ErrorCode =
   | "unauthorised_platform"
   | "account_locked"
   | "forbidden_role"
+  | "forbidden_tenant"
   | "template_limit_reached"
   | "user_already_exists"
   | "validation_error"
@@ -37,6 +38,7 @@ export const HTTP_STATUS_FOR_CODE: Record<ErrorCode, number> = {
   unauthorised_platform: 403,
   account_locked: 429,
   forbidden_role: 403,
+  forbidden_tenant: 403,
   template_limit_reached: 400,
   user_already_exists: 409,
   validation_error: 400,

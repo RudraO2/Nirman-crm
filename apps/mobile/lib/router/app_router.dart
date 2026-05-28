@@ -5,9 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/auth/ui/login_screen.dart';
 import '../features/auth/ui/password_change_screen.dart';
-import '../features/home/ui/home_placeholder_screen.dart';
-import '../features/settings/ui/settings_screen.dart';
 import '../features/auth/utils/auth_validators.dart';
+import '../features/home/ui/home_screen.dart';
+import '../features/leads/ui/filtered_leads_screen.dart';
+import '../features/leads/ui/followups_screen.dart';
+import '../features/leads/ui/lead_detail_screen.dart';
+import '../features/settings/ui/settings_screen.dart';
 
 const _storage = FlutterSecureStorage();
 
@@ -64,7 +67,7 @@ final appRouter = GoRouter(
   },
   routes: [
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-    GoRoute(path: '/home', builder: (_, __) => const HomePlaceholderScreen()),
+    GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
     GoRoute(
       path: '/password-change',
       builder: (_, state) {
@@ -74,6 +77,22 @@ final appRouter = GoRouter(
         return PasswordChangeScreen(isForced: isForced);
       },
     ),
+    GoRoute(
+      path: '/lead/:id',
+      builder: (_, state) => LeadDetailScreen(
+        leadId: state.pathParameters['id']!,
+      ),
+    ),
     GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+    GoRoute(
+      path: '/followups',
+      builder: (_, __) => const FollowupsScreen(),
+    ),
+    GoRoute(
+      path: '/leads/filtered',
+      builder: (_, state) => FilteredLeadsScreen(
+        filter: state.extra as LeadFilter,
+      ),
+    ),
   ],
 );
