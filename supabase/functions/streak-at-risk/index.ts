@@ -38,17 +38,13 @@ Deno.serve(async (req) => {
       token: string;
     };
 
-    const ok = await sendFcmNotification({
-      token: row.token,
-      title: "Keep your streak alive",
-      body: `Your ${row.streak_days}-day streak is at risk. Log a follow-up to keep it going.`,
-      data: { type: "streak_at_risk", route: "/home" },
-    });
-
-    if (ok) {
-      sent++;
-      // Dedup record — one per employee per local day.
-      await supabase.from("domain_events").insert({
+    // Claim the dedup slot FIRST — partial unique index on
+    // (payload->>'user_id', payload->>'local_date') WHERE type='streak_at_risk'
+    // guarantees only one push per employee per local day even under concurrent ticks.
+    // If another tick already claimed it, skip the FCM call entirely.
+    const { error: dedupErr } = await supabase
+      .from("domain_events")
+      .insert({
         tenant_id: row.tenant_id,
         event_type: "notification_sent",
         payload: {
@@ -59,7 +55,27 @@ Deno.serve(async (req) => {
         },
         occurred_at: new Date().toISOString(),
       });
+
+    if (dedupErr) {
+      // Postgres unique-violation = already notified today → not a real failure, skip.
+      if (dedupErr.code !== "23505") {
+        // Other DB errors: log and skip this row to avoid re-sending without a dedup row.
+        console.error(`streak-at-risk dedup insert failed for ${row.user_id}: ${dedupErr.message}`);
+      }
+      continue;
+    }
+
+    const ok = await sendFcmNotification({
+      token: row.token,
+      title: "Keep your streak alive",
+      body: `Your ${row.streak_days}-day streak is at risk. Log a follow-up to keep it going.`,
+      data: { type: "streak_at_risk", route: "/home" },
+    });
+
+    if (ok) {
+      sent++;
     } else {
+      // FCM 404 / invalid token → prune; the dedup row stays so we don't retry today.
       await supabase.from("device_tokens").delete().eq("token", row.token);
     }
   }

@@ -88,7 +88,9 @@ class _StatsContent extends StatelessWidget {
   }
 
   // Shows "Updated …" when the snapshot is not brand-new (i.e. cached) (AC-6).
+  // Epoch sentinel (0) means "no real timestamp" — hide the subtitle.
   static String? _subtitle(DateTime fetchedAt) {
+    if (fetchedAt.millisecondsSinceEpoch == 0) return null;
     final age = DateTime.now().difference(fetchedAt);
     if (age.inSeconds < 30) return null; // fresh fetch — no subtitle
     if (age.inMinutes < 1) return 'Updated just now';

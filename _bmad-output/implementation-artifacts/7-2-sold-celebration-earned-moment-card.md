@@ -3,7 +3,7 @@ baseline_commit: 24969f2
 ---
 # Story 7.2: Sold Celebration animation and earned-moment card
 
-Status: review
+Status: done
 
 ## Story
 
@@ -45,6 +45,14 @@ so that the moment feels significant and earned, not infantilizing.
 - [x] **Task 5 — Tests**
   - [x] `sold_celebration_test.dart`: model parse, ordinals, personal-record priority, empty default.
   - [~] Overlay widget test SKIPPED — confetti `ConfettiController` ticker + `Future.delayed` phase/auto-dismiss timers make `pumpAndSettle` hang and leave pending timers. Overlay is presentational; logic (model + RPC) is unit-tested + live-verified. Visual confirmation is an on-device check.
+
+### Review Findings (2026-05-28)
+
+- [x] [Review][Patch] **P1** sold-celebrate-calc lead select missing `tenant_id` check; `error` from `.maybeSingle()` ignored [`supabase/functions/sold-celebrate-calc/index.ts` lead lookup block]
+- [x] [Review][Patch] **P2** Sold celebration can double-fire — `wasSold` computed off stale `widget.lead`, `setState(_loading=true)` runs after [`apps/mobile/lib/features/leads/ui/pending_outcome_sheet.dart:_submit`, `edit_lead_sheet.dart:_save`]
+- [x] [Review][Patch] **P5** `is_fastest_quarter` always true on first sale of quarter — self-inclusion in min + `<=` [`supabase/migrations/0031_get_sold_celebration.sql` v_min_quarter calc]
+- [x] [Review][Patch] **P8** Overlay 4.5s timer can pop wrong route after manual dismiss; showGeneralDialog uses sheet context [`apps/mobile/lib/features/motivation/ui/sold_celebration_overlay.dart`]
+- [x] [Review][Defer] **D8** `days_to_close=0` reads "0 days to close" on same-day close [`sold_celebration_overlay.dart` _stat] — deferred, cosmetic
 
 ## Dev Notes
 

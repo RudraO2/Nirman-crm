@@ -5,12 +5,17 @@ class MonthlyBest {
   final int lastMonthSold;
   final int allTimeBest;
   final int dayOfMonth;
+  /// Tenant-tz YYYY-MM (e.g. "2026-05"). Use this — NOT device-local time — to
+  /// key per-month dismissal state so the banner doesn't reappear across the
+  /// month boundary in a different device tz.
+  final String monthKey;
 
   const MonthlyBest({
     required this.thisMonthSold,
     required this.lastMonthSold,
     required this.allTimeBest,
     required this.dayOfMonth,
+    required this.monthKey,
   });
 
   static const empty = MonthlyBest(
@@ -18,6 +23,7 @@ class MonthlyBest {
     lastMonthSold: 0,
     allTimeBest: 0,
     dayOfMonth: 0,
+    monthKey: '',
   );
 
   /// "Previous month" card shows only in the first 7 days of the month (AC-1/2).
@@ -31,6 +37,7 @@ class MonthlyBest {
         lastMonthSold: _asInt(j['last_month_sold']),
         allTimeBest: _asInt(j['all_time_best']),
         dayOfMonth: _asInt(j['day_of_month']),
+        monthKey: (j['month_key'] as String?) ?? '',
       );
 
   static int _asInt(dynamic v) {

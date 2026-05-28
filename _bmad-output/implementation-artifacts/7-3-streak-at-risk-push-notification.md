@@ -3,7 +3,7 @@ baseline_commit: 1818e61
 ---
 # Story 7.3: Streak-at-Risk push notification at 6 PM
 
-Status: review
+Status: done
 
 ## Story
 
@@ -32,6 +32,12 @@ so that I do not lose my streak through forgetfulness.
   - [x] Ensure a tapped `streak_at_risk` notification opens the lead list (`/home`). Check `NotificationsService` tap handling routes on `data.route`/type; add minimal handling if missing. (Home IS the urgency-sorted list.)
 - [x] **Task 4 — Verify**
   - [x] SQL: temporarily seed a 3-day streak (or assert the fn runs + returns 0 off-hours), confirm dedup excludes a second run. Document verification; restore any seeded rows.
+
+### Review Findings (2026-05-28)
+
+- [x] [Review][Patch] **P4** Dedup race: no unique index on `(payload→user_id, payload→local_date)`; insert happens AFTER FCM; error result not checked → second cron tick could re-send on slow FCM / failed insert [`supabase/migrations/0032_streak_at_risk.sql`, `supabase/functions/streak-at-risk/index.ts`]
+- [x] [Review][Defer] **D2** `verify_jwt=false` makes edge fn publicly invokable (FCM/RPC flood risk) [`supabase/functions/streak-at-risk/index.ts`] — deferred, all cron fns share pattern per CLAUDE.md; broader security-hardening epic
+- [x] [Review][Defer] **D3** `device_tokens` join not gated by tenant on streak fan-out [`0032_streak_at_risk.sql` JOIN] — deferred, V1 single-tenant
 
 ## Dev Notes
 

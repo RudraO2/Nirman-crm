@@ -29,12 +29,16 @@ class _ArchivedScreenState extends ConsumerState<ArchivedScreen> {
   Timer? _debounce;
   String _query = '';
 
-  // Paginated list managed locally; the family provider is keyed on query only
-  // and used to refresh on restore (via invalidate).
+  // Paginated list managed locally. The family provider is intentionally NOT
+  // watched here — the screen owns the page state — but we still invalidate it
+  // on restore so other consumers (if any) re-fetch.
   final List<LeadListItem> _leads = [];
   bool _loading = false;
   bool _hasMore = true;
   String? _error;
+  // P13: request-id token. _fetch reads the token at start and bails on apply
+  // if a newer fetch has begun in the meantime, so stale results never overwrite fresh.
+  int _fetchToken = 0;
 
   @override
   void initState() {
@@ -70,6 +74,7 @@ class _ArchivedScreenState extends ConsumerState<ArchivedScreen> {
 
   Future<void> _fetch({bool reset = false}) async {
     if (_loading) return;
+    final token = ++_fetchToken; // claim this fetch
     setState(() {
       _loading = true;
       if (reset) {
@@ -84,14 +89,14 @@ class _ArchivedScreenState extends ConsumerState<ArchivedScreen> {
             limit: _pageSize,
             offset: _leads.length,
           );
-      if (!mounted) return;
+      if (!mounted || token != _fetchToken) return; // a newer fetch superseded us
       setState(() {
         _leads.addAll(page);
         _hasMore = page.length == _pageSize;
         _loading = false;
       });
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted || token != _fetchToken) return;
       setState(() {
         _error = e.toString().replaceFirst('Exception: ', '');
         _loading = false;
@@ -112,17 +117,18 @@ class _ArchivedScreenState extends ConsumerState<ArchivedScreen> {
     try {
       await ref.read(leadRepositoryProvider).restoreLead(lead.id, picked);
       ref.invalidate(myLeadsProvider);
-      ref.invalidate(archivedLeadsProvider);
       ref.invalidate(myMotivationStatsProvider);
       ref.invalidate(myMonthlyBestProvider);
       if (!mounted) return;
-      // Remove from local list immediately for snappy UX.
-      setState(() => _leads.removeWhere((l) => l.id == lead.id));
+      // Refetch the page rather than mutating _leads locally. Optimistic removal
+      // + offset-based pagination could silently skip a lead from the next page
+      // because `offset = _leads.length` shifts after removal.
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Restored to ${_capitalize(picked)}.'),
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.surfaceRaised,
       ));
+      await _fetch(reset: true);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

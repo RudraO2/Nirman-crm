@@ -35,13 +35,17 @@ Deno.serve(async (req) => {
     { auth: { persistSession: false } },
   );
 
-  // Authorize: caller owns this lead and it is sold.
-  const { data: lead } = await admin
+  // Authorize: caller owns this lead, lead is in caller's tenant, and it is sold.
+  const { data: lead, error: leadErr } = await admin
     .from("leads")
-    .select("id, assigned_to_user_id, status")
+    .select("id, assigned_to_user_id, status, tenant_id")
     .eq("id", leadId)
+    .eq("tenant_id", tenantId)
     .maybeSingle();
 
+  if (leadErr) {
+    return errorResponse("internal_error", `Lead lookup failed: ${leadErr.message}`);
+  }
   if (!lead || lead.assigned_to_user_id !== actorId) {
     return errorResponse("not_found", "Lead not found in your queue");
   }

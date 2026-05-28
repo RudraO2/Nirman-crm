@@ -58,6 +58,8 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
   }
 
   Future<void> _submit() async {
+    // Re-entry guard — set _loading FIRST so a double-tap can't fire twice.
+    if (_loading) return;
     setState(() => _loading = true);
     final wasSold = _selectedStatus == 'sold' && widget.lead.status != 'sold';
     try {

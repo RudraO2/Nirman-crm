@@ -3,7 +3,7 @@ baseline_commit: 3b8df2f
 ---
 # Story 7.4: Monthly Personal Best banner
 
-Status: review
+Status: done
 
 ## Story
 
@@ -34,6 +34,12 @@ so that I have a personal reference point and earn a moment when I outperform my
   - [x] Place both below `PersonalStatsCard` in `home_screen` `_LeadsView`. No employee comparison anywhere (AC-4).
 - [x] **Task 4 — Tests**
   - [x] `monthly_best_test.dart`: model parse; `showPreviousMonthCard` boundary (day 7 true, 8 false); `isNewBest` (this>best, this==best false, this=0 false).
+
+### Review Findings (2026-05-28)
+
+- [x] [Review][Patch] **P7** Dismissal key uses device tz not tenant tz → banner can reappear across month boundary or after device-tz change [`apps/mobile/lib/features/motivation/ui/monthly_best.dart` `_currentMonthKey`, `supabase/migrations/0034_get_monthly_best.sql`]
+- [x] [Review][Patch] **P12** MonthlyBestSection initState — dismissed banner flashes for 1 frame before secure-storage read completes [`apps/mobile/lib/features/motivation/ui/monthly_best.dart` initState]
+- [x] [Review][Defer] **D7** Ties don't trigger new-best (`>` not `>=`) [`monthly_best.dart` isNewBest] — deferred, matches spec wording "beats"
 
 ## Dev Notes
 

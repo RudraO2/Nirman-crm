@@ -10,11 +10,6 @@ import '../../../core/theme/app_theme.dart';
 import '../data/models/monthly_best.dart';
 import '../providers/motivation_providers.dart';
 
-String _currentMonthKey() {
-  final n = DateTime.now();
-  return '${n.year}-${n.month.toString().padLeft(2, '0')}';
-}
-
 /// Renders the previous-month card and/or the new-best banner based on the RPC.
 class MonthlyBestSection extends ConsumerStatefulWidget {
   const MonthlyBestSection({super.key});
@@ -26,7 +21,8 @@ class MonthlyBestSection extends ConsumerStatefulWidget {
 class _MonthlyBestSectionState extends ConsumerState<MonthlyBestSection> {
   static const _storage = FlutterSecureStorage();
   static const _dismissKey = 'monthly_best_dismissed';
-  bool _dismissedThisMonth = false;
+  String? _dismissedKey; // null until secure-storage read completes
+  bool _loaded = false;
 
   @override
   void initState() {
@@ -36,25 +32,37 @@ class _MonthlyBestSectionState extends ConsumerState<MonthlyBestSection> {
 
   Future<void> _loadDismissed() async {
     final v = await _storage.read(key: _dismissKey);
-    if (mounted && v == _currentMonthKey()) {
-      setState(() => _dismissedThisMonth = true);
-    }
+    if (!mounted) return;
+    setState(() {
+      _dismissedKey = v;
+      _loaded = true;
+    });
   }
 
-  Future<void> _dismiss() async {
-    await _storage.write(key: _dismissKey, value: _currentMonthKey());
-    if (mounted) setState(() => _dismissedThisMonth = true);
+  Future<void> _dismiss(String monthKey) async {
+    if (monthKey.isEmpty) return;
+    await _storage.write(key: _dismissKey, value: monthKey);
+    if (mounted) setState(() => _dismissedKey = monthKey);
   }
 
   @override
   Widget build(BuildContext context) {
+    // Avoid one-frame banner flicker: render nothing until dismiss state is loaded.
+    if (!_loaded) return const SizedBox.shrink();
     final async = ref.watch(myMonthlyBestProvider);
     return async.maybeWhen(
       orElse: () => const SizedBox.shrink(),
       data: (mb) {
+        // Use tenant-tz monthKey from the RPC (not device-local) so the dismissal
+        // boundary matches the user's billing month.
+        final dismissedThisMonth =
+            mb.monthKey.isNotEmpty && _dismissedKey == mb.monthKey;
         final children = <Widget>[];
-        if (mb.isNewBest && !_dismissedThisMonth) {
-          children.add(_NewBestBanner(count: mb.thisMonthSold, onDismiss: _dismiss));
+        if (mb.isNewBest && !dismissedThisMonth) {
+          children.add(_NewBestBanner(
+            count: mb.thisMonthSold,
+            onDismiss: () => _dismiss(mb.monthKey),
+          ));
         }
         if (mb.showPreviousMonthCard) {
           children.add(_PreviousMonthCard(lastMonth: mb.lastMonthSold, best: mb.allTimeBest));

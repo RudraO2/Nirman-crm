@@ -3,7 +3,7 @@ baseline_commit: 4def5be
 ---
 # Story 2.8: Employee views and searches archived leads with restore
 
-Status: review
+Status: done
 
 > **Provenance**: not in epics.md; created 2026-05-28 to close the **FR-16** view/search/restore gap left by Story 2.7. Story 2.7 implemented the *move-to-archived* logic (`is_archived` derived from status); the Archived **view** itself was never built on mobile, so an employee who marks a Lead Sold/Dead/Future cannot find or restore it. This story closes the loop on Epic 2's lifecycle by giving employees a way to see, search, and restore archived leads. Reopens `epic-2` to `in-progress` until 2.8 ships.
 
@@ -68,6 +68,18 @@ so that I can recover a wrongly archived lead, look up past closes, and never lo
   - [x] Model test (`archived_model_test.dart`): `archived_at` parses to `DateTime`; absent and explicit-null both yield `archivedAt == null` (backwards compat with `get_my_leads`).
   - [~] Widget tests for debounce + restore invalidation SKIPPED — debounce uses `Timer`, restore uses `showModalBottomSheet`; both are flaky in unit harness like the 7.2 overlay. Logic is covered by the live probe + the existing repository contract (`restoreLead` already in tests via 2.7 mark-dead-undo path).
   - [~] Status-badge styling deferred — `LeadCard` already renders status visually; the spec's "Dead red / Sold green / Future amber" badge would be a small refinement, tracked as a future polish item, not blocking AC-3.
+
+### Review Findings (2026-05-28)
+
+- [x] [Review][Patch] **P3** ILIKE wildcard injection — `v_q` not escaped; `%` returns all rows [`supabase/migrations/0035_get_my_archived_leads.sql` v_q concat]
+- [x] [Review][Patch] **P6** Restore optimistic-removal + pagination offset desync → next page can silently skip a row; "already restored" retry → `not_found` error confusing UX [`apps/mobile/lib/features/leads/ui/archived_screen.dart` _restore + restore_lead idempotency]
+- [x] [Review][Patch] **P9** `restore_lead` UPDATE not re-gated by tenant/owner (SELECT-UPDATE race) [`supabase/migrations/0036_fix_restore_lead_generic_from.sql` UPDATE block]
+- [x] [Review][Patch] **P11** Full-table PII decrypt before filter (50k perf risk); returns full phone vs spec last-4 [`0035_get_my_archived_leads.sql`]
+- [x] [Review][Patch] **P13** `_fetch` race: concurrent fetch + setState clear can drop in-flight results [`archived_screen.dart` _fetch + _onQueryChanged]
+- [x] [Review][Patch] **P14** Dead `ref.invalidate(archivedLeadsProvider)` — screen never watches the family (local list only) [`archived_screen.dart` _restore]
+- [x] [Review][Defer] **D5** AC-3 colored status badge deferred (`[~]`) [`archived_screen.dart` _ArchivedTile] — deferred, dev marked explicitly; LeadCard renders status text
+- [x] [Review][Defer] **D6** AC-9 50k-archive load unverified [`0035_get_my_archived_leads.sql`] — deferred, no load-test infra
+- [x] [Review][Defer] **D10** Orphan archived leads (no `status_changed` event) sort last [`0035_get_my_archived_leads.sql` ORDER BY] — deferred, legacy data backfill
 
 ## Dev Notes
 

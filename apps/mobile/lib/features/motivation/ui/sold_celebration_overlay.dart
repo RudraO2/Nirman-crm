@@ -26,6 +26,9 @@ Future<void> showSoldCelebration(
     barrierColor: Colors.black.withValues(alpha: 0.82),
     barrierLabel: 'Sold celebration',
     transitionDuration: const Duration(milliseconds: 180),
+    // Use rootNavigator so the dialog isn't tied to the bottom-sheet's Navigator,
+    // which can be popped before the auto-dismiss timer fires.
+    useRootNavigator: true,
     pageBuilder: (_, __, ___) => _CelebrationView(
       leadName: leadName,
       statsFuture: statsFuture,
@@ -45,6 +48,7 @@ class _CelebrationView extends StatefulWidget {
 class _CelebrationViewState extends State<_CelebrationView> {
   late final ConfettiController _confetti;
   bool _showCard = false;
+  bool _dismissed = false; // tracks whether the dialog has already been popped
   SoldCelebration _stats = SoldCelebration.empty;
 
   @override
@@ -56,12 +60,18 @@ class _CelebrationViewState extends State<_CelebrationView> {
     });
     // Phase 1 → Phase 2 after the burst.
     Future.delayed(const Duration(milliseconds: 1500), () {
-      if (mounted) setState(() => _showCard = true);
+      if (mounted && !_dismissed) setState(() => _showCard = true);
     });
     // Auto-dismiss 3s after the card appears (total ~4.5s) unless already closed.
     Future.delayed(const Duration(milliseconds: 4500), () {
-      if (mounted) Navigator.of(context).maybePop();
+      if (mounted && !_dismissed) _dismiss();
     });
+  }
+
+  void _dismiss() {
+    if (_dismissed) return;
+    _dismissed = true;
+    if (mounted) Navigator.of(context, rootNavigator: true).maybePop();
   }
 
   @override
@@ -74,7 +84,7 @@ class _CelebrationViewState extends State<_CelebrationView> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if (_showCard) Navigator.of(context).maybePop();
+        if (_showCard) _dismiss();
       },
       child: Stack(
         alignment: Alignment.center,

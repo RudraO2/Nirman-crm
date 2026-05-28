@@ -3,7 +3,7 @@ baseline_commit: e37425a525a3c25fa9ea037ba54412b02c23b0f9
 ---
 # Story 7.1: Personal Performance Stats card on Employee home
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -51,6 +51,13 @@ so that I can see my own progress without comparing to others.
   - [x] `motivation_stats_test.dart` — fromJson (num + String + null conversion_rate), int coercion, cache round-trip, zero().
   - [x] `personal_stats_card_test.dart` — renders three labelled values; fresh vs cached "Updated" subtitle.
   - [x] Streak logic verified via inline SQL replication against seeded data + live RPC call (documented in Dev Agent Record).
+
+### Review Findings (2026-05-28)
+
+- [x] [Review][Patch] **P10** MotivationStats fromCacheJson masks corrupt cache as fresh via DateTime.now() fallback; "Updated 20479d ago" possible on zero-row epoch path [`apps/mobile/lib/features/motivation/data/models/motivation_stats.dart`, `apps/mobile/lib/features/motivation/ui/personal_stats_card.dart` _subtitle]
+- [x] [Review][Defer] **D1** Read RPC missing `tenant_id = auth_tenant_id()` filter (consistency with restore_lead) [`supabase/migrations/0030_get_my_motivation_stats.sql`] — deferred, safe under single-tenant V1
+- [x] [Review][Defer] **D4** AC-1 label drift — tile labels "Day streak" / "Conversion" vs spec "Follow-up streak: N days" / "Conversion rate: X.X%" [`personal_stats_card.dart`] — deferred, product call on tile vs single-line layout
+- [x] [Review][Defer] **D9** Error swallowing in repository helpers obscures auth/RLS denials [`motivation_repository.dart`] — deferred, broader logging-hardening pass
 
 ## Dev Notes
 

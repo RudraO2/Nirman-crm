@@ -1,5 +1,18 @@
 # Deferred Work
 
+## Deferred from: code review of stories 7-1, 7-2, 7-3, 7-4, 2-8 (2026-05-28)
+
+- **Read RPCs missing tenant gate** (D1, all motivation/archive RPCs) — 0030/0031/0034/0035 filter only by `assigned_to_user_id = auth.uid()`, not `tenant_id = auth_tenant_id()`. Safe under single-tenant V1 (`users.id` globally unique); tighten when multi-tenant lands so the pattern matches `restore_lead`.
+- **`streak-at-risk` edge fn publicly invokable** (D2, 7.3) — `verify_jwt=false` lets anyone POST and trigger an FCM+RPC pass. All Nirman cron-driven edge fns share this pattern per CLAUDE.md; addressing requires a shared-secret header at the gateway across all cron fns — broader security-hardening epic.
+- **`device_tokens` not joined by tenant on streak push** (D3, 7.3) — current single-tenant deployment makes this moot; add `dt.tenant_id = s.tenant_id` join condition when device-token rows can span tenants.
+- **7.1 AC-1 label drift** (D4) — UI splits the spec's "Sold this month: N" / "Follow-up streak: N days" / "Conversion rate: X.X%" into value-on-top + small-label-below tiles. Functionally equivalent; product call.
+- **2.8 AC-3 colored status badge** (D5) — already marked `[~]` deferred in 2.8; LeadCard renders status text but not the spec'd Dead-red / Sold-green / Future-amber chip. UI polish.
+- **2.8 AC-9 50k-archive load test** (D6) — RPC verified on empty + 1 row; no 50k load test infra in repo.
+- **7.4 monthly best ties don't celebrate** (D7) — `isNewBest` is strict `>`. Spec says "beats", so this matches; flagged in case product wants tie-celebration.
+- **7.2 `days_to_close = 0` cosmetic** (D8) — same-day close reads "0 days to close" on the earned-moment card. Polish.
+- **Error swallowing in motivation/archive repository helpers** (D9, all) — `catch (_)` returns defaults; useful for UX but obscures auth/RLS denials. Add `debugPrint` or crash reporter integration in a logging-hardening pass.
+- **Orphan archived leads sort last** (D10, 2.8) — leads with `status IN (dead,sold,future)` but no `status_changed` event get `archived_at = NULL` and sort to bottom. Affects legacy data only; backfill once if it becomes user-visible.
+
 ## Epic 3 close-out + branch reconciliation (2026-05-28)
 
 - **Diverged histories merged into main.** `origin/main` carried Epic 1.5–1.8;

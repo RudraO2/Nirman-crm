@@ -50,7 +50,10 @@ class MotivationStats {
         followupStreakDays: _asInt(j['followup_streak_days']),
         conversionRate: _asDouble(j['conversion_rate']),
         totalAssigned: _asInt(j['total_assigned']),
-        fetchedAt: DateTime.tryParse(j['fetched_at'] as String? ?? '') ?? DateTime.now(),
+        // Corrupt/missing fetched_at → epoch (not now()) so the UI can detect and hide
+        // the "Updated …" subtitle rather than report a fresh fetch that never happened.
+        fetchedAt: DateTime.tryParse(j['fetched_at'] as String? ?? '')
+            ?? DateTime.fromMillisecondsSinceEpoch(0),
       );
 
   static int _asInt(dynamic v) {
