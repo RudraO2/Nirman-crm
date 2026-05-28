@@ -1,7 +1,7 @@
 # Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
 # Status values: backlog | ready-for-dev | in-progress | review | done
 
-last_updated: 2026-05-28  # Epic 7 started — story 7.1 contexted
+last_updated: 2026-05-28  # 2.8 contexted (FR-16 view/search/restore)
 project: nirman-crm
 repo: https://github.com/RudraO2/Nirman-crm
 supabase_project_id: vhgruadourflpxuzuxfn
@@ -17,7 +17,7 @@ development_status:
   1-7-login-rate-limiting-and-lockout: done
   1-8-android-screenshot-prevention-ios-blur: done
 
-  epic-2: done
+  epic-2: in-progress   # reopened 2026-05-28: 2.8 added to close FR-16 view+search+restore gap
   2-1-lead-schema-normalized-phone-encrypted-pii: done
   2-2-lead-timeline-schema-write-helper: done
   2-3-employee-creates-lead-quick-capture-status-first: done
@@ -25,6 +25,7 @@ development_status:
   2-5-employee-views-lead-list-visibility-isolation: done
   2-6-employee-reschedules-visit-one-tap-shortcuts: done
   2-7-employee-changes-status-one-tap-dead-archive: done
+  2-8-employee-views-searches-archived-leads-with-restore: ready-for-dev
 
   epic-3: done
   3-1-click-to-call-opens-dialer-sets-pending-outcome: done
