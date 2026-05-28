@@ -17,6 +17,8 @@ import '../../leads/ui/new_lead_sheet.dart';
 import '../../leads/ui/filtered_leads_screen.dart';
 import '../../leads/ui/followups_screen.dart';
 import '../../leads/ui/pending_outcome_sheet.dart';
+import '../../motivation/providers/motivation_providers.dart';
+import '../../motivation/ui/personal_stats_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -60,6 +62,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _outcomeSheetOpen = true;
     showPendingOutcomeSheet(context, pending.first).whenComplete(() {
       _outcomeSheetOpen = false;
+      // A call outcome may change status (incl. → sold) and logs a qualifying action.
+      ref.invalidate(myMotivationStatsProvider);
     });
   }
 
@@ -98,7 +102,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ],
       ),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(myLeadsProvider),
+        onRefresh: () async {
+          ref.invalidate(myLeadsProvider);
+          ref.invalidate(myMotivationStatsProvider);
+        },
         color: AppColors.accentStrong,
         backgroundColor: AppColors.surfaceRaised,
         child: leadsAsync.when(
@@ -112,6 +119,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     .read(leadRepositoryProvider)
                     .markLeadDead(lead.id);
                 ref.invalidate(myLeadsProvider);
+                ref.invalidate(myMotivationStatsProvider);
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -144,7 +152,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
           final created = await showNewLeadSheet(context);
-          if (created == true) ref.invalidate(myLeadsProvider);
+          if (created == true) {
+            ref.invalidate(myLeadsProvider);
+            ref.invalidate(myMotivationStatsProvider);
+          }
         },
         backgroundColor: AppColors.accentStrong,
         elevation: 3,
@@ -172,6 +183,14 @@ class _LeadsView extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: _TodayWidget(leads: leads),
+          ),
+        ),
+
+        // Personal Performance Stats card (Story 7.1) — sits below Today's Actions
+        const SliverToBoxAdapter(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: PersonalStatsCard(),
           ),
         ),
 

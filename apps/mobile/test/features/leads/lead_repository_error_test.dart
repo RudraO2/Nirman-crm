@@ -9,7 +9,7 @@ import 'package:nirman_crm/features/leads/data/lead_repository.dart';
 // Mirror of LeadRepository._throwFromEdgeError for unit testing.
 // Keep in sync with the production method.
 Never _throwFromEdgeError(dynamic details, String fallback) {
-  final body = details is Map ? details as Map<String, dynamic> : null;
+  final body = details is Map ? Map<String, dynamic>.from(details as Map) : null;
   final err  = body?['error'] as Map<String, dynamic>?;
   final code = err?['code'] as String? ?? 'internal_error';
   final msg  = err?['message'] as String? ?? fallback;

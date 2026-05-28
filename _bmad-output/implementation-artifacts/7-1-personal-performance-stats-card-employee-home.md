@@ -1,6 +1,9 @@
+---
+baseline_commit: e37425a525a3c25fa9ea037ba54412b02c23b0f9
+---
 # Story 7.1: Personal Performance Stats card on Employee home
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,33 +24,33 @@ so that I can see my own progress without comparing to others.
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1 — Migration: `get_my_motivation_stats()` RPC** (AC: 1,2,3,4,5)
-  - [ ] New file `supabase/migrations/0030_get_my_motivation_stats.sql` (next free number — current max is 0029).
-  - [ ] `CREATE OR REPLACE FUNCTION public.get_my_motivation_stats()` → `RETURNS TABLE (sold_this_month int, followup_streak_days int, conversion_rate numeric, total_assigned int)`.
-  - [ ] `LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions`. Resolve `v_user_id := auth.uid()`; `RAISE EXCEPTION 'not_authenticated'` if null. (Mirror 0029 pattern.)
-  - [ ] Resolve tenant timezone: `SELECT timezone FROM public.tenants WHERE id = auth_tenant_id()` into `v_tz` (fallback `'Asia/Kolkata'` if null). All date bucketing uses `(now() AT TIME ZONE v_tz)::date` and `date_trunc('month', now() AT TIME ZONE v_tz)`.
-  - [ ] **sold_this_month**: count leads assigned to `v_user_id` whose latest `status_changed` timeline event has `payload->>'to' = 'sold'` (or `leads.status='sold'` with a `status_changed`→sold event this month — see Dev Notes "Sold definition") with `occurred_at` in the current tenant-month.
-  - [ ] **total_assigned**: count of all leads ever assigned to `v_user_id` (include dead/sold/archived — "ever assigned"). See Dev Notes on whether reassigned-away leads count.
-  - [ ] **conversion_rate**: `round(100.0 * sold_this_month / NULLIF(total_assigned,0), 1)`, coalesced to `0.0`.
-  - [ ] **followup_streak_days**: count consecutive tenant-tz calendar days ending today with ≥1 qualifying timeline event by this user. Qualifying event_types = `status_changed, remark_added, followup_rescheduled, call_initiated, whatsapp_sent, visit_rescheduled, archived` [Source: epics.md#Story 3.7]. Implement with a generate_series day walk or gap-detection CTE (see Dev Notes for reference SQL).
-  - [ ] `REVOKE EXECUTE ... FROM PUBLIC, anon;` `GRANT EXECUTE ... TO authenticated;` Add `COMMENT ON FUNCTION`.
-  - [ ] Apply via `supabase db push --linked` (do NOT use MCP timestamp-named apply — keep file-based history consistent). Verify it appears via `supabase migration list`.
-- [ ] **Task 2 — Model + repository** (AC: 1)
-  - [ ] Add `MotivationStats` model in `apps/mobile/lib/features/motivation/data/models/motivation_stats.dart`: `int soldThisMonth, int followupStreakDays, double conversionRate, int totalAssigned, DateTime fetchedAt`. Add `fromJson` (guard numeric→double for conversion_rate; Postgres `numeric` arrives as String or num — use `(j['conversion_rate'] as num).toDouble()` with String fallback).
-  - [ ] New `MotivationRepository` in `apps/mobile/lib/features/motivation/data/motivation_repository.dart`: `Future<MotivationStats> getMyStats()` calling `_supabase.rpc('get_my_motivation_stats')`, mapping `(result as List).first`. Riverpod `@riverpod MotivationRepository motivationRepository(...)`. Follow `LeadRepository` shape [Source: lead_repository.dart].
-- [ ] **Task 3 — Offline cache (Drift)** (AC: 6)
-  - [ ] Add a single-row Drift table `MotivationStatsCache` (columns mirror the model + `fetched_at`) in the existing local DB, OR — simpler and acceptable for a 4-int snapshot — cache the JSON via `flutter_secure_storage` under key `motivation_stats_v1`. Pick ONE; document choice. [Architecture prefers Drift for offline reads — L277/L431 — but secure_storage is acceptable for a tiny non-sensitive snapshot; confirm in Dev Agent Record.]
-  - [ ] Repository writes cache on every successful fetch; on RPC error, returns the cached snapshot (if any) so the provider resolves to data, not error.
-- [ ] **Task 4 — Provider** (AC: 1,6)
-  - [ ] `@riverpod Future<MotivationStats> myMotivationStats(...)` in `apps/mobile/lib/features/motivation/providers/motivation_providers.dart`. Invalidate it wherever a status change to sold or a qualifying action is logged (at minimum: after `submitCallOutcome`, `markLeadDead`, `setFollowup`, lead create/edit) so the card stays fresh. Reuse the existing invalidation seams in `lead_detail_screen` / `home_screen`.
-- [ ] **Task 5 — UI: stats card** (AC: 1,5,6)
-  - [ ] New widget `apps/mobile/lib/features/motivation/ui/personal_stats_card.dart` (`PersonalStatsCard`). Three stat tiles in a row, matching the visual language of `_TodayWidget` / `_CountTile` (surfaceRaised container, borderHairline, AppColors, GoogleFonts headings). Title "MY PROGRESS".
-  - [ ] States: skeleton (reuse `_Shimmer` style), data, and cached-with-subtitle ("Updated 3m ago"). No red error state.
-  - [ ] Insert into `home_screen.dart` `_LeadsView` as a `SliverToBoxAdapter` immediately AFTER the Today's Actions widget and BEFORE the "MY LEADS" section header (AC-1 placement).
-- [ ] **Task 6 — Tests**
-  - [ ] `motivation_stats_test.dart`: `fromJson` parses numeric conversion_rate (both String and num forms); divide-by-zero guard yields 0.0.
-  - [ ] Widget test: card renders three labelled values from a fixed `MotivationStats`; cached state shows the "Updated …" subtitle.
-  - [ ] (If feasible) a pgTAP or manual SQL check of the streak walk on seeded timeline rows — at minimum document a manual verification query in the Dev Agent Record.
+- [x] **Task 1 — Migration: `get_my_motivation_stats()` RPC** (AC: 1,2,3,4,5)
+  - [x] New file `supabase/migrations/0030_get_my_motivation_stats.sql`.
+  - [x] `CREATE OR REPLACE FUNCTION public.get_my_motivation_stats()` → `RETURNS TABLE (sold_this_month int, followup_streak_days int, conversion_rate numeric, total_assigned int)`.
+  - [x] `LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, extensions`; `auth.uid()` guard with `RAISE EXCEPTION 'not_authenticated'`.
+  - [x] Tenant timezone from `tenants.timezone` (fallback `Asia/Kolkata`); all buckets via `now() AT TIME ZONE v_tz`.
+  - [x] **sold_this_month**: `leads.status='sold'` AND a `status_changed`→`sold` timeline event this tenant-month (Reading 1).
+  - [x] **total_assigned**: count of leads currently == ever assigned to caller (pre-Epic-4).
+  - [x] **conversion_rate**: `round(100.0 * sold / NULLIF(total,0), 1)` coalesced to `0.0`.
+  - [x] **followup_streak_days**: gaps-and-islands CTE over qualifying timeline events; run ending today or yesterday.
+  - [x] `REVOKE … FROM PUBLIC, anon; GRANT … TO authenticated;` + `COMMENT ON FUNCTION`.
+  - [x] Applied via `supabase db push --linked`. Verified end-to-end with a real user JWT over REST: returned `{sold:0, streak:1, conversion:0.0, total:1}` HTTP 200.
+- [x] **Task 2 — Model + repository** (AC: 1)
+  - [x] `MotivationStats` model with robust `fromJson` (num/String conversion_rate, int coercion).
+  - [x] `MotivationRepository.getMyStats()` calling `get_my_motivation_stats`; `@riverpod motivationRepository`.
+- [x] **Task 3 — Offline cache** (AC: 6)
+  - [x] Chose **flutter_secure_storage** (key `motivation_stats_v1`) over Drift — no Drift DB is scaffolded yet, and a 4-int snapshot does not justify one. Documented in Dev Agent Record.
+  - [x] Repository writes cache on success; on RPC error returns cached snapshot; rethrows only when no cache exists.
+- [x] **Task 4 — Provider** (AC: 1,6)
+  - [x] `@riverpod myMotivationStats`. Invalidated in `home_screen` on pull-to-refresh, mark-dead, new-lead, and after the pending-outcome sheet (status→sold path).
+- [x] **Task 5 — UI: stats card** (AC: 1,5,6)
+  - [x] `PersonalStatsCard` — three tiles ("Sold this month", "Day streak", "Conversion") matching `_TodayWidget`/`_CountTile` language; title "MY PROGRESS".
+  - [x] States: skeleton / data / cached-with-"Updated …" subtitle; error renders zeros (no red state).
+  - [x] Inserted in `home_screen` `_LeadsView` after Today's Actions, before the "MY LEADS" header.
+- [x] **Task 6 — Tests**
+  - [x] `motivation_stats_test.dart` — fromJson (num + String + null conversion_rate), int coercion, cache round-trip, zero().
+  - [x] `personal_stats_card_test.dart` — renders three labelled values; fresh vs cached "Updated" subtitle.
+  - [x] Streak logic verified via inline SQL replication against seeded data + live RPC call (documented in Dev Agent Record).
 
 ## Dev Notes
 
@@ -113,8 +116,34 @@ claude-opus-4-7 (Amelia, bmad-agent-dev)
 
 ### Debug Log References
 
+- RPC verified live (real user JWT, REST): `POST /rest/v1/rpc/get_my_motivation_stats` → `[{"sold_this_month":0,"followup_streak_days":1,"conversion_rate":0.0,"total_assigned":1}]` HTTP 200.
+- Full mobile suite: 75 passing, 0 failing. `flutter analyze`: 0 errors.
+
 ### Completion Notes List
 
-- Story context created 2026-05-28. Comprehensive developer guide; Epic 7 first story. First story in epic → epic-7 moved to in-progress.
+- Story context created 2026-05-28; implemented same day. Epic 7 first story → epic-7 in-progress.
+- **Sold definition**: Reading (1) — current status `sold` AND a `status_changed→sold` event in the tenant-month. Avoids counting reverted sales.
+- **total_assigned assumption**: pre-Epic-4 there is no reassignment history, so "currently assigned" == "ever assigned". Revisit when Story 4.1 lands (a lead reassigned away would leave the denominator).
+- **Offline cache**: used `flutter_secure_storage` (not Drift). No Drift DB exists in the app yet; a 4-int snapshot does not warrant scaffolding one. AC-6 satisfied: cached snapshot returned on RPC failure; card shows "Updated …" subtitle when the snapshot is not fresh; zeros shown only when there is no cache at all.
+- **Streak**: gaps-and-islands SQL; counts the contiguous run ending today, or yesterday if today has no qualifying action yet (matches Story 7.3 "keep it going" semantics).
+- **Fixed a pre-existing failing test** (not introduced by this story): `lead_repository_error_test.dart` mirror of `_throwFromEdgeError` used an unsafe `as Map<String,dynamic>` cast that threw `TypeError` on an empty `{}` literal; synced it to the production `Map<String,dynamic>.from(...)` form. This was a latent failure from the earlier Epic-2/3 merge.
+- **Not verified on physical device** — code + server verified; on-device visual check of the card pending next `flutter run` (USB).
+
+### Change Log
+
+- 2026-05-28: Implemented Story 7.1 — `get_my_motivation_stats` RPC (0030), `features/motivation/` module (model, repository w/ secure-storage cache, provider, `PersonalStatsCard`), wired into home screen with stats invalidation. Added motivation unit + widget tests. Fixed pre-existing `lead_repository_error_test` cast bug.
 
 ### File List
+
+**New**
+- `supabase/migrations/0030_get_my_motivation_stats.sql`
+- `apps/mobile/lib/features/motivation/data/models/motivation_stats.dart`
+- `apps/mobile/lib/features/motivation/data/motivation_repository.dart` (+ generated `motivation_repository.g.dart`)
+- `apps/mobile/lib/features/motivation/providers/motivation_providers.dart` (+ generated `motivation_providers.g.dart`)
+- `apps/mobile/lib/features/motivation/ui/personal_stats_card.dart`
+- `apps/mobile/test/features/motivation/motivation_stats_test.dart`
+- `apps/mobile/test/features/motivation/personal_stats_card_test.dart`
+
+**Modified**
+- `apps/mobile/lib/features/home/ui/home_screen.dart` — inserted `PersonalStatsCard` sliver; invalidate `myMotivationStatsProvider` on refresh / mark-dead / new-lead / pending-outcome.
+- `apps/mobile/test/features/leads/lead_repository_error_test.dart` — synced `_throwFromEdgeError` mirror to production (cast fix).
