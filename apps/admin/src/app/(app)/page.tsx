@@ -16,8 +16,8 @@ export default async function HomePage() {
 
   if (error) {
     return (
-      <div className="p-6">
-        <p className="text-destructive">Failed to load metrics: {error.message}</p>
+      <div className="p-8">
+        <p className="text-[var(--rust)]">Failed to load metrics: {error.message}</p>
       </div>
     )
   }
@@ -25,8 +25,8 @@ export default async function HomePage() {
   const m = (data as Metrics[] | null)?.[0]
   if (!m) {
     return (
-      <div className="p-6">
-        <p className="text-destructive">Failed to load metrics: no data returned.</p>
+      <div className="p-8">
+        <p className="text-[var(--rust)]">Failed to load metrics: no data returned.</p>
       </div>
     )
   }
@@ -53,21 +53,33 @@ export default async function HomePage() {
   ]
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Today&apos;s business health at a glance.</p>
+    <div className="mx-auto max-w-[1280px] px-6 py-10 space-y-10">
+      <div className="space-y-2">
+        <p className="eyebrow">Today</p>
+        <h1
+          className="text-4xl tracking-tight text-[var(--ink)]"
+          style={{ fontFamily: 'var(--font-serif)', fontWeight: 500 }}
+        >
+          Business <em className="font-normal italic">at a glance</em>
+        </h1>
       </div>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {cards.map((card) => (
           <Link
             key={card.title}
             href={card.href}
-            className="block rounded-lg border bg-card p-6 shadow-sm transition-colors hover:bg-muted"
+            className="group block rounded-[12px] border bg-[var(--cream-raised)] p-6 transition-colors hover:border-[var(--line-strong)]"
+            style={{ borderColor: 'var(--line)' }}
           >
-            <p className="text-sm font-medium text-muted-foreground">{card.title}</p>
-            <p className="mt-2 text-4xl font-bold tracking-tight">{card.value}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{card.ref}</p>
+            <p className="eyebrow text-[var(--ink-soft)]">{card.title}</p>
+            <p
+              className="mt-3 text-5xl tabular-nums tracking-tight text-[var(--ink)]"
+              style={{ fontFamily: 'var(--font-serif)', fontWeight: 500 }}
+            >
+              {card.value}
+            </p>
+            <p className="mt-2 text-xs text-[var(--ink-soft)]">{card.ref}</p>
           </Link>
         ))}
       </div>
