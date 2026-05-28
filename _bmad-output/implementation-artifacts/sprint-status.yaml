@@ -1,7 +1,7 @@
 # Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
 # Status values: backlog | ready-for-dev | in-progress | review | done
 
-last_updated: 2026-05-28  # 5.3 done — conversion funnel chart (migration 0050 + admin /funnel)
+last_updated: 2026-05-28  # 5.4 done — employee activity status (migration 0051 + admin /activity)
 project: nirman-crm
 repo: https://github.com/RudraO2/Nirman-crm
 supabase_project_id: vhgruadourflpxuzuxfn
@@ -49,6 +49,7 @@ development_status:
   5-1-3-metric-builder-home-with-reference-points: done
   5-2-per-employee-performance-dashboard-with-charts: done
   5-3-conversion-funnel-chart: done
+  5-4-employee-activity-status: done
   epic-6: backlog
 
   epic-7: done     # all 4 stories done (review patches applied 2026-05-28)
