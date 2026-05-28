@@ -89,6 +89,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         surfaceTintColor: Colors.transparent,
         actions: [
           IconButton(
+            icon: const Icon(Icons.inventory_2_outlined),
+            color: AppColors.inkSecondary,
+            tooltip: 'Archive',
+            onPressed: () => context.push('/archived'),
+          ),
+          IconButton(
             icon: const Icon(Icons.event_note_rounded),
             color: AppColors.inkSecondary,
             tooltip: 'Follow-ups calendar',

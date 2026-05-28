@@ -161,6 +161,26 @@ class LeadRepository {
         .toList();
   }
 
+  /// Caller's archived leads (Story 2.8). status ∈ (dead, sold, future), newest-archived first.
+  /// [query] optional name substring OR exact-phone search.
+  Future<List<LeadListItem>> getMyArchivedLeads({
+    String? query,
+    int limit = 50,
+    int offset = 0,
+  }) async {
+    final result = await _supabase.rpc(
+      'get_my_archived_leads',
+      params: {
+        'p_q': (query == null || query.trim().isEmpty) ? null : query.trim(),
+        'p_limit': limit,
+        'p_offset': offset,
+      },
+    );
+    return (result as List)
+        .map((row) => LeadListItem.fromJson(Map<String, dynamic>.from(row as Map)))
+        .toList();
+  }
+
   /// Quick Mark Dead — sets status='dead', returns previous status for undo (Story 2.7).
   Future<MarkDeadResult> markLeadDead(String leadId) async {
     final result = await _supabase.rpc(

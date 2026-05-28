@@ -7,6 +7,7 @@ import '../features/auth/ui/login_screen.dart';
 import '../features/auth/ui/password_change_screen.dart';
 import '../features/auth/utils/auth_validators.dart';
 import '../features/home/ui/home_screen.dart';
+import '../features/leads/ui/archived_screen.dart';
 import '../features/leads/ui/filtered_leads_screen.dart';
 import '../features/leads/ui/followups_screen.dart';
 import '../features/leads/ui/lead_detail_screen.dart';
@@ -84,6 +85,7 @@ final appRouter = GoRouter(
       ),
     ),
     GoRoute(path: '/settings', builder: (_, __) => const SettingsScreen()),
+    GoRoute(path: '/archived', builder: (_, __) => const ArchivedScreen()),
     GoRoute(
       path: '/followups',
       builder: (_, __) => const FollowupsScreen(),

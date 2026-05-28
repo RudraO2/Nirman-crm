@@ -337,5 +337,145 @@ class _LeadTimelineProviderElement
   String get id => (origin as LeadTimelineProvider).id;
 }
 
+String _$archivedLeadsHash() => r'24713ca8b47ce7ce4da9c63725d12ffe97c68e43';
+
+/// Caller's archived leads (dead/sold/future), filtered by [query] (Story 2.8).
+/// Family keyed on query so debounced search updates the cache key cleanly.
+///
+/// Copied from [archivedLeads].
+@ProviderFor(archivedLeads)
+const archivedLeadsProvider = ArchivedLeadsFamily();
+
+/// Caller's archived leads (dead/sold/future), filtered by [query] (Story 2.8).
+/// Family keyed on query so debounced search updates the cache key cleanly.
+///
+/// Copied from [archivedLeads].
+class ArchivedLeadsFamily extends Family<AsyncValue<List<LeadListItem>>> {
+  /// Caller's archived leads (dead/sold/future), filtered by [query] (Story 2.8).
+  /// Family keyed on query so debounced search updates the cache key cleanly.
+  ///
+  /// Copied from [archivedLeads].
+  const ArchivedLeadsFamily();
+
+  /// Caller's archived leads (dead/sold/future), filtered by [query] (Story 2.8).
+  /// Family keyed on query so debounced search updates the cache key cleanly.
+  ///
+  /// Copied from [archivedLeads].
+  ArchivedLeadsProvider call(String query) {
+    return ArchivedLeadsProvider(query);
+  }
+
+  @override
+  ArchivedLeadsProvider getProviderOverride(
+    covariant ArchivedLeadsProvider provider,
+  ) {
+    return call(provider.query);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'archivedLeadsProvider';
+}
+
+/// Caller's archived leads (dead/sold/future), filtered by [query] (Story 2.8).
+/// Family keyed on query so debounced search updates the cache key cleanly.
+///
+/// Copied from [archivedLeads].
+class ArchivedLeadsProvider
+    extends AutoDisposeFutureProvider<List<LeadListItem>> {
+  /// Caller's archived leads (dead/sold/future), filtered by [query] (Story 2.8).
+  /// Family keyed on query so debounced search updates the cache key cleanly.
+  ///
+  /// Copied from [archivedLeads].
+  ArchivedLeadsProvider(String query)
+    : this._internal(
+        (ref) => archivedLeads(ref as ArchivedLeadsRef, query),
+        from: archivedLeadsProvider,
+        name: r'archivedLeadsProvider',
+        debugGetCreateSourceHash:
+            const bool.fromEnvironment('dart.vm.product')
+                ? null
+                : _$archivedLeadsHash,
+        dependencies: ArchivedLeadsFamily._dependencies,
+        allTransitiveDependencies:
+            ArchivedLeadsFamily._allTransitiveDependencies,
+        query: query,
+      );
+
+  ArchivedLeadsProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.query,
+  }) : super.internal();
+
+  final String query;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<LeadListItem>> Function(ArchivedLeadsRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: ArchivedLeadsProvider._internal(
+        (ref) => create(ref as ArchivedLeadsRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        query: query,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<LeadListItem>> createElement() {
+    return _ArchivedLeadsProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ArchivedLeadsProvider && other.query == query;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, query.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin ArchivedLeadsRef on AutoDisposeFutureProviderRef<List<LeadListItem>> {
+  /// The parameter `query` of this provider.
+  String get query;
+}
+
+class _ArchivedLeadsProviderElement
+    extends AutoDisposeFutureProviderElement<List<LeadListItem>>
+    with ArchivedLeadsRef {
+  _ArchivedLeadsProviderElement(super.provider);
+
+  @override
+  String get query => (origin as ArchivedLeadsProvider).query;
+}
+
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

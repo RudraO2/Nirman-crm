@@ -29,3 +29,10 @@ Future<List<ProjectRef>> availableProjects(AvailableProjectsRef ref) {
 Future<List<TimelineEntry>> leadTimeline(LeadTimelineRef ref, String id) {
   return ref.watch(leadRepositoryProvider).getLeadTimeline(id);
 }
+
+/// Caller's archived leads (dead/sold/future), filtered by [query] (Story 2.8).
+/// Family keyed on query so debounced search updates the cache key cleanly.
+@riverpod
+Future<List<LeadListItem>> archivedLeads(ArchivedLeadsRef ref, String query) {
+  return ref.watch(leadRepositoryProvider).getMyArchivedLeads(query: query);
+}

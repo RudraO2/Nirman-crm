@@ -67,6 +67,8 @@ class LeadListItem {
   final DateTime createdAt;
   final int urgencyScore;
   final String? interestType;
+  /// Story 2.8 — populated by get_my_archived_leads; null for active-list rows.
+  final DateTime? archivedAt;
 
   const LeadListItem({
     required this.id,
@@ -87,6 +89,7 @@ class LeadListItem {
     required this.createdAt,
     required this.urgencyScore,
     this.interestType,
+    this.archivedAt,
   });
 
   factory LeadListItem.fromJson(Map<String, dynamic> j) {
@@ -110,6 +113,7 @@ class LeadListItem {
       createdAt:         DateTime.parse(j['created_at'] as String),
       urgencyScore:      j['urgency_score'] as int,
       interestType:      j['interest_type'] as String?,
+      archivedAt:        _dt(j['archived_at'] as String?),
     );
   }
 
