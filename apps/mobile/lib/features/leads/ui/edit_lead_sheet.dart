@@ -124,6 +124,14 @@ class _EditLeadSheetState extends ConsumerState<EditLeadSheet> {
         await showSoldCelebration(context, ref, leadId: widget.lead.id, leadName: widget.lead.name);
       }
       if (mounted) Navigator.of(context).pop(true);
+    } on LeadReassignedError {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This lead was just reassigned. Refreshing.')),
+      );
+      Navigator.of(context).pop();
+      ref.invalidate(leadByIdProvider(widget.lead.id));
+      ref.invalidate(myLeadsProvider);
     } on DuplicateLeadError catch (e) {
       setState(() { _errorMsg = e.message; _duplicateOwner = e.ownerName; _saving = false; });
     } catch (e) {

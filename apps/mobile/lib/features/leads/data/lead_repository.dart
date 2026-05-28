@@ -60,6 +60,14 @@ class CreateLeadPayload {
   };
 }
 
+/// Thrown when a lead was reassigned between load and save (Story 4.5).
+class LeadReassignedError implements Exception {
+  const LeadReassignedError();
+
+  @override
+  String toString() => 'This lead was just reassigned. Refreshing.';
+}
+
 /// Duplicate error detail returned by create-lead when phone already exists.
 class DuplicateLeadError implements Exception {
   final String message;
@@ -81,7 +89,7 @@ class LeadRepository {
 
   const LeadRepository(this._supabase);
 
-  // Parses FunctionException.details → throws DuplicateLeadError or Exception.
+  // Parses FunctionException.details → throws typed error or Exception.
   // supabase_flutter 2.x throws FunctionException on 4xx/5xx; details is decoded JSON.
   static Never _throwFromEdgeError(dynamic details, String fallback) {
     final body = details is Map ? Map<String, dynamic>.from(details as Map) : null;
@@ -131,6 +139,7 @@ class LeadRepository {
   }
 
   /// Updates an existing lead via the update-lead Edge Function.
+  /// Throws [LeadReassignedError] if the lead was reassigned since load.
   /// Throws [DuplicateLeadError] on phone collision.
   /// Throws [Exception] on validation or server errors.
   Future<UpdateLeadResult> updateLead(UpdateLeadPayload payload) async {
@@ -142,9 +151,16 @@ class LeadRepository {
       final data = (response.data as Map<String, dynamic>)['data']
           as Map<String, dynamic>;
       return UpdateLeadResult.fromJson(data);
+    } on LeadReassignedError {
+      rethrow;
     } on DuplicateLeadError {
       rethrow;
     } on FunctionException catch (e) {
+      // update-lead returns "not_found" when the lead is no longer in this
+      // employee's queue — i.e., it was reassigned between load and save.
+      final body = e.details is Map ? Map<String, dynamic>.from(e.details as Map) : null;
+      final code = (body?['error'] as Map<String, dynamic>?)?['code'] as String?;
+      if (code == 'not_found') throw const LeadReassignedError();
       _throwFromEdgeError(e.details, 'Failed to update lead');
     }
   }

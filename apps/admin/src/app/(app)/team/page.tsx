@@ -52,7 +52,7 @@ export default async function TeamPage() {
               </TableCell>
               <TableCell>{new Date(emp.created_at).toLocaleDateString()}</TableCell>
               <TableCell>
-                <EmployeeActions employeeId={emp.id} isActive={emp.is_active} />
+                <EmployeeActions employeeId={emp.id} employeeName={emp.email_or_username} isActive={emp.is_active} />
               </TableCell>
             </TableRow>
           ))}
