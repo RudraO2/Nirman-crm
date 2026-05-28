@@ -89,6 +89,12 @@ Not started. ~42% of total scope remains. All four require web admin dashboard (
 
 - 0001→0002 deployment window: security gap exists between the two migration files being applied sequentially. Any user who authenticates after 0001 but before 0002 lands operates under permissive old policies and can call `set_current_tenant` as authenticated. Mitigate via atomic deployment practice (disable external access / Supabase pause during migration run) — not a code-level fix.
 
+## Deferred from: code review of 4-2-bulk-assign-leads (2026-05-28)
+
+- **D1 (ux): no loading state on "Preview Distribution" button** — `handleAdvance` awaits `get_employee_active_lead_counts` RPC before setting step. If network is slow, the button gives no feedback for the duration of the request. Add a `advancing` boolean state + spinner on the advance button.
+- **D2 (security): send-bulk-assignment-notification shares same verify_jwt=false exposure as D2 from 4.1** — same mitigation note applies; harden with caller role check in edge fn before V2.
+- **D3 (ux): keyboard navigation in Manual DnD canvas** — @dnd-kit/core supports accessibility via keyboard sensors; not enabled in current impl. Wire up `KeyboardSensor` + `screenReaderInstructions` before shipping to users with accessibility requirements.
+
 ## Deferred from: code review of 4-1-admin-assigns-single-lead-to-employee (2026-05-28)
 
 - **D1 (perf): list_assignable_leads decrypts every row's PII before filtering** — Same class as 2.8/D11. For tenants with >5k leads + a search query, the base CTE decrypts every lead before the ILIKE filter. Optimise via partial indexing on `(tenant_id, status)` + push the search down into a SQL function that scans the index, decrypts only the matching window, then filters. Not blocking for V1 (≤50k leads/org budget).

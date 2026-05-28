@@ -1,34 +1,11 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { LeadsToolbar } from '@/components/leads/leads-toolbar'
-import { AssignDialog } from '@/components/leads/assign-dialog'
-import { StatusPill } from '@/components/leads/status-pill'
+import { LeadsTable } from '@/components/leads/leads-table'
+import type { LeadRow, EmployeeRow } from '@/components/leads/leads-table'
 
 const PAGE_SIZE = 50
-
-interface LeadRow {
-  id: string
-  name: string | null
-  phone_last4: string | null
-  status: string
-  assigned_to_user_id: string | null
-  assignee_username: string | null
-  assignment_deadline: string | null
-  created_at: string
-  total_count: number
-}
-
-interface EmployeeRow { id: string; username: string }
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
-}
 
 export default async function LeadsPage({
   searchParams,
@@ -103,52 +80,7 @@ export default async function LeadsPage({
         initialArchived={archived}
       />
 
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Assigned to</TableHead>
-              <TableHead>Deadline</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {leads.map((l) => (
-              <TableRow key={l.id} className="hover:bg-muted/40">
-                <TableCell className="font-medium">{l.name ?? <span className="text-muted-foreground italic">Unnamed</span>}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">•••{l.phone_last4 ?? '----'}</TableCell>
-                <TableCell><StatusPill status={l.status} /></TableCell>
-                <TableCell>
-                  {l.assignee_username ?? <span className="text-muted-foreground italic">Unassigned</span>}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{fmtDate(l.assignment_deadline)}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{fmtDate(l.created_at)}</TableCell>
-                <TableCell className="text-right">
-                  <AssignDialog
-                    leadId={l.id}
-                    leadName={l.name}
-                    phoneLast4={l.phone_last4}
-                    currentAssigneeId={l.assigned_to_user_id}
-                    currentDeadline={l.assignment_deadline}
-                    employees={employees}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
-            {leads.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                  {(q || statusFilter || employeeFilter || archived) ? 'No leads match these filters.' : 'No leads yet.'}
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+      <LeadsTable leads={leads} employees={employees} />
 
       {totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
