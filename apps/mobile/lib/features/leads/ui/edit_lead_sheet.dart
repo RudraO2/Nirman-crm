@@ -117,6 +117,7 @@ class _EditLeadSheetState extends ConsumerState<EditLeadSheet> {
       ref.invalidate(myLeadsProvider);
       ref.invalidate(leadByIdProvider(widget.lead.id));
       ref.invalidate(myMotivationStatsProvider);
+      ref.invalidate(myMonthlyBestProvider);
       if (!mounted) return;
       if (wasSold) {
         ref.read(motivationRepositoryProvider).notifyAdminSold(widget.lead.id, widget.lead.name);

@@ -5,10 +5,16 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../data/motivation_repository.dart';
 import '../data/models/motivation_stats.dart';
+import '../data/models/monthly_best.dart';
 
 part 'motivation_providers.g.dart';
 
 @riverpod
 Future<MotivationStats> myMotivationStats(MyMotivationStatsRef ref) {
   return ref.watch(motivationRepositoryProvider).getMyStats();
+}
+
+@riverpod
+Future<MonthlyBest> myMonthlyBest(MyMonthlyBestRef ref) {
+  return ref.watch(motivationRepositoryProvider).getMonthlyBest();
 }

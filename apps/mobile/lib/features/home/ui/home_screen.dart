@@ -19,6 +19,7 @@ import '../../leads/ui/followups_screen.dart';
 import '../../leads/ui/pending_outcome_sheet.dart';
 import '../../motivation/providers/motivation_providers.dart';
 import '../../motivation/ui/personal_stats_card.dart';
+import '../../motivation/ui/monthly_best.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -105,6 +106,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         onRefresh: () async {
           ref.invalidate(myLeadsProvider);
           ref.invalidate(myMotivationStatsProvider);
+          ref.invalidate(myMonthlyBestProvider);
         },
         color: AppColors.accentStrong,
         backgroundColor: AppColors.surfaceRaised,
@@ -193,6 +195,9 @@ class _LeadsView extends StatelessWidget {
             child: PersonalStatsCard(),
           ),
         ),
+
+        // Monthly personal-best card + new-best banner (Story 7.4)
+        const SliverToBoxAdapter(child: MonthlyBestSection()),
 
         // Section header
         SliverToBoxAdapter(

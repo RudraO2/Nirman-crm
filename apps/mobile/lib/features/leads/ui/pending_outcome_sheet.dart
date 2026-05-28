@@ -69,6 +69,7 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
       );
       ref.invalidate(myLeadsProvider);
       ref.invalidate(myMotivationStatsProvider);
+      ref.invalidate(myMonthlyBestProvider);
       if (!mounted) return;
       if (wasSold) {
         // Fire admin push (best-effort) and play the celebration (Story 7.2).

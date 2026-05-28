@@ -41,11 +41,11 @@ development_status:
   epic-5: backlog
   epic-6: backlog
 
-  epic-7: in-progress
+  epic-7: review   # all 4 stories in review (code complete + RPCs/edge fns verified live)
   7-1-personal-performance-stats-card-employee-home: review
   7-2-sold-celebration-earned-moment-card: review
   7-3-streak-at-risk-push-notification: review
-  7-4-monthly-personal-best-banner: backlog
+  7-4-monthly-personal-best-banner: review
 
 # Verified end-to-end on RMX5003 (Android 15) — 2026-05-28
 # - login flow (test2006@gmail.com / rudra1)

@@ -8,6 +8,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/motivation_stats.dart';
 import 'models/sold_celebration.dart';
+import 'models/monthly_best.dart';
 
 part 'motivation_repository.g.dart';
 
@@ -58,6 +59,18 @@ class MotivationRepository {
       return SoldCelebration.fromRpc(Map<String, dynamic>.from(rows.first as Map));
     } catch (_) {
       return SoldCelebration.empty;
+    }
+  }
+
+  /// Monthly personal-best figures (Story 7.4). Returns [MonthlyBest.empty] on failure.
+  Future<MonthlyBest> getMonthlyBest() async {
+    try {
+      final result = await _supabase.rpc('get_monthly_best');
+      final rows = result as List;
+      if (rows.isEmpty) return MonthlyBest.empty;
+      return MonthlyBest.fromRpc(Map<String, dynamic>.from(rows.first as Map));
+    } catch (_) {
+      return MonthlyBest.empty;
     }
   }
 
