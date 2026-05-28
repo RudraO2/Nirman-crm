@@ -27,6 +27,8 @@ interface AssignDialogProps {
   currentAssigneeId: string | null
   currentDeadline: string | null
   employees: Employee[]
+  initialOpen?: boolean
+  onClose?: () => void
 }
 
 function nowLocalIso(): string {
@@ -37,9 +39,10 @@ function nowLocalIso(): string {
 
 export function AssignDialog({
   leadId, leadName, phoneLast4, currentAssigneeId, currentDeadline, employees,
+  initialOpen = false, onClose,
 }: AssignDialogProps) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
   // P4: only pre-select the current assignee if they're still in the assignable employees list.
   // Legacy admin-owned leads have currentAssigneeId set but the user isn't an employee — pre-selecting
   // would let the user click Confirm and hit a server-side target_not_assignable error.
@@ -102,15 +105,23 @@ export function AssignDialog({
 
       toast.success(`Assigned to ${selectedUsername ?? 'employee'}`)
       setOpen(false)
+      onClose?.()
       router.refresh()
     })
   }
 
+  function handleOpenChange(v: boolean) {
+    setOpen(v)
+    if (!v) onClose?.()
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button size="sm" variant="outline">Assign</Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      {!initialOpen && (
+        <DialogTrigger asChild>
+          <Button size="sm" variant="outline">Assign</Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="text-base font-semibold">
@@ -186,7 +197,7 @@ export function AssignDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
+          <Button variant="ghost" onClick={() => handleOpenChange(false)} disabled={pending}>Cancel</Button>
           <Button onClick={handleConfirm} disabled={pending || !employeeId}>
             {pending ? 'Assigning…' : 'Confirm'}
           </Button>

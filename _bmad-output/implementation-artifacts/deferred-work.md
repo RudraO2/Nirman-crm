@@ -89,6 +89,12 @@ Not started. ~42% of total scope remains. All four require web admin dashboard (
 
 - 0001→0002 deployment window: security gap exists between the two migration files being applied sequentially. Any user who authenticates after 0001 but before 0002 lands operates under permissive old policies and can call `set_current_tenant` as authenticated. Mitigate via atomic deployment practice (disable external access / Supabase pause during migration run) — not a code-level fix.
 
+## Deferred from: code review of 4-3-admin-global-search (2026-05-28)
+
+- **D1 (perf): name search decrypts all rows in tenant** — `search_leads_global` name branch calls `pgp_sym_decrypt` for every `name_encrypted` row, then applies ILIKE. For tenants with 50k leads this is the theoretical worst case. No index is possible on encrypted data. Mitigation path: add a deterministic-hash prefix column (`name_prefix_hash`) truncated at N chars, index it, and use it to pre-filter before full decrypt. Not blocking for V1.
+- **D2 (ux): stale employee list if employee added/deactivated mid-session** — `GlobalSearch` caches `employees` after first overlay open; re-fetches only on full page reload. If an employee is deactivated between overlay open and assign, `AssignDialog` will show them; server-side `assign_lead` will return `target_not_assignable`. Error surfaced to user. Mitigation: re-fetch `list_employees_for_assignment` on every assign dialog open.
+- **D3 (ux): no loading indicator on Assign button inside search results** — clicking "Assign" closes the overlay and opens `AssignDialog` immediately (no async before that), but if the employee list hasn't loaded yet the dialog's picker will be empty. A micro-spinner on the Assign button guarded by `employees.length === 0` would signal "loading employees…".
+
 ## Deferred from: code review of 4-2-bulk-assign-leads (2026-05-28)
 
 - **D1 (ux): no loading state on "Preview Distribution" button** — `handleAdvance` awaits `get_employee_active_lead_counts` RPC before setting step. If network is slow, the button gives no feedback for the duration of the request. Add a `advancing` boolean state + spinner on the advance button.

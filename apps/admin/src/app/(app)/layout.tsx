@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Toaster } from '@/components/ui/sonner'
+import { GlobalSearch } from '@/components/global-search'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -30,7 +31,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Team
           </Link>
         </nav>
-        <span className="ml-auto text-xs text-muted-foreground">{user.email}</span>
+        <div className="ml-auto flex items-center gap-3">
+          <GlobalSearch />
+          <span className="text-xs text-muted-foreground">{user.email}</span>
+        </div>
       </header>
       <main className="flex-1">{children}</main>
       <Toaster position="bottom-right" />
