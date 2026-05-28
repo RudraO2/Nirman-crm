@@ -1,7 +1,7 @@
 # Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
 # Status values: backlog | ready-for-dev | in-progress | review | done
 
-last_updated: 2026-05-28  # 4.4 done — employee shares lead with another employee
+last_updated: 2026-05-28  # 4.5 done — lead reassignment blocks employee deactivation
 project: nirman-crm
 repo: https://github.com/RudraO2/Nirman-crm
 supabase_project_id: vhgruadourflpxuzuxfn
@@ -43,6 +43,7 @@ development_status:
   4-2-admin-bulk-assigns-leads: done
   4-3-admin-global-search-by-name-and-phone: done
   4-4-employee-shares-lead-with-another-employee: done
+  4-5-lead-reassignment-blocks-employee-deactivation: done
   epic-5: backlog
   epic-6: backlog
 
