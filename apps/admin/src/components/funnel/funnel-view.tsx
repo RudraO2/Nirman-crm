@@ -259,10 +259,13 @@ export function FunnelView({
                   borderRadius: '8px',
                   fontSize: 12,
                 }}
-                formatter={(value, _name, props) => [
-                  `${value} leads${props.payload?.dropoff_pct != null ? ` (▼ ${props.payload.dropoff_pct}% drop)` : ''}`,
-                  props.payload?.label,
-                ]}
+                formatter={(value, _name, props) => {
+                  const d = props.payload?.dropoff_pct
+                  const dropText =
+                    d != null && d > 0 ? ` (▼ ${d}% drop)` :
+                    d != null && d < 0 ? ` (▲ ${Math.abs(d)}% gain)` : ''
+                  return [`${value} leads${dropText}`, props.payload?.label]
+                }}
               />
               <Bar dataKey="lead_count" radius={[0, 4, 4, 0]} maxBarSize={40}>
                 {chartData.map((entry) => (
