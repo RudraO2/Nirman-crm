@@ -85,6 +85,16 @@ Not started. ~42% of total scope remains. All four require web admin dashboard (
 - Epic 6 (Bulk Excel) — import w/ synonym matching, export + watermark + audit
 - Epic 7 (Motivation Layer) — personal stats, sold celebration, streak push, monthly best
 
+## Deferred from: code review of story-4.6-future-pool-and-project-match-trigger (2026-05-28)
+
+- **D1 (ux): toggleAll clears entire selectedIds, not just filteredLeads subset** — theoretical; filter chip clicks cause full navigation (state reset), so cross-filter selection persistence doesn't occur. Fix if client-side filtering is added later.
+- **D2 (security): error messages leak lead UUID in RAISE EXCEPTION** — `lead_not_found_or_not_future: <uuid>` and `employee_id_required for lead: <uuid>` surface UUID to client via Supabase RPC error payload. Refactor to use USING DETAIL or omit identifier from message in security hardening pass.
+- **D3 (ux): assign_lead silently nulls assignment_deadline on reactivation** — `reactivate_future_leads` calls `assign_lead(lead_id, employee_id, NULL)` which unconditionally sets `assignment_deadline = NULL`. Future leads are not expected to carry deadlines, but undocumented. Add comment or guard if convention changes.
+- **D4 (ux): column header "Days in Future" vs spec "days since marked Future"** — minor wording deviation. Change to "Days in Pool" or "Days since Future" in a UX polish pass.
+- **D5 (ux): matchCount URL param shown in banner without server re-verification** — banner displays URL-injected count, which becomes stale if leads are reactivated by another session before the user acts. After reactivation, banner is dismissed (fixed). Stale count on page load is acceptable for V1.
+- **D6 (pre-existing): list_assignable_leads backslash escape uses non-standard PG string syntax** — `replace(v_q, '\', '\\')` relies on `standard_conforming_strings=off` behavior. Works in practice but fragile. Refactor to `E'\\'` or dollar-quoting in future migration.
+- **D7 (pre-existing): phone_encrypted null guard missing** — `list_assignable_leads` calls `pgp_sym_decrypt(l.phone_encrypted, v_pii_key)` without IS NOT NULL guard (unlike name_encrypted). Returns NULL phone_last4 silently for any row with NULL phone_encrypted. Pre-existing since 0038; fix in a future patch migration.
+
 ## Deferred from: code review of 1-1-initialize-multi-tenant-schema-with-rls (2026-05-26)
 
 - 0001→0002 deployment window: security gap exists between the two migration files being applied sequentially. Any user who authenticates after 0001 but before 0002 lands operates under permissive old policies and can call `set_current_tenant` as authenticated. Mitigate via atomic deployment practice (disable external access / Supabase pause during migration run) — not a code-level fix.
