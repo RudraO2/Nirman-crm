@@ -12,6 +12,9 @@ import '../../../core/theme/app_theme.dart';
 import '../data/lead_repository.dart';
 import '../data/models/lead_model.dart';
 import '../providers/lead_providers.dart';
+import '../../motivation/data/motivation_repository.dart';
+import '../../motivation/providers/motivation_providers.dart';
+import '../../motivation/ui/sold_celebration_overlay.dart';
 
 Future<bool?> showEditLeadSheet(BuildContext context, LeadDetail lead) {
   return showModalBottomSheet<bool>(
@@ -107,11 +110,18 @@ class _EditLeadSheetState extends ConsumerState<EditLeadSheet> {
       projectIds:    _projectIds.toList(),
     );
 
+    final wasSold = _status == 'sold' && widget.lead.status != 'sold';
     try {
       await ref.read(leadRepositoryProvider).updateLead(payload);
       // Refresh both the list and this lead's detail
       ref.invalidate(myLeadsProvider);
       ref.invalidate(leadByIdProvider(widget.lead.id));
+      ref.invalidate(myMotivationStatsProvider);
+      if (!mounted) return;
+      if (wasSold) {
+        ref.read(motivationRepositoryProvider).notifyAdminSold(widget.lead.id, widget.lead.name);
+        await showSoldCelebration(context, ref, leadId: widget.lead.id, leadName: widget.lead.name);
+      }
       if (mounted) Navigator.of(context).pop(true);
     } on DuplicateLeadError catch (e) {
       setState(() { _errorMsg = e.message; _duplicateOwner = e.ownerName; _saving = false; });

@@ -10,6 +10,9 @@ import '../../../core/theme/app_theme.dart';
 import '../data/lead_repository.dart';
 import '../data/models/lead_model.dart';
 import '../providers/lead_providers.dart';
+import '../../motivation/data/motivation_repository.dart';
+import '../../motivation/providers/motivation_providers.dart';
+import '../../motivation/ui/sold_celebration_overlay.dart';
 
 Future<void> showPendingOutcomeSheet(
   BuildContext context,
@@ -56,6 +59,7 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
 
   Future<void> _submit() async {
     setState(() => _loading = true);
+    final wasSold = _selectedStatus == 'sold' && widget.lead.status != 'sold';
     try {
       await ref.read(leadRepositoryProvider).submitCallOutcome(
         leadId:     widget.lead.id,
@@ -64,6 +68,13 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
         followupAt: _scheduleFollowup ? _followupAt : null,
       );
       ref.invalidate(myLeadsProvider);
+      ref.invalidate(myMotivationStatsProvider);
+      if (!mounted) return;
+      if (wasSold) {
+        // Fire admin push (best-effort) and play the celebration (Story 7.2).
+        ref.read(motivationRepositoryProvider).notifyAdminSold(widget.lead.id, widget.lead.name);
+        await showSoldCelebration(context, ref, leadId: widget.lead.id, leadName: widget.lead.name);
+      }
       if (mounted) Navigator.of(context).pop();
     } catch (_) {
       if (mounted) {

@@ -7,6 +7,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'models/motivation_stats.dart';
+import 'models/sold_celebration.dart';
 
 part 'motivation_repository.g.dart';
 
@@ -40,6 +41,36 @@ class MotivationRepository {
         );
       }
       rethrow;
+    }
+  }
+
+  /// Earned-moment numbers for a just-sold lead (Story 7.2).
+  /// Never throws — returns [SoldCelebration.empty] on any failure so the
+  /// celebration moment is never blocked by a network hiccup.
+  Future<SoldCelebration> fetchSoldCelebration(String leadId) async {
+    try {
+      final result = await _supabase.rpc(
+        'get_sold_celebration',
+        params: {'p_lead_id': leadId},
+      );
+      final rows = result as List;
+      if (rows.isEmpty) return SoldCelebration.empty;
+      return SoldCelebration.fromRpc(Map<String, dynamic>.from(rows.first as Map));
+    } catch (_) {
+      return SoldCelebration.empty;
+    }
+  }
+
+  /// Fires the admin "[employee] just closed [lead]" push (Story 7.2).
+  /// Best-effort — swallows errors so it never blocks the employee's flow.
+  Future<void> notifyAdminSold(String leadId, String? leadName) async {
+    try {
+      await _supabase.functions.invoke('sold-celebrate-calc', body: {
+        'lead_id': leadId,
+        if (leadName != null && leadName.isNotEmpty) 'lead_name': leadName,
+      });
+    } catch (_) {
+      // ignored — admin push is non-critical
     }
   }
 }
