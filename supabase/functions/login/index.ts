@@ -14,7 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs";
 import { z } from "npm:zod";
-import { errorResponse, successResponse } from "./_shared/errors.ts";
+import { CORS_HEADERS, errorResponse, successResponse } from "./_shared/errors.ts";
 
 const SEED_TENANT_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -32,6 +32,11 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const DUMMY_HASH = "$2b$12$invalidhashfornonexistentusers0000000000000000000000";
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  // CORS preflight — must return 2xx with allow headers before browser sends POST
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
+
   if (req.method !== "POST") {
     return errorResponse("validation_error", "Use POST");
   }

@@ -45,6 +45,14 @@ export const HTTP_STATUS_FOR_CODE: Record<ErrorCode, number> = {
   internal_error: 500,
 };
 
+export const CORS_HEADERS: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Max-Age": "86400",
+};
+
 export function errorResponse(
   code: ErrorCode,
   message: string,
@@ -54,7 +62,7 @@ export function errorResponse(
     JSON.stringify({ error: { code, message, ...(details !== undefined ? { details } : {}) } }),
     {
       status: HTTP_STATUS_FOR_CODE[code],
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...CORS_HEADERS },
     },
   );
 }
@@ -62,6 +70,6 @@ export function errorResponse(
 export function successResponse<T>(data: T, status = 200): Response {
   return new Response(JSON.stringify({ data }), {
     status,
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...CORS_HEADERS },
   });
 }
