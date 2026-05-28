@@ -203,7 +203,7 @@ function RowEditor({ project, onSaved, onCancel }: RowEditorProps) {
             <SelectValue placeholder="— None —" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">— None —</SelectItem>
+            <SelectItem value={NONE_VALUE}>— None —</SelectItem>
             {PROPERTY_TYPES.map((t) => (
               <SelectItem key={t} value={t}>{t}</SelectItem>
             ))}
