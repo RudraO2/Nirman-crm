@@ -25,7 +25,10 @@ export interface EmployeeRow { id: string; username: string }
 function fmtDate(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
-  return d.toLocaleString(undefined, {
+  // Locked locale + IST so SSR + client render identical text (no hydration mismatch).
+  // Tenant ops in India; matches DESIGN.md timezone default (Asia/Kolkata).
+  return d.toLocaleString('en-IN', {
+    timeZone: 'Asia/Kolkata',
     year: 'numeric', month: 'short', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
   })

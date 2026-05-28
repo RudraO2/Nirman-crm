@@ -19,6 +19,8 @@ import {
 import type { ProjectRow } from './page'
 
 const PROPERTY_TYPES = ['Flat', 'Plot', 'Villa', 'Commercial', 'Studio', 'Penthouse']
+// Radix Select forbids empty-string item values. Use a sentinel and translate to null on save.
+const NONE_VALUE = '__none__'
 
 // ── New Project Form ──────────────────────────────────────────────────────────
 
@@ -26,14 +28,16 @@ function NewProjectForm() {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const [propertyType, setPropertyType] = useState<string>('')
+  const [propertyType, setPropertyType] = useState<string>(NONE_VALUE)
   const [isActive, setIsActive] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
+  const propertyTypeDb = propertyType === NONE_VALUE ? null : propertyType
+
   function reset() {
     setName('')
-    setPropertyType('')
+    setPropertyType(NONE_VALUE)
     setIsActive(true)
     setError(null)
   }
@@ -54,7 +58,7 @@ function NewProjectForm() {
         .from('projects')
         .insert({
           name: name.trim(),
-          property_type: propertyType || null,
+          property_type: propertyTypeDb,
           is_active: isActive,
         })
         .select('id')
@@ -71,13 +75,13 @@ function NewProjectForm() {
       reset()
       router.refresh()
 
-      if (propertyType) {
+      if (propertyTypeDb) {
         const { data: countData, error: countErr } = await supabase
-          .rpc('get_future_pool_match_count', { p_property_type: propertyType })
+          .rpc('get_future_pool_match_count', { p_property_type: propertyTypeDb })
 
         if (!countErr && typeof countData === 'number' && countData > 0) {
           router.push(
-            `/future-pool?projectMatch=${encodeURIComponent(projectId)}&matchCount=${countData}&interestType=${encodeURIComponent(propertyType)}`
+            `/future-pool?projectMatch=${encodeURIComponent(projectId)}&matchCount=${countData}&interestType=${encodeURIComponent(propertyTypeDb)}`
           )
           return
         }
@@ -113,7 +117,7 @@ function NewProjectForm() {
                 <SelectValue placeholder="— None —" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">— None —</SelectItem>
+                <SelectItem value={NONE_VALUE}>— None —</SelectItem>
                 {PROPERTY_TYPES.map((t) => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
@@ -155,7 +159,7 @@ interface RowEditorProps {
 
 function RowEditor({ project, onSaved, onCancel }: RowEditorProps) {
   const [name, setName] = useState(project.name)
-  const [propertyType, setPropertyType] = useState(project.property_type ?? '')
+  const [propertyType, setPropertyType] = useState(project.property_type ?? NONE_VALUE)
   const [isActive, setIsActive] = useState(project.is_active)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
@@ -170,7 +174,7 @@ function RowEditor({ project, onSaved, onCancel }: RowEditorProps) {
         .from('projects')
         .update({
           name: name.trim(),
-          property_type: propertyType || null,
+          property_type: propertyType === NONE_VALUE ? null : propertyType,
           is_active: isActive,
         })
         .eq('id', project.id)
@@ -290,7 +294,7 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
                     </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground text-sm">
-                    {new Date(p.created_at).toLocaleDateString()}
+                    {new Date(p.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                   </TableCell>
                   <TableCell className="text-right">
                     <Button
