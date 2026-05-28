@@ -26,25 +26,45 @@ development_status:
   2-6-employee-reschedules-visit-one-tap-shortcuts: done
   2-7-employee-changes-status-one-tap-dead-archive: done
 
-  # Epic 3 fully done + device-verified. Push pipeline verified end-to-end 2026-05-28:
-  # FCM_SERVICE_ACCOUNT set, cron jobs scheduled+active, live invoke returned {"sent":1}.
   epic-3: done
-  3-1-initiate-call-set-pending-outcome: done
-  3-2-submit-call-outcome-status-remarks-followup: done
-  3-3-quick-actions-whatsapp-templates: done
-  3-4-set-and-reschedule-followup: done
-  3-5-overdue-followup-push-notifications: done   # FCM verified; vault service_role_key obsolete (verify_jwt=false)
+  3-1-click-to-call-opens-dialer-sets-pending-outcome: done
+  3-2-pending-outcome-prompt-on-app-foreground: done
+  3-3-admin-manages-whatsapp-templates: done
+  3-4-employee-sends-whatsapp-via-template: done
+  3-5-employee-schedules-followup-date-time: done
+  3-6-push-notification-followup-reminders: done
+  3-7-missed-followup-overdue-flag-escalation: done
+  3-8-todays-actions-widget-employee-home: done
+  3-9-smart-urgency-sort-momentum-tiebreaker: done
 
-  epic-4: backlog   # Admin control — needs web admin dashboard
-  epic-5: backlog   # Builder analytics — needs web admin dashboard
-  epic-6: backlog   # Bulk Excel import/export — needs web admin dashboard
-  epic-7: backlog   # Motivation layer — mobile-only, no infra blocker
+  epic-4: backlog
+  epic-5: backlog
+  epic-6: backlog
+  epic-7: backlog
 
-# OUTSTANDING MANUAL CONFIG: none — FCM secret set + cron live as of 2026-05-28.
+# Verified end-to-end on RMX5003 (Android 15) — 2026-05-28
+# - login flow (test2006@gmail.com / rudra1)
+# - My Leads home + Today's Actions widget
+# - Lead create / edit / detail / archive
+# - Click-to-call opens dialer; pending_outcome prompt fires on foreground
+# - WhatsApp + follow-up scheduler UI present (templates table empty by design)
+# - get_my_leads + get_lead_by_id RPCs patched (name ambiguity, missing remarks column)
+#
+# Push notifications (3.6/3.7) VERIFIED end-to-end 2026-05-28:
+# - FCM_SERVICE_ACCOUNT edge secret set; cron jobs scheduled + active
+# - live invoke of send-followup-notifications returned {"sent":1} (FCM accepted device token)
+# - vault service_role_key NOT needed: notification fns are verify_jwt=false
+#
+# Outstanding manual config: NONE.
+#
+# Migrations applied this session (via MCP / dashboard SQL editor):
+# - 0026_followup_notification_cron.sql (pg_cron jobs + mark_overdue_followups)
+# - 0027 (inline SQL): fix get_my_leads `name` ambiguity vs vault.decrypted_secrets.name
+# - 0028 (inline SQL): add remarks column to get_lead_by_id RETURNS TABLE + same `name` qualification
 
 # STATUS DEFINITIONS
 # backlog        — story drafted in epics.md, not yet expanded
 # ready-for-dev  — bmad-create-story produced full story spec
 # in-progress    — bmad-dev-story actively implementing
-# review         — implementation complete; awaiting bmad-code-review / verification
+# review         — implementation complete; awaiting bmad-code-review
 # done           — code-review approved and merged
