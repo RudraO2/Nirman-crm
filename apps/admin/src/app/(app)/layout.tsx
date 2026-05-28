@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { Toaster } from '@/components/ui/sonner'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -10,5 +12,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const role = user.app_metadata?.role
   if (role !== 'admin') redirect('/login')
 
-  return <>{children}</>
+  return (
+    <div className="flex min-h-full flex-col">
+      <header className="sticky top-0 z-10 flex h-14 items-center gap-6 border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <Link href="/leads" className="text-sm font-semibold tracking-tight">Nirman CRM</Link>
+        <nav className="flex items-center gap-1">
+          <Link
+            href="/leads"
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            Leads
+          </Link>
+          <Link
+            href="/team"
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            Team
+          </Link>
+        </nav>
+        <span className="ml-auto text-xs text-muted-foreground">{user.email}</span>
+      </header>
+      <main className="flex-1">{children}</main>
+      <Toaster position="bottom-right" />
+    </div>
+  )
 }
