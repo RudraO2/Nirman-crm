@@ -4,6 +4,18 @@ import { createClient } from '@/lib/supabase/server'
 import { Toaster } from '@/components/ui/sonner'
 import { GlobalSearch } from '@/components/global-search'
 
+const NAV_ITEMS: Array<{ href: string; label: string }> = [
+  { href: '/leads',       label: 'Leads' },
+  { href: '/team',        label: 'Team' },
+  { href: '/future-pool', label: 'Future Pool' },
+  { href: '/performance', label: 'Performance' },
+  { href: '/funnel',      label: 'Funnel' },
+  { href: '/activity',    label: 'Activity' },
+  { href: '/import',      label: 'Import' },
+  { href: '/export',      label: 'Export' },
+  { href: '/projects',    label: 'Projects' },
+]
+
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -14,68 +26,45 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   if (role !== 'admin') redirect('/login')
 
   return (
-    <div className="flex min-h-full flex-col">
-      <header className="sticky top-0 z-10 flex h-14 items-center gap-6 border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <Link href="/leads" className="text-sm font-semibold tracking-tight">Nirman CRM</Link>
-        <nav className="flex items-center gap-1">
+    <div className="flex min-h-full flex-col bg-[var(--cream)]">
+      {/* Navy-deep top bar — crisp, no rounding, cream text */}
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{
+          background: 'var(--navy-deep)',
+          borderColor: 'rgba(192, 179, 149, 0.15)',
+        }}
+      >
+        <div className="flex h-14 items-center gap-8 px-6">
           <Link
             href="/leads"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+            className="font-medium tracking-tight"
+            style={{
+              fontFamily: 'var(--font-serif)',
+              color: 'var(--cream)',
+              fontSize: '18px',
+            }}
           >
-            Leads
+            Nirman <em className="font-normal">CRM</em>
           </Link>
-          <Link
-            href="/team"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Team
-          </Link>
-          <Link
-            href="/future-pool"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Future Pool
-          </Link>
-          <Link
-            href="/performance"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Performance
-          </Link>
-          <Link
-            href="/funnel"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Funnel
-          </Link>
-          <Link
-            href="/activity"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Activity
-          </Link>
-          <Link
-            href="/import"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Import
-          </Link>
-          <Link
-            href="/export"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Export
-          </Link>
-          <Link
-            href="/projects"
-            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
-          >
-            Projects
-          </Link>
-        </nav>
-        <div className="ml-auto flex items-center gap-3">
-          <GlobalSearch />
-          <span className="text-xs text-muted-foreground">{user.email}</span>
+          <nav className="flex items-center gap-1">
+            {NAV_ITEMS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-white/5"
+                style={{ color: 'rgba(242, 235, 219, 0.78)' }}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-4">
+            <GlobalSearch />
+            <span className="text-xs" style={{ color: 'rgba(242, 235, 219, 0.65)' }}>
+              {user.email}
+            </span>
+          </div>
         </div>
       </header>
       <main className="flex-1">{children}</main>
