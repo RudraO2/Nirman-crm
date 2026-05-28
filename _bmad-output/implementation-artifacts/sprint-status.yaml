@@ -1,7 +1,7 @@
 # Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
 # Status values: backlog | ready-for-dev | in-progress | review | done
 
-last_updated: 2026-05-28
+last_updated: 2026-05-28  # Epic 7 started — story 7.1 contexted
 project: nirman-crm
 repo: https://github.com/RudraO2/Nirman-crm
 supabase_project_id: vhgruadourflpxuzuxfn
@@ -40,7 +40,12 @@ development_status:
   epic-4: backlog
   epic-5: backlog
   epic-6: backlog
-  epic-7: backlog
+
+  epic-7: in-progress
+  7-1-personal-performance-stats-card-employee-home: ready-for-dev
+  7-2-sold-celebration-earned-moment-card: backlog
+  7-3-streak-at-risk-push-notification: backlog
+  7-4-monthly-personal-best-banner: backlog
 
 # Verified end-to-end on RMX5003 (Android 15) — 2026-05-28
 # - login flow (test2006@gmail.com / rudra1)
