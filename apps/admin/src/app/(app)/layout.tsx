@@ -61,6 +61,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             Import
           </Link>
           <Link
+            href="/export"
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            Export
+          </Link>
+          <Link
             href="/projects"
             className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition hover:bg-muted hover:text-foreground"
           >

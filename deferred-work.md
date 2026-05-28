@@ -46,3 +46,13 @@
 - **D-6.1-2 (security): xlsx@0.18.5 has known vulnerabilities** — `npm audit` reports 2 moderate + 1 high CVE in `xlsx`. Risk is reduced because xlsx runs server-side only (Server Action, never in client bundle). Fix before production: evaluate migration to `exceljs` (actively maintained, no known high CVEs) and swap `parseExcelAction` implementation. API is compatible enough for a drop-in replace.
 
 - **D-6.1-3 (ux): No loading skeleton for /import route** — navigating to `/import` causes a brief blank while the server component fetches `list_employees_for_assignment`. Add `apps/admin/src/app/(app)/import/loading.tsx` with a card skeleton (same pattern as deferred for Performance + Funnel pages).
+
+## Deferred from: Stories 6.2 + 6.3 — Excel Export + History (2026-05-28)
+
+- **D-6.2-1 (security minor): Raw RPC error message returned in 500 response** — `apps/admin/src/app/(app)/export/download/route.ts:89` returns `rpcError.message` directly to the client. Route is admin-only so leak risk is low, but raw Postgres error text can disclose internal column names, vault key state, or function signatures. Fix: log the error server-side, return generic `'Export failed'` body with 500.
+
+- **D-6.2-2 (accessibility): Filter labels not associated with controls** — `export-filters.tsx` uses bare `<label>` elements without `htmlFor`. Screen readers cannot link the label to the control. Fix: add `id` to each `<select>`/`<input>` and `htmlFor` to matching `<label>`, or wrap controls inside the `<label>`. Same pattern as deferred for Performance + Funnel.
+
+- **D-6.3-1 (ux): Export History "Filters Applied" column shows placeholder for employee/project** — `history/page.tsx` `formatFilters()` renders employee_id / project_id as the literal string "filtered" instead of resolving the UUID to a human-readable name. Fix: join `export_log` against `users` + `projects` server-side (or expose a view) and render the actual username / project name.
+
+- **D-6.2-3 (semantics minor): export_log.row_count = total matching rows, not capped at 10000** — `export_leads_data` counts matching rows for the audit row but the `RETURN QUERY` is `LIMIT 10000`. When a tenant has >10k matching leads, the log claims more rows than the file contains. Fix: clamp `v_row_count := LEAST(v_row_count, 10000)` OR add a `truncated boolean` column to `export_log`. Acceptable now since no tenant approaches 10k.
