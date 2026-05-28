@@ -26,24 +26,21 @@ development_status:
   2-6-employee-reschedules-visit-one-tap-shortcuts: done
   2-7-employee-changes-status-one-tap-dead-archive: done
 
-  # Epic 3 code complete + device-verified for call/outcome/whatsapp/followup flows.
-  # Push-notification delivery NOT yet verified end-to-end — blocked on outstanding
-  # config: FCM_SERVICE_ACCOUNT edge secret + vault service_role_key (see deferred-work.md).
+  # Epic 3 fully done + device-verified. Push pipeline verified end-to-end 2026-05-28:
+  # FCM_SERVICE_ACCOUNT set, cron jobs scheduled+active, live invoke returned {"sent":1}.
   epic-3: done
   3-1-initiate-call-set-pending-outcome: done
   3-2-submit-call-outcome-status-remarks-followup: done
   3-3-quick-actions-whatsapp-templates: done
   3-4-set-and-reschedule-followup: done
-  3-5-overdue-followup-push-notifications: review   # code done; FCM secret config pending e2e verify
+  3-5-overdue-followup-push-notifications: done   # FCM verified; vault service_role_key obsolete (verify_jwt=false)
 
   epic-4: backlog   # Admin control — needs web admin dashboard
   epic-5: backlog   # Builder analytics — needs web admin dashboard
   epic-6: backlog   # Bulk Excel import/export — needs web admin dashboard
   epic-7: backlog   # Motivation layer — mobile-only, no infra blocker
 
-# OUTSTANDING MANUAL CONFIG (tracked in deferred-work.md):
-#   - vault service_role_key holds a bad value; set the real service_role JWT
-#   - set FCM_SERVICE_ACCOUNT edge secret (supabase secrets set) for push delivery
+# OUTSTANDING MANUAL CONFIG: none — FCM secret set + cron live as of 2026-05-28.
 
 # STATUS DEFINITIONS
 # backlog        — story drafted in epics.md, not yet expanded

@@ -1,5 +1,33 @@
 # Deferred Work
 
+## Epic 3 close-out + branch reconciliation (2026-05-28)
+
+- **Diverged histories merged into main.** `origin/main` carried Epic 1.5–1.8;
+  feature branch carried Epic 2 + 3. Both forked at story 1.4 and were
+  rebased/recreated, so 16 add/add conflicts. Hand-resolved to the superset
+  (kept device-tested `setSession` login, shared `auth_validators`, cold-start
+  router notifier, real HomeScreen + Epic 2/3 routes, Firebase/notifications
+  init, custom theme). `flutter analyze`: 0 errors. main is now source of truth;
+  GitHub default branch switched to main.
+- **8 stale branches NOT deleted** (1.1–1.3, 1.5–1.8). Their content is in main
+  but via rebased/recreated commits, so git reports them un-merged. Deleting is
+  unprovable data-loss — left for manual review. The 3 provably-merged branches
+  (1.4, 2.1, 2.2) were deleted.
+
+### Epic 3.5 push notifications — CONFIGURED + VERIFIED end-to-end
+- ✅ `FCM_SERVICE_ACCOUNT` edge secret set from Firebase admin JSON (project crm-lms-57c5d).
+- ✅ Both cron jobs scheduled + active (`send-followup-notifications` every min,
+  `process-overdue-followups` every 5 min). They were never scheduled before
+  (pg_cron wasn't enabled when 0026 ran; re-scheduled 2026-05-28).
+- ✅ Live test: set a lead's `next_followup_at` to now, invoked fn → `{"sent":1}`
+  (FCM accepted the registered device token; dedup event logged). Lead restored.
+- **vault `service_role_key` NO LONGER NEEDED** — both notification fns have
+  `verify_jwt=false`, so the cron's gateway call succeeds with empty/missing
+  bearer (verified 200 with no auth). The 0026 prerequisite note is obsolete.
+  `SUPABASE_SERVICE_ROLE_KEY` env (used internally by the fns) is platform-injected.
+- Remaining: only visual confirmation of the push on the physical device, and
+  ongoing real-world cron firing (jobs are live).
+
 ## Deferred from: code review of 1-3-admin-creates-employee-accounts round 2 (2026-05-27)
 
 - **AC-7 unstable error string matching** — `authErr?.message` substring checks for GoTrue duplicate detection are fragile across GoTrue upgrades. Pre-existing; not introduced by review patches.
