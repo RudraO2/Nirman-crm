@@ -1,7 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import bcrypt from "npm:bcryptjs";
 import { z } from "npm:zod";
-import { errorResponse, successResponse } from "./_shared/errors.ts";
+import { CORS_HEADERS, errorResponse, successResponse } from "./_shared/errors.ts";
 import { verifyJwtAndScope, isAuthFailure } from "./_shared/auth.ts";
 
 const UPPER   = "ABCDEFGHIJKLMNPQRSTUVWXYZ"; // 25: no O
@@ -52,6 +52,9 @@ const CreateEmployeeInput = z.object({
 });
 
 Deno.serve(async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS_HEADERS });
+  }
   if (req.method !== "POST") return errorResponse("validation_error", "Use POST");
 
   const authResult = await verifyJwtAndScope(req);
