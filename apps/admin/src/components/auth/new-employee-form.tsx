@@ -49,10 +49,15 @@ export function NewEmployeeForm() {
                 id="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. alice or alice@nirman.com"
+                placeholder="alice  (or  alice@nirman.com)"
                 required
                 minLength={3}
+                pattern="[a-zA-Z0-9._+\-@]+"
+                title="Letters, digits, dot, underscore, plus, hyphen, @"
               />
+              <p className="text-xs text-muted-foreground">
+                Plain names auto-suffix with @employees.nirman.local for login.
+              </p>
             </div>
             {error && <p className="text-destructive text-sm">{error}</p>}
             <div className="flex gap-2">

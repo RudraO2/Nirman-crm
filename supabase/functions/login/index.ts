@@ -58,7 +58,11 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   const { username, password, platform } = parsed.data;
-  const normalizedUsername = username.toLowerCase().trim();
+  const rawInput = username.toLowerCase().trim();
+  // Match the synthetic domain rule used by create-employee so plain usernames work.
+  const normalizedUsername = rawInput.includes("@")
+    ? rawInput
+    : `${rawInput}@employees.nirman.local`;
 
   // Service-role client — bypasses RLS to look up user by username
   const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {

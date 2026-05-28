@@ -73,7 +73,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!parsed.success) {
     return errorResponse("validation_error", "Invalid input", parsed.error.flatten().fieldErrors);
   }
-  const username = parsed.data.username.toLowerCase();
+  // Supabase auth requires a valid email. Accept either "alice" or "alice@x.com":
+  // plain usernames get a synthetic domain so GoTrue accepts the createUser call.
+  // Stored as-is in public.users.email_or_username so login lookup matches the input.
+  const rawInput = parsed.data.username.trim().toLowerCase();
+  const username = rawInput.includes("@")
+    ? rawInput
+    : `${rawInput}@employees.nirman.local`;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
