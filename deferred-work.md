@@ -27,3 +27,14 @@
   returns NULL (ROUND(…/NULLIF(0,0), 1)). PostgREST maps NULL → null in JSON, which
   the UI displays as "—". Verified correct. No fix needed — noted for future type
   tightening (change TypeScript type to `number | null`).
+
+## Deferred from: code review of story-5.3 (2026-05-28)
+
+- **F-1 (security): NULL JWT role check in `get_funnel_stats`** — `(auth.jwt() -> 'app_metadata' ->> 'role') <> 'admin'` evaluates to NULL (not FALSE) when `app_metadata.role` is absent, allowing the function to execute without the admin guard. This is a codebase-wide pattern (same form used in all functions in 0049). A systemic fix would change every admin-only function to use `IS DISTINCT FROM 'admin'`. Deferring because (a) Supabase JWTs are platform-signed and `role` is always populated for authenticated users, (b) changing only 5.3 creates inconsistency, (c) a migration changing all existing functions would need its own story.
+  **What's needed:** A global search-and-replace across all SECURITY DEFINER admin functions to use `COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin'` or `IS DISTINCT FROM 'admin'`.
+
+- **F-2 (semantics): `p_days=1` ("Today") includes yesterday** — `(created_at AT TIME ZONE v_tz)::date >= v_today - 1` returns leads from the last 2 days (yesterday + today), not just today. This is consistent with the same pattern used in `get_employee_performance_stats` (0049) and matches the spec `p_days = N → created_at >= v_today - N`. A proper "Today only" filter would use `= v_today`. Deferring to avoid diverging from codebase convention; fix in a dedicated date-filter cleanup story that also adjusts 0049.
+
+- **F-3 (ux): No loading skeleton on filter navigation for Funnel page** — filter changes trigger a full server component re-fetch, causing a brief blank. Add `apps/admin/src/app/(app)/funnel/loading.tsx` with a card skeleton (same pattern as deferred for Performance page above).
+
+- **F-4 (accessibility): Filter selects and range buttons lack ARIA labels** — `<select>` elements have no `aria-label`, range toggle buttons have no `aria-pressed` state. Add `aria-label` and `aria-pressed` before any accessibility audit.
