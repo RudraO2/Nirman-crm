@@ -1,7 +1,7 @@
 # Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
 # Status values: backlog | ready-for-dev | in-progress | review | done
 
-last_updated: 2026-05-28  # 4.1 done (Epic 4 first ship; review patches applied)
+last_updated: 2026-05-28  # 4.3 done — global search by name/phone (commit 81fd974)
 project: nirman-crm
 repo: https://github.com/RudraO2/Nirman-crm
 supabase_project_id: vhgruadourflpxuzuxfn
@@ -40,6 +40,8 @@ development_status:
 
   epic-4: in-progress
   4-1-admin-assigns-single-lead-to-employee: done
+  4-2-admin-bulk-assigns-leads: done
+  4-3-admin-global-search-by-name-and-phone: done
   epic-5: backlog
   epic-6: backlog
 
