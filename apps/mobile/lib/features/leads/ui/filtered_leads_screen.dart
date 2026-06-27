@@ -16,6 +16,7 @@ enum LeadFilter {
   visitsToday,
   incomplete,
   pendingOutcome,
+  untouched,
 }
 
 extension LeadFilterExt on LeadFilter {
@@ -25,6 +26,7 @@ extension LeadFilterExt on LeadFilter {
       case LeadFilter.visitsToday:     return 'Visits Today';
       case LeadFilter.incomplete:      return 'Incomplete Leads';
       case LeadFilter.pendingOutcome:  return 'Calls Awaiting Outcome';
+      case LeadFilter.untouched:       return 'Untouched Leads';
     }
   }
 
@@ -34,6 +36,7 @@ extension LeadFilterExt on LeadFilter {
       case LeadFilter.visitsToday:     return 'No site visits scheduled today';
       case LeadFilter.incomplete:      return 'No incomplete leads';
       case LeadFilter.pendingOutcome:  return 'No calls awaiting outcome';
+      case LeadFilter.untouched:       return 'No untouched leads — all worked!';
     }
   }
 
@@ -52,6 +55,7 @@ extension LeadFilterExt on LeadFilter {
       case LeadFilter.visitsToday:     return leads.where((l) => sameDay(l.visitDate)).toList();
       case LeadFilter.incomplete:      return leads.where((l) => l.isIncomplete).toList();
       case LeadFilter.pendingOutcome:  return leads.where((l) => l.hasPendingOutcome).toList();
+      case LeadFilter.untouched:       return leads.where((l) => l.isUntouched).toList();
     }
   }
 }

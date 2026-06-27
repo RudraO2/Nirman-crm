@@ -125,6 +125,16 @@ class LeadListItem {
       lastActionAt != null &&
       DateTime.now().difference(lastActionAt!).inDays >= 7;
 
+  /// True when the lead has had no action since it was created — e.g. bulk-imported
+  /// and never worked. `last_action_at` is stamped equal to `created_at` on insert;
+  /// any real action (call, status change, remark, follow-up, reschedule) advances
+  /// it. A 2-second tolerance absorbs insert-time clock skew between the two columns.
+  /// Pending-outcome leads are excluded — a call already advanced last_action_at.
+  bool get isUntouched =>
+      !hasPendingOutcome &&
+      (lastActionAt == null ||
+          !lastActionAt!.isAfter(createdAt.add(const Duration(seconds: 2))));
+
   bool get hasPendingOutcome => pendingOutcomeAt != null;
 
   bool get hasOverdueFollowup =>

@@ -111,6 +111,34 @@ class _CardBody extends StatelessWidget {
           ),
         ],
 
+        // ── Untouched badge — never actioned since creation (e.g. imported) ──
+        if (lead.isUntouched) ...[
+          const SizedBox(height: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: AppColors.navy.withValues(alpha: 0.06),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: AppColors.navy.withValues(alpha: 0.30)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.fiber_new_rounded, size: 11, color: AppColors.navy),
+                const SizedBox(width: 3),
+                Text(
+                  'Untouched',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.navy,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+
         // ── Shared badge (Story 4.4 — lead shared with caller) ────────
         if (lead.isShared) ...[
           const SizedBox(height: 4),
