@@ -177,6 +177,35 @@ class LeadRepository {
         .toList();
   }
 
+  /// Returns ALL urgency-sorted active leads for the current user, paging through
+  /// get_my_leads() until exhausted. The home screen needs the complete active set
+  /// — Today's-Actions counts and alarm reconcile fold over the whole list, so a
+  /// partial (single-page) load undercounts and misses alarms. [pageSize] is the
+  /// per-request limit; loop stops when a page returns fewer rows than [pageSize].
+  Future<List<LeadListItem>> getAllMyLeads({int pageSize = 200}) =>
+      collectPages(
+        (limit, offset) => getMyLeads(limit: limit, offset: offset),
+        pageSize: pageSize,
+      );
+
+  /// Pages a `(limit, offset) -> rows` fetcher until a page returns fewer than
+  /// [pageSize] rows (the last page), accumulating all rows. Pure paging loop,
+  /// extracted for unit testing without a live Supabase client.
+  static Future<List<T>> collectPages<T>(
+    Future<List<T>> Function(int limit, int offset) fetch, {
+    int pageSize = 200,
+  }) async {
+    final all = <T>[];
+    var offset = 0;
+    while (true) {
+      final page = await fetch(pageSize, offset);
+      all.addAll(page);
+      if (page.length < pageSize) break;
+      offset += pageSize;
+    }
+    return all;
+  }
+
   /// Caller's archived leads (Story 2.8). status ∈ (dead, sold, future), newest-archived first.
   /// [query] optional name substring OR exact-phone search.
   Future<List<LeadListItem>> getMyArchivedLeads({

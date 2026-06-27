@@ -16,7 +16,7 @@ Future<LeadDetail?> leadById(LeadByIdRef ref, String id) {
 /// Invalidate this provider after any lead mutation to refresh the list.
 @riverpod
 Future<List<LeadListItem>> myLeads(MyLeadsRef ref) {
-  return ref.read(leadRepositoryProvider).getMyLeads();
+  return ref.read(leadRepositoryProvider).getAllMyLeads();
 }
 
 /// Available projects for the lead form project picker.
