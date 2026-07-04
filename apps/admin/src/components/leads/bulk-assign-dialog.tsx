@@ -117,7 +117,7 @@ function EmployeeBucket({
           {overThreshold && (
             <Badge
               variant="outline"
-              className="text-[10px] border-amber-400 text-amber-600 bg-amber-50 dark:bg-amber-900/20"
+              className="text-[10px] border-warm/50 text-warm bg-warm-bg"
             >
               <AlertTriangle className="size-3 mr-1" />
               {afterAssign} active
@@ -159,7 +159,7 @@ function UnassignedPool({ leads, isOver }: { leads: LeadRow[]; isOver: boolean }
         <Badge variant="outline" className="text-[10px]">{leads.length}</Badge>
       </div>
       {leads.length === 0 ? (
-        <p className="text-xs text-green-600 text-center mt-2 font-medium">All leads allocated ✓</p>
+        <p className="text-xs text-sold text-center mt-2 font-medium">All leads allocated ✓</p>
       ) : (
         <div className="flex flex-col gap-1.5">
           {leads.map((l) => (
@@ -550,13 +550,13 @@ export function BulkAssignDialog({
             </p>
 
             {warnings.length > 0 && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 space-y-1">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium text-sm">
+              <div className="rounded-lg border border-warm/40 bg-warm-bg px-4 py-3 space-y-1">
+                <div className="flex items-center gap-2 text-warm font-medium text-sm">
                   <AlertTriangle className="size-4 shrink-0" />
                   Workload warning
                 </div>
                 {warnings.map((w) => (
-                  <p key={w.name} className="text-sm text-amber-700 dark:text-amber-300 pl-6">
+                  <p key={w.name} className="text-sm text-warm pl-6">
                     {w.name} will have {w.total} active leads after assignment (limit: 80)
                   </p>
                 ))}
@@ -601,13 +601,13 @@ export function BulkAssignDialog({
         {step === 'dnd' && (
           <div className="space-y-4 py-2">
             {warnings.length > 0 && (
-              <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 space-y-1">
-                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 font-medium text-sm">
+              <div className="rounded-lg border border-warm/40 bg-warm-bg px-4 py-3 space-y-1">
+                <div className="flex items-center gap-2 text-warm font-medium text-sm">
                   <AlertTriangle className="size-4 shrink-0" />
                   Workload warning
                 </div>
                 {warnings.map((w) => (
-                  <p key={w.name} className="text-sm text-amber-700 dark:text-amber-300 pl-6">
+                  <p key={w.name} className="text-sm text-warm pl-6">
                     {w.name} will have {w.total} active leads (limit: 80)
                   </p>
                 ))}

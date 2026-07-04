@@ -61,7 +61,7 @@ export function LeadsToolbar({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3">
+    <div className="flex flex-wrap items-center gap-3 rounded-[14px] border border-line bg-paper p-3 shadow-[var(--shadow)]">
       <Input
         type="search"
         placeholder="Search name or phone…"
@@ -92,15 +92,8 @@ export function LeadsToolbar({
           ))}
         </SelectContent>
       </Select>
-      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-        <input
-          type="checkbox"
-          checked={archived}
-          onChange={(e) => { setArchived(e.target.checked); updateUrl({ archived: e.target.checked }) }}
-          className="size-4 rounded border-input"
-        />
-        Include archived
-      </label>
+      {/* Archived is now expressed by the Archived tab (§2); the URL param and
+          server logic are unchanged — the checkbox is just retired here. */}
       {(q || status !== 'any' || employee !== 'any' || archived) && (
         <Button
           variant="ghost"

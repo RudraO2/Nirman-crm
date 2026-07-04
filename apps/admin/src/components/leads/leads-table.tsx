@@ -67,8 +67,8 @@ export function LeadsTable({ leads, employees }: LeadsTableProps) {
   return (
     <div className="space-y-3">
       {selectedIds.size >= 2 && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
-          <span className="text-sm font-medium text-primary">
+        <div className="flex items-center gap-3 rounded-[12px] bg-evergreen px-4 py-2.5 text-ivory shadow-[var(--shadow-lg)]">
+          <span className="text-sm font-semibold">
             {selectedIds.size} leads selected
           </span>
           <BulkAssignDialog
@@ -79,7 +79,7 @@ export function LeadsTable({ leads, employees }: LeadsTableProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="ml-auto text-muted-foreground"
+            className="ml-auto text-ivory/70 hover:text-ivory hover:bg-white/10"
             onClick={() => setSelectedIds(new Set())}
           >
             Clear selection
@@ -87,7 +87,7 @@ export function LeadsTable({ leads, employees }: LeadsTableProps) {
         </div>
       )}
 
-      <div className="rounded-lg border">
+      <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -127,21 +127,21 @@ export function LeadsTable({ leads, employees }: LeadsTableProps) {
                   />
                 </TableCell>
                 <TableCell className="font-medium">
-                  {l.name ?? <span className="text-muted-foreground italic">Unnamed</span>}
+                  {l.name ?? <span className="text-ink-3 italic">Unnamed</span>}
                 </TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">
+                <TableCell className="font-mono text-xs text-ink-3">
                   •••{l.phone_last4 ?? '----'}
                 </TableCell>
                 <TableCell><StatusPill status={l.status} /></TableCell>
                 <TableCell>
                   {l.assignee_username ?? (
-                    <span className="text-muted-foreground italic">Unassigned</span>
+                    <span className="text-ink-3 italic">Unassigned</span>
                   )}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className="text-sm tabular-nums text-ink-2">
                   {fmtDate(l.assignment_deadline)}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
+                <TableCell className="text-sm tabular-nums text-ink-2">
                   {fmtDate(l.created_at)}
                 </TableCell>
                 <TableCell className="text-right">

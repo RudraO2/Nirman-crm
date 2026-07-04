@@ -6,6 +6,7 @@ import {
 } from '@/components/ui/table'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { TabStrip } from '@/components/tab-strip'
 import { ReactivateDialog } from '@/components/leads/reactivate-dialog'
 import type { LeadRow, EmployeeRow } from '@/components/leads/leads-table'
 
@@ -85,22 +86,25 @@ export function FuturePoolView({
   const showBanner = Boolean(projectMatch) && matchCount > 0 && !bannerDismissed
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Future Pool</h1>
-          <p className="text-sm text-muted-foreground">
-            {filteredLeads.length} future lead{filteredLeads.length !== 1 ? 's' : ''}
-            {interestTypeFilter ? ` · ${interestTypeFilter}` : ''}
-          </p>
-        </div>
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <p className="eyebrow">Sales</p>
+        <h1 className="font-serif text-[29px] font-medium leading-[1.15] tracking-[-0.01em] text-ink">
+          Future Pool
+        </h1>
+        <p className="text-[13.5px] text-ink-2">
+          {filteredLeads.length} future lead{filteredLeads.length !== 1 ? 's' : ''}
+          {interestTypeFilter ? ` · ${interestTypeFilter}` : ''}
+        </p>
       </div>
+
+      <TabStrip />
 
       {/* Project-match banner */}
       {showBanner && (
-        <div className="flex items-center justify-between rounded-lg border border-blue-300 bg-blue-50 dark:bg-blue-900/20 px-4 py-3">
-          <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
-            {matchCount} Future Lead{matchCount !== 1 ? 's' : ''} match this new Project. Review and reactivate?
+        <div className="flex items-center justify-between rounded-[12px] border border-brass-soft bg-brass-soft/40 px-4 py-3">
+          <p className="text-sm font-medium text-ink">
+            ✨ {matchCount} Future Lead{matchCount !== 1 ? 's' : ''} match this new Project. Review and reactivate?
           </p>
           <div className="flex items-center gap-2 shrink-0 ml-4">
             <Button
@@ -124,7 +128,7 @@ export function FuturePoolView({
       {/* Filter chips */}
       {distinctTypes.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted-foreground">Filter:</span>
+          <span className="text-xs text-ink-2">Interest:</span>
           <Link href={filterHref('')}>
             <Badge
               variant={!interestTypeFilter ? 'default' : 'outline'}
@@ -148,8 +152,8 @@ export function FuturePoolView({
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-2">
-          <span className="text-sm font-medium text-primary">
+        <div className="flex items-center gap-3 rounded-[12px] bg-evergreen px-4 py-2.5 text-ivory shadow-[var(--shadow-lg)]">
+          <span className="text-sm font-semibold">
             {selectedIds.size} lead{selectedIds.size !== 1 ? 's' : ''} selected
           </span>
           <Button size="sm" onClick={() => openDialogWith(selectedLeads)}>
@@ -158,7 +162,7 @@ export function FuturePoolView({
           <Button
             variant="ghost"
             size="sm"
-            className="ml-auto text-muted-foreground"
+            className="ml-auto text-ivory/70 hover:text-ivory hover:bg-white/10"
             onClick={() => setSelectedIds(new Set())}
           >
             Clear
@@ -167,7 +171,7 @@ export function FuturePoolView({
       )}
 
       {/* Table */}
-      <div className="rounded-lg border">
+      <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -200,21 +204,21 @@ export function FuturePoolView({
                   />
                 </TableCell>
                 <TableCell className="font-medium">
-                  {lead.name ?? <span className="italic text-muted-foreground">Unnamed</span>}
+                  {lead.name ?? <span className="italic text-ink-3">Unnamed</span>}
                 </TableCell>
                 <TableCell>
                   {lead.assignee_username ?? (
-                    <span className="italic text-muted-foreground">Unassigned</span>
+                    <span className="italic text-ink-3">Unassigned</span>
                   )}
                 </TableCell>
                 <TableCell>
                   {lead.interest_type ? (
                     <Badge variant="secondary">{lead.interest_type}</Badge>
                   ) : (
-                    <span className="text-muted-foreground">—</span>
+                    <span className="text-ink-3">—</span>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="tabular-nums text-ink-2">
                   {daysSince(lead.created_at)}d
                 </TableCell>
               </TableRow>

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { Button } from '@/components/ui/button'
+import { TabStrip } from '@/components/tab-strip'
 import { LeadsToolbar } from '@/components/leads/leads-toolbar'
 import { LeadsTable } from '@/components/leads/leads-table'
 import type { LeadRow, EmployeeRow } from '@/components/leads/leads-table'
@@ -37,11 +38,7 @@ export default async function LeadsPage({
   ])
 
   if (leadsErr || empErr) {
-    return (
-      <div className="p-6">
-        <p className="text-destructive">Failed to load leads: {leadsErr?.message ?? empErr?.message}</p>
-      </div>
-    )
+    return <p className="text-danger">Failed to load leads: {leadsErr?.message ?? empErr?.message}</p>
   }
 
   const leads = (leadsRaw ?? []) as LeadRow[]
@@ -61,16 +58,19 @@ export default async function LeadsPage({
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Leads</h1>
-          <p className="text-sm text-muted-foreground">
-            {Number(total)} {Number(total) === 1 ? 'lead' : 'leads'}
-            {archived ? ' (including archived)' : ' active'}
-          </p>
-        </div>
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <p className="eyebrow">Sales</p>
+        <h1 className="font-serif text-[29px] font-medium leading-[1.15] tracking-[-0.01em] text-ink">
+          Leads
+        </h1>
+        <p className="text-[13.5px] text-ink-2">
+          {Number(total)} {Number(total) === 1 ? 'lead' : 'leads'}
+          {archived ? ' (including archived)' : ' active'}
+        </p>
       </div>
+
+      <TabStrip />
 
       <LeadsToolbar
         employees={employees}
