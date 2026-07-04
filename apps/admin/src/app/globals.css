@@ -14,7 +14,7 @@
 
   --font-sans: var(--font-sans), system-ui, sans-serif;
   --font-serif: var(--font-serif), Georgia, serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
   --font-heading: var(--font-serif), Georgia, serif;
 
   --color-sidebar-ring: var(--sidebar-ring);
@@ -61,6 +61,28 @@
   --color-gold-soft: var(--gold-soft);
   --color-gold-bright: var(--gold-bright);
 
+  /* ── Redesign tokens (evergreen / ivory / brass system) — §3 ── */
+  --color-evergreen: var(--evergreen);
+  --color-evergreen-2: var(--evergreen-2);
+  --color-evergreen-3: var(--evergreen-3);
+  --color-ivory: var(--ivory);
+  --color-paper: var(--paper);
+  --color-mist: var(--mist);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-brass: var(--brass);
+  --color-brass-soft: var(--brass-soft);
+  --color-brass-bright: var(--brass-bright);
+  --color-danger: var(--danger);
+  --color-hot: var(--hot);       --color-hot-bg: var(--hot-bg);
+  --color-warm: var(--warm);     --color-warm-bg: var(--warm-bg);
+  --color-cold: var(--cold);     --color-cold-bg: var(--cold-bg);
+  --color-dead: var(--dead);     --color-dead-bg: var(--dead-bg);
+  --color-sold: var(--sold);     --color-sold-bg: var(--sold-bg);
+  --color-future: var(--future); --color-future-bg: var(--future-bg);
+
   --radius-sm: 6px;
   --radius-md: 12px;
   --radius-lg: 20px;
@@ -71,64 +93,88 @@
 }
 
 :root {
-  /* Brand palette (hex → DESIGN.md) */
-  --cream:         #F2EBDB;
-  --cream-raised: #ECE3CD;
-  --cream-sunk:   #E8DEC4;
-  --cream-mist:   #D9CDB1;
-  --ink:           #2A2620;
-  --ink-soft:      #4A443B;
-  --ink-disabled:  #928670;
-  --line:          #C0B395;
-  --line-strong:   #928670;
-  --navy:          #1F2A3D;
-  --navy-soft:     #2F3A4F;
-  --navy-deep:     #1A2638;
-  --gold:          #C19A4A;
-  --gold-deep:     #8B6520;
-  --gold-soft:     #DCC58D;
-  --gold-bright:   #D4AE5C;
-  --rust:          #9C3D2A;
-  --rust-fill:     #B8513A;
-  --moss:          #4A6A3F;
-  --moss-fill:     #6A8B5A;
+  /* ── Redesign palette (§3 tokens) ── */
+  --evergreen:    #132A21;
+  --evergreen-2:  #1B382C;
+  --evergreen-3:  #0D1F18;
+  --ivory:        #F6F3EC;
+  --paper:        #FFFFFF;
+  --mist:         #EDE8DD;
+  --ink-2:        #5C665F;
+  --ink-3:        #98A29A;
+  --line-2:       #CFC8B8;
+  --brass:        #A8823C;
+  --brass-soft:   #EADFC4;
+  --brass-bright: #C9A354;
+  --danger:       #B3372B;
+  --hot:    #C24638; --hot-bg:    #F9E9E6;
+  --warm:   #C07A17; --warm-bg:   #F7EDD9;
+  --cold:   #3E6DA6; --cold-bg:   #E6EDF6;
+  --dead:   #78817B; --dead-bg:   #ECEEEC;
+  --sold:   #2F7D4F; --sold-bg:   #E3F0E7;
+  --future: #7A5BA8; --future-bg: #EEE8F6;
+
+  --shadow: 0 1px 2px rgba(28,35,31,.05), 0 4px 16px rgba(28,35,31,.05);
+  --shadow-lg: 0 8px 40px rgba(13,31,24,.22);
+
+  /* ── Legacy brand names kept as aliases → new values (§3) ── */
+  --cream:         var(--ivory);
+  --cream-raised:  var(--paper);
+  --cream-sunk:    var(--mist);
+  --cream-mist:    var(--line);
+  --ink:           #1C231F;
+  --ink-soft:      var(--ink-2);
+  --ink-disabled:  var(--ink-3);
+  --line:          #E4DFD3;
+  --line-strong:   var(--line-2);
+  --navy:          var(--evergreen);
+  --navy-soft:     var(--evergreen-2);
+  --navy-deep:     var(--evergreen-3);
+  --gold:          var(--brass);
+  --gold-deep:     #96732F;
+  --gold-soft:     var(--brass-soft);
+  --gold-bright:   var(--brass-bright);
+  --rust:          var(--danger);
+  --rust-fill:     var(--hot);
+  --moss:          var(--sold);
+  --moss-fill:     var(--sold);
 
   /* Map shadcn tokens to brand */
-  --background:           var(--cream);
+  --background:           var(--ivory);
   --foreground:           var(--ink);
-  --card:                 var(--cream-raised);
+  --card:                 var(--paper);
   --card-foreground:      var(--ink);
-  --popover:              var(--cream-raised);
+  --popover:              var(--paper);
   --popover-foreground:   var(--ink);
-  --primary:              var(--gold-bright);
-  --primary-foreground:   var(--ink);
-  --secondary:            var(--cream-sunk);
+  --primary:              var(--brass);
+  --primary-foreground:   #FFFFFF;
+  --secondary:            var(--mist);
   --secondary-foreground: var(--ink);
-  --muted:                var(--cream-sunk);
-  --muted-foreground:     var(--ink-soft);
-  --accent:               var(--gold-soft);
+  --muted:                var(--mist);
+  --muted-foreground:     var(--ink-2);
+  --accent:               var(--brass-soft);
   --accent-foreground:    var(--ink);
-  --destructive:          var(--rust);
+  --destructive:          var(--danger);
   --border:               var(--line);
-  --input:                var(--line);
-  --ring:                 var(--gold-deep);
+  --input:                var(--line-2);
+  --ring:                 var(--brass);
 
-  --chart-1: var(--gold);
-  --chart-2: var(--gold-deep);
-  --chart-3: var(--navy-soft);
-  --chart-4: var(--gold-soft);
-  --chart-5: var(--ink-soft);
+  --chart-1: var(--brass);
+  --chart-2: var(--evergreen);
+  --chart-3: var(--cold);
+  --chart-4: var(--brass-bright);
+  --chart-5: var(--ink-2);
 
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 
-  --sidebar:                       var(--cream-raised);
-  --sidebar-foreground:            var(--ink);
-  --sidebar-primary:               var(--gold);
-  --sidebar-primary-foreground:    var(--ink);
-  --sidebar-accent:                var(--cream-sunk);
-  --sidebar-accent-foreground:     var(--ink);
-  --sidebar-border:                var(--line);
-  --sidebar-ring:                  var(--gold-deep);
+  --sidebar:                       var(--evergreen);
+  --sidebar-foreground:            #E9E4D6;
+  --sidebar-primary:               var(--brass);
+  --sidebar-primary-foreground:    #FFFFFF;
+  --sidebar-accent:                var(--evergreen-2);
+  --sidebar-accent-foreground:     #F2EEE2;
+  --sidebar-border:                rgba(233,228,214,.08);
+  --sidebar-ring:                  var(--brass);
 }
 
 @layer base {
@@ -159,9 +205,9 @@
 /* Eyebrow / uppercase label utility */
 .eyebrow {
   font-family: var(--font-sans);
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.24em;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--brass);
 }
