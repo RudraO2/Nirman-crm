@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
+import { TabStrip } from '@/components/tab-strip'
 import type { ProjectRow } from './page'
 
 const PROPERTY_TYPES = ['Flat', 'Plot', 'Villa', 'Commercial', 'Studio', 'Penthouse']
@@ -246,18 +247,23 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground">
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <p className="eyebrow">Builder Ops</p>
+          <h1 className="font-serif text-[29px] font-medium leading-[1.15] tracking-[-0.01em] text-ink">
+            Projects
+          </h1>
+          <p className="text-[13.5px] text-ink-2">
             {initialProjects.length} project{initialProjects.length !== 1 ? 's' : ''}
           </p>
         </div>
         <NewProjectForm />
       </div>
 
-      <div className="rounded-lg border">
+      <TabStrip />
+
+      <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -279,21 +285,26 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
                   />
                 </TableRow>
               ) : (
-                <TableRow key={p.id} className={p.is_active ? '' : 'opacity-60'}>
+                <TableRow key={p.id} className={p.is_active ? '' : 'opacity-55'}>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>
                     {p.property_type ? (
                       <Badge variant="secondary">{p.property_type}</Badge>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-ink-3">—</span>
                     )}
                   </TableCell>
                   <TableCell>
-                    <span className={p.is_active ? 'text-green-600' : 'text-muted-foreground'}>
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11.5px] font-semibold ${
+                        p.is_active ? 'bg-sold-bg text-sold' : 'bg-dead-bg text-dead'
+                      }`}
+                    >
+                      <span className="size-1.5 rounded-full bg-current" />
                       {p.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
+                  <TableCell className="text-ink-2 text-sm tabular-nums">
                     {new Date(p.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
                   </TableCell>
                   <TableCell className="text-right">
