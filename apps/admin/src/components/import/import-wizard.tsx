@@ -123,33 +123,33 @@ export function ImportWizard({ employees }: Props) {
             <div className="flex items-center gap-1.5">
               <div
                 className={[
-                  'flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium',
+                  'flex h-[26px] w-[26px] items-center justify-center rounded-full text-xs font-bold',
                   i < stepIndex
-                    ? 'bg-foreground text-background'
+                    ? 'bg-sold text-white'
                     : i === stepIndex
-                    ? 'border-2 border-foreground bg-background text-foreground'
-                    : 'border border-muted-foreground/30 bg-muted text-muted-foreground',
+                    ? 'bg-evergreen text-ivory'
+                    : 'border-2 border-line-2 bg-paper text-ink-3',
                 ].join(' ')}
               >
                 {i < stepIndex ? '✓' : i + 1}
               </div>
               <span
                 className={[
-                  'text-sm',
-                  i === stepIndex ? 'font-medium text-foreground' : 'text-muted-foreground',
+                  'text-[12.5px] font-semibold',
+                  i <= stepIndex ? 'text-ink' : 'text-ink-3',
                 ].join(' ')}
               >
                 {s.label}
               </span>
             </div>
             {i < STEPS.length - 1 && (
-              <div className="mx-3 h-px w-8 bg-border" />
+              <div className="mx-2.5 h-0.5 w-8 min-w-5 flex-1 bg-line" />
             )}
           </div>
         ))}
       </div>
 
-      {error && <p className="text-destructive text-sm">{error}</p>}
+      {error && <p className="text-danger text-sm">{error}</p>}
 
       {/* Upload step */}
       {step === 'upload' && (
@@ -158,8 +158,8 @@ export function ImportWizard({ employees }: Props) {
           onDragLeave={() => setDragging(false)}
           onDrop={handleDrop}
           className={[
-            'rounded-lg border-2 border-dashed p-12 text-center transition-colors',
-            dragging ? 'border-foreground bg-muted/50' : 'border-border',
+            'rounded-[16px] border-2 border-dashed bg-paper p-10 text-center transition-colors',
+            dragging ? 'border-brass bg-brass-soft/30' : 'border-line-2',
             isPending ? 'pointer-events-none opacity-60' : 'cursor-pointer',
           ].join(' ')}
           onClick={() => fileInputRef.current?.click()}
@@ -175,11 +175,11 @@ export function ImportWizard({ employees }: Props) {
             }}
           />
           <div className="space-y-2">
-            <div className="text-4xl text-muted-foreground">↑</div>
-            <p className="text-sm font-medium">
+            <div className="text-4xl text-brass">↑</div>
+            <p className="text-[15px] font-semibold">
               {isPending ? 'Parsing file…' : 'Drop an Excel file here or click to browse'}
             </p>
-            <p className="text-xs text-muted-foreground">Accepts .xlsx and .xls files</p>
+            <p className="text-xs text-ink-2">Accepts .xlsx and .xls files</p>
           </div>
         </div>
       )}
@@ -187,10 +187,10 @@ export function ImportWizard({ employees }: Props) {
       {/* Map step */}
       {step === 'map' && parseResult && (
         <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-ink-2">
             Review detected column mappings. Manually map any unmatched columns or mark them as Ignore.
           </p>
-          <div className="rounded-lg border">
+          <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -204,23 +204,23 @@ export function ImportWizard({ employees }: Props) {
                   const current = mappings[col]
                   const isAutoMapped = parseResult.mappings[col] !== null
                   return (
-                    <TableRow key={col}>
+                    <TableRow key={col} className={isAutoMapped ? '' : 'bg-warm-bg/50'}>
                       <TableCell className="font-mono text-sm">{col}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="text-sm text-ink-2">
                         {isAutoMapped ? (
-                          <span className="rounded-sm bg-muted px-1.5 py-0.5 text-xs">
+                          <span className="rounded-sm bg-mist px-1.5 py-0.5 text-xs">
                             {parseResult.mappings[col]}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground/50">—</span>
+                          <span className="text-ink-3">—</span>
                         )}
                       </TableCell>
                       <TableCell>
                         {isAutoMapped ? (
-                          <span className="text-sm text-muted-foreground">{current}</span>
+                          <span className="text-sm text-ink-2">{current}</span>
                         ) : (
                           <select
-                            className="rounded-md border bg-background px-2 py-1 text-sm"
+                            className="rounded-[9px] border border-line-2 bg-paper px-2 py-1 text-sm"
                             value={current ?? ''}
                             onChange={(e) =>
                               setMappings((prev) => ({
@@ -270,14 +270,14 @@ export function ImportWizard({ employees }: Props) {
               },
               { label: 'Missing phone (rejected)', value: parseResult.missingPhoneCount },
             ].map((stat) => (
-              <div key={stat.label} className="rounded-lg border bg-card p-4">
-                <p className="text-xs text-muted-foreground">{stat.label}</p>
-                <p className="mt-1 text-2xl font-semibold tabular-nums">{stat.value}</p>
+              <div key={stat.label} className="rounded-[14px] border border-line bg-paper p-4 shadow-[var(--shadow)]">
+                <p className="text-xs text-ink-2">{stat.label}</p>
+                <p className="mt-1 font-serif text-2xl font-medium tabular-nums text-ink">{stat.value}</p>
               </div>
             ))}
           </div>
 
-          <div className="rounded-lg border">
+          <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -333,13 +333,13 @@ export function ImportWizard({ employees }: Props) {
             </div>
           </div>
 
-          <div className="rounded-lg border divide-y">
+          <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)] divide-y divide-line">
             {employees.map((emp) => {
               const checked = selectedEmployees.includes(emp.id)
               return (
                 <label
                   key={emp.id}
-                  className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-muted/40"
+                  className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-mist/50"
                 >
                   <input
                     type="checkbox"
@@ -379,21 +379,21 @@ export function ImportWizard({ employees }: Props) {
       {/* Done step */}
       {step === 'done' && importResult && (
         <div className="space-y-4">
-          <div className="rounded-lg border bg-card p-6 space-y-4">
-            <h2 className="text-base font-semibold">Import Complete</h2>
+          <div className="rounded-[14px] border border-line bg-paper p-6 space-y-4 shadow-[var(--shadow)]">
+            <h2 className="font-serif text-lg font-medium">Import Complete</h2>
             <div className="grid grid-cols-3 gap-4">
               {[
                 { label: 'Imported', value: importResult.imported },
                 { label: 'Duplicates skipped', value: importResult.duplicates_skipped },
                 { label: 'Errors', value: importResult.errors },
               ].map((stat) => (
-                <div key={stat.label} className="rounded-lg border bg-background p-4">
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-semibold tabular-nums">{stat.value}</p>
+                <div key={stat.label} className="rounded-[12px] border border-line bg-ivory p-4">
+                  <p className="text-xs text-ink-2">{stat.label}</p>
+                  <p className="mt-1 font-serif text-2xl font-medium tabular-nums text-ink">{stat.value}</p>
                 </div>
               ))}
             </div>
-            <p className="text-xs text-muted-foreground font-mono">Batch: {importResult.batch_id}</p>
+            <p className="text-xs text-ink-3 font-mono">Batch: {importResult.batch_id}</p>
           </div>
           <div className="flex justify-end">
             <Button variant="outline" onClick={reset}>

@@ -15,9 +15,9 @@ interface Props {
 const STATUS_OPTIONS = ['warm', 'cold', 'hot', 'dead', 'sold', 'future'] as const
 
 const selectCls =
-  'w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ' +
+  'w-full rounded-[9px] border border-line-2 bg-paper px-3 py-2 text-sm text-ink ' +
   'ring-offset-background transition-colors ' +
-  'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ' +
+  'focus:outline-none focus:ring-2 focus:ring-brass focus:ring-offset-2 ' +
   'disabled:cursor-not-allowed disabled:opacity-50'
 
 export function ExportFilters({ employees, projects }: Props) {
@@ -78,7 +78,7 @@ export function ExportFilters({ employees, projects }: Props) {
   return (
     <div className="space-y-6">
       {/* ── Filters card ── */}
-      <div className="rounded-lg border bg-card p-6 space-y-5">
+      <div className="rounded-[14px] border border-line bg-paper p-6 space-y-5 shadow-[var(--shadow)]">
         <h2 className="text-base font-semibold leading-none">Filter Leads</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
@@ -171,25 +171,25 @@ export function ExportFilters({ employees, projects }: Props) {
 
       {/* ── Action bar ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <p className="text-sm text-muted-foreground min-h-[1.25rem]">
+        <div className="flex items-center gap-2.5 rounded-[10px] bg-mist px-4 py-2.5 text-sm text-ink-2">
           {loading ? (
             <span className="animate-pulse">Computing…</span>
           ) : count === null ? (
-            <span className="text-destructive">Could not load count</span>
+            <span className="text-danger">Could not load count</span>
           ) : (
             <>
-              <span className="font-semibold text-foreground tabular-nums">
+              <span className="font-serif text-2xl font-medium tabular-nums text-ink">
                 {count.toLocaleString()}
-              </span>{' '}
+              </span>
               lead{count !== 1 ? 's' : ''} will be exported
             </>
           )}
-        </p>
+        </div>
 
         <div className="flex items-center gap-4">
           <a
             href="/export/history"
-            className="text-sm text-muted-foreground underline underline-offset-4 hover:text-foreground transition-colors"
+            className="text-sm text-ink-2 underline underline-offset-4 hover:text-ink transition-colors"
           >
             View Export History
           </a>
