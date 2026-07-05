@@ -2,9 +2,6 @@
 import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 
 function LoginForm() {
   const router = useRouter()
@@ -67,96 +64,76 @@ function LoginForm() {
     router.refresh()
   }
 
+  const fieldCls =
+    'w-full rounded-[13px] border-[1.5px] px-4 py-3 text-[15px] text-[#F2EEE2] outline-none ' +
+    'placeholder:text-[rgba(233,228,214,.3)] focus:border-brass-bright disabled:opacity-60 ' +
+    'bg-[rgba(233,228,214,.07)] border-[rgba(233,228,214,.16)]'
+  const labelCls =
+    'mb-1.5 block text-[11px] font-bold uppercase tracking-[0.1em] text-[rgba(233,228,214,.5)]'
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--cream)] px-4">
-      <div className="w-full max-w-md">
-        {/* Editorial header — outside the card, on cream */}
-        <div className="mb-8 text-center">
-          <p className="eyebrow mb-3">Nirman Media</p>
-          <h1
-            className="text-5xl font-medium tracking-tight text-[var(--ink)]"
-            style={{ fontFamily: 'var(--font-serif)' }}
-          >
-            Nirman <em className="font-normal italic">CRM</em>
-          </h1>
-          <p className="mt-3 text-sm text-[var(--ink-soft)]">
-            Admin Dashboard
-          </p>
-        </div>
-
-        {/* Card — cream-raised on cream, hairline border, no shadow */}
+    <div
+      className="flex min-h-screen flex-col justify-center px-6 py-10"
+      style={{ background: 'linear-gradient(175deg, var(--evergreen) 0%, var(--evergreen-3) 55%, #0A1912 100%)' }}
+    >
+      <div className="mx-auto w-full max-w-sm">
+        {/* Brass logo mark */}
         <div
-          className="rounded-[20px] border p-8"
-          style={{
-            background: 'var(--cream-raised)',
-            borderColor: 'var(--line)',
-          }}
+          className="mb-5 grid size-[58px] place-items-center rounded-[17px] bg-brass font-serif text-[27px] font-semibold italic text-[var(--evergreen-3)]"
         >
-          {error && (
-            <div
-              className="mb-6 rounded-md border px-4 py-3 text-sm"
-              style={{
-                background: 'rgba(156, 61, 42, 0.08)',
-                borderColor: 'rgba(156, 61, 42, 0.25)',
-                color: 'var(--rust)',
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label
-                htmlFor="username"
-                className="text-xs font-medium uppercase tracking-wider text-[var(--ink-soft)]"
-              >
-                Username
-              </Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                required
-                autoComplete="username"
-                disabled={loading}
-                className="h-11 rounded-md border-[var(--line)] bg-[var(--cream-sunk)] px-4 text-[var(--ink)] placeholder:text-[var(--ink-disabled)] focus-visible:border-[var(--gold-deep)] focus-visible:ring-2 focus-visible:ring-[var(--gold-deep)]/30"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label
-                htmlFor="password"
-                className="text-xs font-medium uppercase tracking-wider text-[var(--ink-soft)]"
-              >
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                disabled={loading}
-                className="h-11 rounded-md border-[var(--line)] bg-[var(--cream-sunk)] px-4 text-[var(--ink)] placeholder:text-[var(--ink-disabled)] focus-visible:border-[var(--gold-deep)] focus-visible:ring-2 focus-visible:ring-[var(--gold-deep)]/30"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-11 w-full rounded-full text-sm font-semibold tracking-wide transition-colors"
-              style={{
-                background: 'var(--gold-bright)',
-                color: 'var(--ink)',
-              }}
-            >
-              {loading ? 'Signing in…' : 'Sign In'}
-            </Button>
-          </form>
+          N
         </div>
+
+        <h1 className="font-serif text-[30px] font-medium leading-[1.15] text-[#F2EEE2]">
+          Nirman <em className="not-italic text-brass-bright">CRM</em>
+        </h1>
+        <p className="mb-8 mt-2 text-[13.5px] text-[rgba(233,228,214,.55)]">
+          Admin Dashboard
+        </p>
+
+        {error && (
+          <div className="mb-5 rounded-[12px] border border-[rgba(179,55,43,.45)] bg-[rgba(179,55,43,.15)] px-4 py-3 text-sm text-[#F0B7B0]">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-3.5">
+          <div>
+            <label htmlFor="username" className={labelCls}>Username</label>
+            <input
+              id="username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              required
+              autoComplete="username"
+              disabled={loading}
+              className={fieldCls}
+            />
+          </div>
+          <div>
+            <label htmlFor="password" className={labelCls}>Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              disabled={loading}
+              className={fieldCls}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-3.5 w-full rounded-[13px] bg-brass py-[15px] text-[15px] font-bold text-white transition-transform active:scale-[.98] disabled:opacity-60"
+          >
+            {loading ? 'Signing in…' : 'Sign In'}
+          </button>
+        </form>
 
         {/* Footer — quiet meta line */}
-        <p className="mt-6 text-center text-xs text-[var(--ink-disabled)]">
+        <p className="mt-6 text-center text-xs text-[rgba(233,228,214,.35)]">
           Editorial CRM · Builder-side discipline
         </p>
       </div>
