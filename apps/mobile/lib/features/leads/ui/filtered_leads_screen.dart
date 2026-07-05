@@ -78,8 +78,8 @@ class FilteredLeadsScreen extends ConsumerWidget {
         iconTheme: const IconThemeData(color: AppColors.inkPrimary),
         title: Text(
           filter.title,
-          style: GoogleFonts.sourceSerif4(
-            fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
+          style: GoogleFonts.fraunces(
+            fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
           ),
         ),
       ),

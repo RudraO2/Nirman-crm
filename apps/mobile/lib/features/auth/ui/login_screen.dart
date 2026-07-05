@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../utils/auth_validators.dart';
 
@@ -18,6 +20,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _loading = false;
   String? _errorMessage;
   bool _passwordVisible = false;
+
+  // Light ink used on the dark evergreen panel.
+  static const _ivoryText = Color(0xFFF2EEE2);
 
   @override
   void dispose() {
@@ -73,88 +78,171 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Nirman CRM',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Sign in to your account',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                if (_errorMessage != null) ...[
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppColors.evergreen,
+              AppColors.evergreenDeep,
+              Color(0xFF0A1912),
+            ],
+            stops: [0.0, 0.55, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(28, 24, 28, 40),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Brass logo mark.
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    width: 58, height: 58,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.errorContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors.brass,
+                      borderRadius: BorderRadius.circular(17),
                     ),
+                    alignment: Alignment.center,
                     child: Text(
-                      _errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      'N',
+                      style: GoogleFonts.fraunces(
+                        fontSize: 27,
+                        fontStyle: FontStyle.italic,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.evergreenDeep,
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                ],
-                TextField(
-                  controller: _usernameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Username',
-                    border: OutlineInputBorder(),
-                  ),
-                  textInputAction: TextInputAction.next,
-                  autocorrect: false,
-                  keyboardType: TextInputType.emailAddress,
-                  enabled: !_loading,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !_passwordVisible,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
-                      onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Nirman CRM',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w500,
+                      height: 1.15,
+                      color: _ivoryText,
                     ),
                   ),
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _loading ? null : _submit(),
-                  enabled: !_loading,
-                ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _loading ? null : _submit,
-                  child: _loading
-                      ? const SizedBox(
-                          height: 20, width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Log In'),
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in to your account',
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      color: const Color(0xFFE9E4D6).withValues(alpha: 0.55),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+
+                  if (_errorMessage != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.danger.withValues(alpha: 0.5)),
+                      ),
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(color: Color(0xFFF3D9D5), fontSize: 13),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+
+                  _fieldLabel('Username'),
+                  const SizedBox(height: 7),
+                  TextField(
+                    controller: _usernameController,
+                    decoration: _darkInput('ravi.kumar'),
+                    style: const TextStyle(color: _ivoryText, fontSize: 15),
+                    cursorColor: AppColors.brassBright,
+                    textInputAction: TextInputAction.next,
+                    autocorrect: false,
+                    keyboardType: TextInputType.emailAddress,
+                    enabled: !_loading,
+                  ),
+                  const SizedBox(height: 14),
+
+                  _fieldLabel('Password'),
+                  const SizedBox(height: 7),
+                  TextField(
+                    controller: _passwordController,
+                    obscureText: !_passwordVisible,
+                    decoration: _darkInput('••••••••').copyWith(
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _passwordVisible ? Icons.visibility_off : Icons.visibility,
+                          color: const Color(0xFFE9E4D6).withValues(alpha: 0.5),
+                          size: 20,
+                        ),
+                        onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                      ),
+                    ),
+                    style: const TextStyle(color: _ivoryText, fontSize: 15),
+                    cursorColor: AppColors.brassBright,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => _loading ? null : _submit(),
+                    enabled: !_loading,
+                  ),
+                  const SizedBox(height: 24),
+
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.brass,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: AppColors.brass.withValues(alpha: 0.5),
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+                      ),
+                      child: _loading
+                          ? const SizedBox(
+                              height: 20, width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                            )
+                          : const Text('Log In', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _fieldLabel(String text) => Text(
+        text.toUpperCase(),
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.1,
+          color: const Color(0xFFE9E4D6).withValues(alpha: 0.5),
+        ),
+      );
+
+  InputDecoration _darkInput(String hint) {
+    OutlineInputBorder border(Color c, [double w = 1.5]) => OutlineInputBorder(
+          borderRadius: BorderRadius.circular(13),
+          borderSide: BorderSide(color: c, width: w),
+        );
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: const Color(0xFFE9E4D6).withValues(alpha: 0.3), fontSize: 15),
+      filled: true,
+      fillColor: const Color(0xFFE9E4D6).withValues(alpha: 0.07),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 13),
+      border: border(const Color(0xFFE9E4D6).withValues(alpha: 0.16)),
+      enabledBorder: border(const Color(0xFFE9E4D6).withValues(alpha: 0.16)),
+      focusedBorder: border(AppColors.brassBright),
+      disabledBorder: border(const Color(0xFFE9E4D6).withValues(alpha: 0.10)),
     );
   }
 }

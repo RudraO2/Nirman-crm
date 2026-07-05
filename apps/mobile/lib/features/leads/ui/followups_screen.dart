@@ -27,9 +27,9 @@ class FollowupsScreen extends ConsumerWidget {
         surfaceTintColor: Colors.transparent,
         iconTheme: const IconThemeData(color: AppColors.inkPrimary),
         title: Text(
-          'Follow-ups',
-          style: GoogleFonts.sourceSerif4(
-            fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
+          'Plan',
+          style: GoogleFonts.fraunces(
+            fontSize: 21, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
           ),
         ),
       ),
@@ -71,14 +71,16 @@ class FollowupsScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 8),
+                    padding: const EdgeInsets.only(top: 10, bottom: 8),
                     child: Text(
                       entry.key,
                       style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.8,
-                        color: AppColors.inkSecondary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.1,
+                        color: entry.key.startsWith('OVERDUE')
+                            ? AppColors.statusHot
+                            : AppColors.brass,
                       ),
                     ),
                   ),

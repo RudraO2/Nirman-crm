@@ -145,9 +145,9 @@ class _ArchivedScreenState extends ConsumerState<ArchivedScreen> {
       backgroundColor: AppColors.surfaceBase,
       appBar: AppBar(
         title: Text(
-          'Archive',
-          style: GoogleFonts.sourceSerif4(
-            fontSize: 20,
+          'Archived',
+          style: GoogleFonts.fraunces(
+            fontSize: 21,
             fontWeight: FontWeight.w500,
             color: AppColors.inkPrimary,
           ),
@@ -181,14 +181,18 @@ class _ArchivedScreenState extends ConsumerState<ArchivedScreen> {
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 filled: true,
-                fillColor: AppColors.surfaceRaised,
+                fillColor: AppColors.paper,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.borderHairline),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: AppColors.borderHairline),
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: AppColors.brass, width: 1.5),
                 ),
               ),
             ),
@@ -244,7 +248,8 @@ class _ArchivedTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        LeadCard(lead: lead, onTap: onTap),
+        // Archived cards read as dimmed (mockup #s-archived).
+        Opacity(opacity: 0.7, child: LeadCard(lead: lead, onTap: onTap)),
         Positioned(
           top: 6,
           right: 6,
