@@ -23,7 +23,7 @@ Future<bool?> showEditLeadSheet(BuildContext context, LeadDetail lead) {
     useSafeArea: true,
     backgroundColor: AppColors.surfaceBase,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
     ),
     builder: (_) => EditLeadSheet(lead: lead),
   );
@@ -158,21 +158,21 @@ class _EditLeadSheetState extends ConsumerState<EditLeadSheet> {
                 children: [
                   Center(
                     child: Container(
-                      width: 40, height: 4,
+                      width: 42, height: 4.5,
                       decoration: BoxDecoration(
-                        color: AppColors.borderHairline,
-                        borderRadius: BorderRadius.circular(2),
+                        color: AppColors.borderStrong,
+                        borderRadius: BorderRadius.circular(99),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
-                          'Edit Lead',
-                          style: GoogleFonts.sourceSerif4(
-                            fontSize: 22,
+                          'Edit lead',
+                          style: GoogleFonts.fraunces(
+                            fontSize: 21,
                             fontWeight: FontWeight.w500,
                             color: AppColors.inkPrimary,
                           ),
@@ -185,8 +185,7 @@ class _EditLeadSheetState extends ConsumerState<EditLeadSheet> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Divider(color: AppColors.borderHairline, height: 1),
+                  const SizedBox(height: 8),
                 ],
               ),
             ),
@@ -367,15 +366,14 @@ class _FieldLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(children: [
       Text(
-        label.toUpperCase(),
+        label,
         style: TextStyle(
-          fontSize: 11.5, fontWeight: FontWeight.w500,
-          letterSpacing: 0.24 * 11.5, color: AppColors.inkSecondary,
+          fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.inkSecondary,
         ),
       ),
       if (required) ...[
-        const SizedBox(width: 4),
-        Text('*', style: TextStyle(color: AppColors.error, fontSize: 12)),
+        const SizedBox(width: 3),
+        Text('*', style: TextStyle(color: AppColors.statusHot, fontSize: 12, fontWeight: FontWeight.w700)),
       ],
     ]);
   }
@@ -384,15 +382,16 @@ class _FieldLabel extends StatelessWidget {
 InputDecoration _inputDecoration({String? hint, String? errorText}) {
   return InputDecoration(
     hintText: hint,
-    hintStyle: TextStyle(color: AppColors.inkDisabled, fontSize: 16),
+    hintStyle: TextStyle(color: AppColors.inkDisabled, fontSize: 15),
     errorText: errorText,
     errorStyle: TextStyle(color: AppColors.error, fontSize: 12),
     filled: true,
-    fillColor: AppColors.surfaceSunk,
-    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.borderHairline)),
-    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.borderHairline)),
-    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.accentStrong, width: 2)),
-    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppColors.error, width: 1.5)),
+    fillColor: AppColors.paper,
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5)),
+    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5)),
+    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.brass, width: 1.5)),
+    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.error, width: 1.5)),
+    focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppColors.error, width: 1.5)),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
   );
 }
@@ -413,19 +412,29 @@ class _StatusChipGroup extends StatelessWidget {
           onTap: () => onSelected(s),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: active ? color.withOpacity(0.12) : AppColors.surfaceSunk,
-              borderRadius: BorderRadius.circular(9999),
-              border: Border.all(color: active ? color : AppColors.borderHairline, width: active ? 1.5 : 1),
+              color: active ? s.statusBgColor : AppColors.paper,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: active ? color : AppColors.borderStrong, width: 1.5),
             ),
-            child: Text(
-              s.statusLabel,
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                color: active ? color : AppColors.inkPrimary,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 8, height: 8,
+                  decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  s.statusLabel,
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: active ? color : AppColors.inkSecondary,
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -450,16 +459,16 @@ class _ChipGroup<T> extends StatelessWidget {
           onTap: () => onSelected(e.key),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: active ? AppColors.accentStrong.withOpacity(0.12) : AppColors.surfaceSunk,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: active ? AppColors.accentStrong : AppColors.borderHairline, width: active ? 1.5 : 1),
+              color: active ? AppColors.evergreen : AppColors.paper,
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: active ? AppColors.evergreen : AppColors.borderStrong, width: 1.5),
             ),
             child: Text(e.value, style: TextStyle(
-              fontSize: 14,
-              fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-              color: active ? AppColors.accentStrong : AppColors.inkPrimary,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w600,
+              color: active ? AppColors.brassBright : AppColors.inkSecondary,
             )),
           ),
         );
@@ -490,15 +499,15 @@ class _ProjectPicker extends ConsumerWidget {
                 duration: const Duration(milliseconds: 120),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(
-                  color: active ? AppColors.navy.withOpacity(0.10) : AppColors.surfaceSunk,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: active ? AppColors.navy : AppColors.borderHairline, width: active ? 1.5 : 1),
+                  color: active ? AppColors.evergreen : AppColors.paper,
+                  borderRadius: BorderRadius.circular(99),
+                  border: Border.all(color: active ? AppColors.evergreen : AppColors.borderStrong, width: 1.5),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (active) ...[Icon(Icons.check_rounded, size: 14, color: AppColors.navy), const SizedBox(width: 4)],
-                    Text(p.name, style: TextStyle(fontSize: 14, fontWeight: active ? FontWeight.w600 : FontWeight.w400, color: active ? AppColors.navy : AppColors.inkPrimary)),
+                    if (active) ...[Icon(Icons.check_rounded, size: 14, color: AppColors.brassBright), const SizedBox(width: 4)],
+                    Text(p.name, style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: active ? AppColors.brassBright : AppColors.inkSecondary)),
                   ],
                 ),
               ),
@@ -557,15 +566,15 @@ class _SaveBar extends StatelessWidget {
             child: ElevatedButton(
               onPressed: canSave && !saving ? onSave : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentStrong,
-                foregroundColor: AppColors.surfaceBase,
+                backgroundColor: AppColors.brass,
+                foregroundColor: Colors.white,
                 disabledBackgroundColor: AppColors.surfaceMist,
                 disabledForegroundColor: AppColors.inkDisabled,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
               ),
               child: saving
-                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(AppColors.surfaceBase)))
+                  ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.5, valueColor: AlwaysStoppedAnimation(Colors.white)))
                   : const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             ),
           ),

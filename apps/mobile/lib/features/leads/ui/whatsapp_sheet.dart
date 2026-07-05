@@ -148,9 +148,9 @@ class _PickerView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.borderHairline, borderRadius: BorderRadius.circular(2)))),
+        Center(child: Container(width: 42, height: 4.5, decoration: BoxDecoration(color: AppColors.borderStrong, borderRadius: BorderRadius.circular(99)))),
         const SizedBox(height: 16),
-        Text('Send WhatsApp', style: GoogleFonts.sourceSerif4(fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
+        Text('Send WhatsApp', style: GoogleFonts.fraunces(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
         const SizedBox(height: 4),
         Text('Pick a template', style: TextStyle(fontSize: 13, color: AppColors.inkSecondary)),
         const SizedBox(height: 16),
@@ -225,12 +225,12 @@ class _ConfirmView extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.borderHairline, borderRadius: BorderRadius.circular(2)))),
+        Center(child: Container(width: 42, height: 4.5, decoration: BoxDecoration(color: AppColors.borderStrong, borderRadius: BorderRadius.circular(99)))),
         const SizedBox(height: 16),
         Row(children: [
           GestureDetector(onTap: onBack, child: Icon(Icons.arrow_back_rounded, color: AppColors.inkSecondary, size: 20)),
           const SizedBox(width: 8),
-          Text('Confirm send', style: GoogleFonts.sourceSerif4(fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
+          Text('Confirm send', style: GoogleFonts.fraunces(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
         ]),
         const SizedBox(height: 20),
         // Phone = largest element per Story 3.4 AC

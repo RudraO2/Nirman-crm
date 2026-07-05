@@ -111,10 +111,10 @@ class _RescheduleVisitSheetState extends ConsumerState<_RescheduleVisitSheet> {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.surfaceBase,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       padding: EdgeInsets.fromLTRB(
-        24, 16, 24,
+        24, 12, 24,
         MediaQuery.of(context).viewInsets.bottom + 24,
       ),
       child: Column(
@@ -124,10 +124,10 @@ class _RescheduleVisitSheetState extends ConsumerState<_RescheduleVisitSheet> {
           // Drag handle
           Center(
             child: Container(
-              width: 36, height: 4,
+              width: 42, height: 4.5,
               decoration: BoxDecoration(
-                color: AppColors.borderHairline,
-                borderRadius: BorderRadius.circular(2),
+                color: AppColors.borderStrong,
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
           ),

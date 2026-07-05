@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/lead_repository.dart';
 import '../data/models/lead_model.dart';
@@ -23,7 +24,7 @@ Future<bool?> showNewLeadSheet(BuildContext context) {
     useSafeArea: true,
     backgroundColor: AppColors.surfaceBase,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
     ),
     builder: (_) => const NewLeadSheet(),
   );
@@ -45,6 +46,7 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
 
   // Form controllers
   final _phoneCtrl    = TextEditingController();
+  final _secondaryPhoneCtrl = TextEditingController();
   final _nameCtrl     = TextEditingController();
   final _locationCtrl = TextEditingController();
   final _budgetMinCtrl = TextEditingController();
@@ -69,6 +71,7 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
   @override
   void dispose() {
     _phoneCtrl.dispose();
+    _secondaryPhoneCtrl.dispose();
     _nameCtrl.dispose();
     _locationCtrl.dispose();
     _budgetMinCtrl.dispose();
@@ -98,6 +101,7 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
     final payload = CreateLeadPayload(
       status:           _status!,
       phone:            _phoneCtrl.text.trim(),
+      secondaryPhone:   _secondaryPhoneCtrl.text.trim().isEmpty ? null : _secondaryPhoneCtrl.text.trim(),
       source:           _source,
       name:             _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
       propertyType:     _propertyType,
@@ -111,7 +115,19 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
     );
 
     try {
-      await ref.read(leadRepositoryProvider).createLead(payload);
+      final result = await ref.read(leadRepositoryProvider).createLead(payload);
+      if (!mounted) return;
+      // Story 13.3 — surface the system visit code + free WhatsApp delivery.
+      if (result.customerCode != null) {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => _CustomerCodeDialog(
+            code: result.customerCode!,
+            whatsappLink: result.whatsappLink,
+          ),
+        );
+      }
       if (mounted) Navigator.of(context).pop(true);
     } on DuplicateLeadError catch (e) {
       setState(() {
@@ -129,80 +145,10 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
   }
 
   // ------------------------------------------------------------------
-  // Build
+  // Build — ONE sheet: status chips at the top + full form below (§6.5)
   // ------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    return _status == null ? _buildStatusPicker() : _buildForm();
-  }
-
-  // ------------------------------------------------------------------
-  // Step 1: Status picker
-  // ------------------------------------------------------------------
-  Widget _buildStatusPicker() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40, height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.borderHairline,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'New Lead',
-            style: GoogleFonts.sourceSerif4(
-              fontSize: 24,
-              fontWeight: FontWeight.w500,
-              color: AppColors.inkPrimary,
-              height: 1.2,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Choose a status to start',
-            style: TextStyle(
-              fontSize: 14,
-              color: AppColors.inkSecondary,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 24),
-          // 2-column grid of status cards
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 2.2,
-            children: const [
-              'hot', 'warm', 'cold', 'future', 'sold', 'dead',
-            ].map((s) => _StatusCard(
-              status: s,
-              onTap: () => setState(() => _status = s),
-            )).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ------------------------------------------------------------------
-  // Step 2: Lead form
-  // ------------------------------------------------------------------
-  Widget _buildForm() {
-    final statusColor = _status!.statusColor;
-    final statusLabel = _status!.statusLabel;
-
     return DraggableScrollableSheet(
       initialChildSize: 0.92,
       minChildSize: 0.5,
@@ -211,85 +157,52 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
       builder: (_, scrollCtrl) {
         return Column(
           children: [
-            // Header — fixed, not scrollable
+            // Grab handle
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 16, 16, 0),
-              color: AppColors.surfaceBase,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40, height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.borderHairline,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => setState(() => _status = null),
-                        behavior: HitTestBehavior.opaque,
-                        child: Row(
-                          children: [
-                            Icon(Icons.arrow_back_ios_new_rounded,
-                              size: 16, color: AppColors.inkSecondary),
-                            const SizedBox(width: 4),
-                            Text('Status',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.inkSecondary,
-                              )),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // Status pill
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: statusColor, width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 8, height: 8,
-                              decoration: BoxDecoration(
-                                color: statusColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              statusLabel,
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: statusColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(color: AppColors.borderHairline, height: 1),
-                ],
+              width: 42, height: 4.5,
+              margin: const EdgeInsets.fromLTRB(0, 10, 0, 6),
+              decoration: BoxDecoration(
+                color: AppColors.borderStrong,
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
             // Scrollable form body
             Expanded(
               child: ListView(
                 controller: scrollCtrl,
-                padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 0),
                 children: [
+                  Text(
+                    'New lead',
+                    style: GoogleFonts.fraunces(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.inkPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Status first, details below — one screen',
+                    style: TextStyle(fontSize: 13, color: AppColors.inkSecondary),
+                  ),
+
+                  // ── Status (required) ──
+                  const SizedBox(height: 16),
+                  _FieldLabel(label: 'Status', required: true),
+                  const SizedBox(height: 6),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: const ['hot', 'warm', 'cold', 'future', 'sold', 'dead']
+                        .map((s) => _StatusChip(
+                              status: s,
+                              selected: _status == s,
+                              onTap: () => setState(() => _status = s),
+                            ))
+                        .toList(),
+                  ),
+                  const SizedBox(height: 4),
+
                   // ── Phone (required) ──
                   _FieldLabel(label: 'Phone', required: true),
                   const SizedBox(height: 6),
@@ -318,6 +231,24 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
 
                   const SizedBox(height: 20),
 
+                  // ── Secondary phone (alternative / spouse) ──
+                  _FieldLabel(label: 'Secondary phone'),
+                  const SizedBox(height: 6),
+                  TextFormField(
+                    controller: _secondaryPhoneCtrl,
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d\s\-+()]'))],
+                    decoration: _inputDecoration(hint: 'Alternative / spouse number'),
+                    style: TextStyle(color: AppColors.inkPrimary, fontSize: 16),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Keeps you connected if the primary number is unreachable. '
+                    'Needed to mark the lead complete.',
+                    style: TextStyle(fontSize: 12, color: AppColors.inkSecondary, height: 1.4),
+                  ),
+                  const SizedBox(height: 20),
+
                   // ── Name ──
                   _FieldLabel(label: 'Name'),
                   const SizedBox(height: 6),
@@ -336,6 +267,8 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
                     options: const {
                       'walk_in': 'Walk-in',
                       'referral': 'Referral',
+                      'cold_call': 'Cold Calling',
+                      'employee_referral': 'Employee Ref',
                       'associate': 'Associate',
                       'ad': 'Ad',
                     },
@@ -458,13 +391,14 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Step 1 — Status card
+// Status chip (single-select, required) — dot + capitalized word
 // ---------------------------------------------------------------------------
-class _StatusCard extends StatelessWidget {
+class _StatusChip extends StatelessWidget {
   final String status;
+  final bool selected;
   final VoidCallback onTap;
 
-  const _StatusCard({required this.status, required this.onTap});
+  const _StatusChip({required this.status, required this.selected, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -473,34 +407,35 @@ class _StatusCard extends StatelessWidget {
 
     return Semantics(
       button: true,
+      selected: selected,
       label: '$label status',
-      child: InkWell(
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.10),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.35), width: 1.5),
+            color: selected ? status.statusBgColor : AppColors.paper,
+            borderRadius: BorderRadius.circular(99),
+            border: Border.all(
+              color: selected ? color : AppColors.borderStrong,
+              width: 1.5,
+            ),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                width: 10, height: 10,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
+                width: 8, height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                  letterSpacing: 0.1,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? color : AppColors.inkSecondary,
                 ),
               ),
             ],
@@ -525,17 +460,16 @@ class _FieldLabel extends StatelessWidget {
     return Row(
       children: [
         Text(
-          label.toUpperCase(),
+          label,
           style: TextStyle(
-            fontSize: 11.5,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.24 * 11.5,
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
             color: AppColors.inkSecondary,
           ),
         ),
         if (required) ...[
-          const SizedBox(width: 4),
-          Text('*', style: TextStyle(color: AppColors.error, fontSize: 12)),
+          const SizedBox(width: 3),
+          Text('*', style: TextStyle(color: AppColors.statusHot, fontSize: 12, fontWeight: FontWeight.w700)),
         ],
       ],
     );
@@ -545,25 +479,29 @@ class _FieldLabel extends StatelessWidget {
 InputDecoration _inputDecoration({String? hint, String? errorText}) {
   return InputDecoration(
     hintText: hint,
-    hintStyle: TextStyle(color: AppColors.inkDisabled, fontSize: 16),
+    hintStyle: TextStyle(color: AppColors.inkDisabled, fontSize: 15),
     errorText: errorText,
     errorStyle: TextStyle(color: AppColors.error, fontSize: 12),
     filled: true,
-    fillColor: AppColors.surfaceSunk,
+    fillColor: AppColors.paper,
     border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: AppColors.borderHairline),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5),
     ),
     enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: AppColors.borderHairline),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5),
     ),
     focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
-      borderSide: BorderSide(color: AppColors.accentStrong, width: 2),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: AppColors.brass, width: 1.5),
     ),
     errorBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(color: AppColors.error, width: 1.5),
+    ),
+    focusedErrorBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(color: AppColors.error, width: 1.5),
     ),
     contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -595,21 +533,21 @@ class _ChipGroup<T> extends StatelessWidget {
           onTap: () => onSelected(e.key),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 120),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             decoration: BoxDecoration(
-              color: isActive ? AppColors.accentStrong.withOpacity(0.12) : AppColors.surfaceSunk,
-              borderRadius: BorderRadius.circular(20),
+              color: isActive ? AppColors.evergreen : AppColors.paper,
+              borderRadius: BorderRadius.circular(99),
               border: Border.all(
-                color: isActive ? AppColors.accentStrong : AppColors.borderHairline,
-                width: isActive ? 1.5 : 1,
+                color: isActive ? AppColors.evergreen : AppColors.borderStrong,
+                width: 1.5,
               ),
             ),
             child: Text(
               e.value,
               style: TextStyle(
-                fontSize: 14,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive ? AppColors.accentStrong : AppColors.inkPrimary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: isActive ? AppColors.brassBright : AppColors.inkSecondary,
               ),
             ),
           ),
@@ -659,28 +597,28 @@ class _ProjectPicker extends ConsumerWidget {
               onTap: () => onChanged(p.id, !active),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 120),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
-                  color: active ? AppColors.navy.withOpacity(0.10) : AppColors.surfaceSunk,
-                  borderRadius: BorderRadius.circular(20),
+                  color: active ? AppColors.evergreen : AppColors.paper,
+                  borderRadius: BorderRadius.circular(99),
                   border: Border.all(
-                    color: active ? AppColors.navy : AppColors.borderHairline,
-                    width: active ? 1.5 : 1,
+                    color: active ? AppColors.evergreen : AppColors.borderStrong,
+                    width: 1.5,
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (active) ...[
-                      Icon(Icons.check_rounded, size: 14, color: AppColors.navy),
+                      Icon(Icons.check_rounded, size: 14, color: AppColors.brassBright),
                       const SizedBox(width: 4),
                     ],
                     Text(
                       p.name,
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: active ? FontWeight.w600 : FontWeight.w400,
-                        color: active ? AppColors.navy : AppColors.inkPrimary,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: active ? AppColors.brassBright : AppColors.inkSecondary,
                       ),
                     ),
                   ],
@@ -785,13 +723,13 @@ class _SaveBar extends StatelessWidget {
             child: ElevatedButton(
               onPressed: canSave && !saving ? onSave : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentStrong,
-                foregroundColor: AppColors.surfaceBase,
+                backgroundColor: AppColors.brass,
+                foregroundColor: Colors.white,
                 disabledBackgroundColor: AppColors.surfaceMist,
                 disabledForegroundColor: AppColors.inkDisabled,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(13),
                 ),
               ),
               child: saving
@@ -799,7 +737,7 @@ class _SaveBar extends StatelessWidget {
                       width: 22, height: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation(AppColors.surfaceBase),
+                        valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
                     )
                   : const Text(
@@ -809,6 +747,101 @@ class _SaveBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Customer visit-code result dialog (Story 13.3)
+// Shows the system-generated code + free WhatsApp delivery. No SMS.
+// ---------------------------------------------------------------------------
+class _CustomerCodeDialog extends StatelessWidget {
+  final String code;
+  final String? whatsappLink;
+
+  const _CustomerCodeDialog({required this.code, this.whatsappLink});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.surfaceBase,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Lead saved',
+              style: GoogleFonts.fraunces(
+                fontSize: 22, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Share this visit code with the customer. They show it at reception to verify their visit.',
+              style: TextStyle(fontSize: 13, color: AppColors.inkSecondary, height: 1.5),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 18),
+              decoration: BoxDecoration(
+                color: AppColors.mist,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.line),
+              ),
+              child: Center(
+                child: Text(
+                  code,
+                  style: GoogleFonts.fraunces(
+                    fontSize: 30, fontWeight: FontWeight.w600,
+                    color: AppColors.accentStrong, letterSpacing: 2,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () {
+                Clipboard.setData(ClipboardData(text: code));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Code copied')),
+                );
+              },
+              icon: const Icon(Icons.copy_rounded, size: 16),
+              label: const Text('Copy code'),
+            ),
+            if (whatsappLink != null) ...[
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 48,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentStrong,
+                    foregroundColor: AppColors.surfaceBase,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    final uri = Uri.parse(whatsappLink!);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.send_rounded, size: 18),
+                  label: const Text('Send via WhatsApp'),
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -84,12 +84,12 @@ class _ShareLeadSheetState extends ConsumerState<_ShareLeadSheet> {
         children: [
           Center(
             child: Padding(
-              padding: const EdgeInsets.only(top: 14),
+              padding: const EdgeInsets.only(top: 12),
               child: Container(
-                width: 36, height: 4,
+                width: 42, height: 4.5,
                 decoration: BoxDecoration(
-                  color: AppColors.borderHairline,
-                  borderRadius: BorderRadius.circular(2),
+                  color: AppColors.borderStrong,
+                  borderRadius: BorderRadius.circular(99),
                 ),
               ),
             ),
@@ -98,8 +98,8 @@ class _ShareLeadSheetState extends ConsumerState<_ShareLeadSheet> {
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
             child: Text(
               'Share with',
-              style: GoogleFonts.sourceSerif4(
-                fontSize: 18,
+              style: GoogleFonts.fraunces(
+                fontSize: 20,
                 fontWeight: FontWeight.w500,
                 color: AppColors.inkPrimary,
               ),

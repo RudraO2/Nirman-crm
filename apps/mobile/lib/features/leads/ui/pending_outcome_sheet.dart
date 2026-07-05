@@ -151,9 +151,9 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPad),
       decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderHairline),
+        color: AppColors.surfaceBase,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -162,10 +162,10 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
           // Handle
           Center(
             child: Container(
-              width: 36, height: 4,
+              width: 42, height: 4.5,
               decoration: BoxDecoration(
-                color: AppColors.borderHairline,
-                borderRadius: BorderRadius.circular(2),
+                color: AppColors.borderStrong,
+                borderRadius: BorderRadius.circular(99),
               ),
             ),
           ),
@@ -173,9 +173,9 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
 
           // Header
           Text(
-            'Call outcome',
-            style: GoogleFonts.sourceSerif4(
-              fontSize: 18,
+            'How did the call go?',
+            style: GoogleFonts.fraunces(
+              fontSize: 20,
               fontWeight: FontWeight.w500,
               color: AppColors.inkPrimary,
             ),
@@ -191,11 +191,10 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
 
           // Status selector
           Text(
-            'STATUS',
+            'Status',
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.8,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
               color: AppColors.inkSecondary,
             ),
           ),
@@ -209,22 +208,32 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
               return GestureDetector(
                 onTap: () => setState(() => _selectedStatus = s),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                   decoration: BoxDecoration(
-                    color: selected ? color.withOpacity(0.15) : AppColors.surfaceBase,
-                    borderRadius: BorderRadius.circular(9999),
+                    color: selected ? s.statusBgColor : AppColors.paper,
+                    borderRadius: BorderRadius.circular(99),
                     border: Border.all(
-                      color: selected ? color.withOpacity(0.6) : AppColors.borderHairline,
-                      width: selected ? 1.5 : 1,
+                      color: selected ? color : AppColors.borderStrong,
+                      width: 1.5,
                     ),
                   ),
-                  child: Text(
-                    s.statusLabel,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-                      color: selected ? color : AppColors.inkSecondary,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8, height: 8,
+                        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        s.statusLabel,
+                        style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w700,
+                          color: selected ? color : AppColors.inkSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -242,19 +251,19 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
               hintText: 'Add a remark (optional)',
               hintStyle: TextStyle(color: AppColors.inkDisabled, fontSize: 14),
               filled: true,
-              fillColor: AppColors.surfaceBase,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              fillColor: AppColors.paper,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.borderHairline),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.borderHairline),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.borderStrong, width: 1.5),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
-                borderSide: BorderSide(color: AppColors.accentStrong, width: 1.5),
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: AppColors.brass, width: 1.5),
               ),
             ),
           ),
@@ -309,11 +318,11 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
             child: ElevatedButton(
               onPressed: _loading ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentStrong,
+                backgroundColor: AppColors.brass,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.accentStrong.withOpacity(0.5),
+                disabledBackgroundColor: AppColors.brass.withValues(alpha: 0.5),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
                 elevation: 0,
               ),
               child: _loading

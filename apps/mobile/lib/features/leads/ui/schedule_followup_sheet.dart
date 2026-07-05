@@ -110,17 +110,19 @@ class _ScheduleFollowupSheetState extends ConsumerState<_ScheduleFollowupSheet> 
       margin: const EdgeInsets.fromLTRB(8, 0, 8, 8),
       padding: EdgeInsets.fromLTRB(20, 20, 20, 20 + bottomPad),
       decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.borderHairline),
+        color: AppColors.surfaceBase,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.line),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: AppColors.borderHairline, borderRadius: BorderRadius.circular(2)))),
+          Center(child: Container(width: 42, height: 4.5, decoration: BoxDecoration(color: AppColors.borderStrong, borderRadius: BorderRadius.circular(99)))),
           const SizedBox(height: 16),
-          Text('Schedule Follow-up', style: GoogleFonts.sourceSerif4(fontSize: 18, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
+          Text('Schedule follow-up', style: GoogleFonts.fraunces(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
+          const SizedBox(height: 3),
+          Text('Alarm rings on your phone at this time', style: TextStyle(fontSize: 13, color: AppColors.inkSecondary)),
 
           if (widget.currentFollowup != null) ...[
             const SizedBox(height: 4),
@@ -164,9 +166,9 @@ class _ScheduleFollowupSheetState extends ConsumerState<_ScheduleFollowupSheet> 
             child: Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppColors.surfaceBase,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _picked != null ? AppColors.accentStrong.withOpacity(0.5) : AppColors.borderHairline),
+                color: AppColors.paper,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _picked != null ? AppColors.brass : AppColors.borderStrong, width: 1.5),
               ),
               child: Row(children: [
                 Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.inkSecondary),
@@ -190,11 +192,11 @@ class _ScheduleFollowupSheetState extends ConsumerState<_ScheduleFollowupSheet> 
             child: ElevatedButton(
               onPressed: _picked == null || _loading ? null : _save,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentStrong,
+                backgroundColor: AppColors.brass,
                 foregroundColor: Colors.white,
-                disabledBackgroundColor: AppColors.accentStrong.withOpacity(0.3),
+                disabledBackgroundColor: AppColors.brass.withValues(alpha: 0.3),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
                 elevation: 0,
               ),
               child: _loading
@@ -228,11 +230,11 @@ class _QuickOption extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: AppColors.surfaceBase,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: AppColors.borderHairline),
+          color: AppColors.paper,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderStrong, width: 1.5),
         ),
-        child: Text(label, style: TextStyle(fontSize: 14, color: AppColors.inkPrimary)),
+        child: Text(label, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.inkPrimary)),
       ),
     );
   }
