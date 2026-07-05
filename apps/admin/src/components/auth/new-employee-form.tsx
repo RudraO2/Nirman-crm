@@ -35,14 +35,14 @@ export function NewEmployeeForm() {
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>Add Employee</Button>
+      <Button onClick={() => setOpen(true)}>+ New employee</Button>
       {open && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-evergreen-3/40 backdrop-blur-sm">
           <form
             onSubmit={handleSubmit}
-            className="bg-background rounded-lg border p-6 space-y-4 w-full max-w-sm shadow-lg z-50"
+            className="z-50 w-full max-w-sm space-y-4 rounded-[16px] border border-line bg-paper p-6 shadow-[var(--shadow-lg)]"
           >
-            <h2 className="text-lg font-semibold">Add Employee</h2>
+            <h2 className="font-serif text-lg font-medium">Add Employee</h2>
             <div className="space-y-2">
               <Label htmlFor="username">Username / Email</Label>
               <Input
