@@ -17,6 +17,7 @@ import '../../leads/ui/new_lead_sheet.dart';
 import '../../leads/ui/filtered_leads_screen.dart';
 import '../../leads/ui/followups_screen.dart';
 import '../../leads/ui/pending_outcome_sheet.dart';
+import '../../alarms/data/alarm_sync_service.dart';
 import '../../motivation/providers/motivation_providers.dart';
 import '../../motivation/ui/personal_stats_card.dart';
 import '../../motivation/ui/monthly_best.dart';
@@ -31,11 +32,31 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with WidgetsBindingObserver {
   bool _outcomeSheetOpen = false;
+  bool _firstReconcile = true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    // Story 10.3 — keep device alarms in sync with the active-lead list.
+    // Every follow-up mutation (create / reschedule / complete / status change /
+    // reassign) invalidates myLeadsProvider, so a single listener here reconciles
+    // alarms for all of them (Task 3). fireImmediately covers the app-open
+    // reconcile (Task 4) — correcting drift from server-side changes that
+    // happened while the app was closed. Reconcile only on resolved data; pass
+    // the loaded leads to avoid a redundant getMyLeads() fetch.
+    ref.listenManual<AsyncValue<List<LeadListItem>>>(
+      myLeadsProvider,
+      (_, next) {
+        final leads = next.valueOrNull;
+        if (leads == null) return;
+        final reason = _firstReconcile ? 'app_open' : 'leads_changed';
+        _firstReconcile = false;
+        ref.read(alarmSyncServiceProvider).reconcile(reason: reason, leads: leads);
+      },
+      fireImmediately: true,
+    );
   }
 
   @override
@@ -87,26 +108,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.inventory_2_outlined),
-            color: AppColors.inkSecondary,
-            tooltip: 'Archive',
-            onPressed: () => context.push('/archived'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.event_note_rounded),
-            color: AppColors.inkSecondary,
-            tooltip: 'Follow-ups calendar',
-            onPressed: () => context.push('/followups'),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings_outlined),
-            color: AppColors.inkSecondary,
-            tooltip: 'Settings',
-            onPressed: () => context.push('/settings'),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         onRefresh: () async {
@@ -236,6 +237,42 @@ class _LeadsView extends StatelessWidget {
                     ),
                   ),
                 ),
+                const Spacer(),
+                // Untouched filter chip — tap to see leads never actioned.
+                Builder(builder: (context) {
+                  final untouched = leads.where((l) => l.isUntouched).length;
+                  if (untouched == 0) return const SizedBox.shrink();
+                  return GestureDetector(
+                    onTap: () => context.push('/leads/filtered',
+                        extra: LeadFilter.untouched),
+                    child: Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppColors.navy.withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(9999),
+                        border: Border.all(
+                            color: AppColors.navy.withValues(alpha: 0.30)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.fiber_new_rounded,
+                              size: 12, color: AppColors.navy),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$untouched untouched',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.navy,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
               ],
             ),
           ),
