@@ -1,28 +1,19 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Cell,
-  LabelList,
-  ResponsiveContainer,
-} from 'recharts'
+import { TabStrip } from '@/components/tab-strip'
 
 type FunnelStage = { stage: string; lead_count: number; dropoff_pct: number | null }
 type Employee = { id: string; username: string }
 type Project = { id: string; name: string }
 
+// §3 palette — colors used for both the CSS funnel bars and the breakdown dots.
 const STAGE_CONFIG: Record<string, { label: string; color: string }> = {
-  total:   { label: 'Total Leads', color: '#64748b' },
-  warm:    { label: 'Warm',        color: '#f59e0b' },
-  hot:     { label: 'Hot',         color: '#ef4444' },
-  visited: { label: 'Visited',     color: '#8b5cf6' },
-  sold:    { label: 'Sold',        color: '#22c55e' },
+  total:   { label: 'Total',   color: 'var(--ink-2)' },
+  warm:    { label: 'Warm',    color: 'var(--warm)' },
+  hot:     { label: 'Hot',     color: 'var(--hot)' },
+  visited: { label: 'Visited', color: 'var(--future)' },
+  sold:    { label: 'Sold',    color: 'var(--sold)' },
 }
 
 const RANGE_LABELS: Record<string, string> = {
@@ -71,45 +62,13 @@ export function FunnelView({
 
   const totalCount = totalStage?.lead_count ?? 0
 
-  const chartData = stages.map((s) => ({
+  // CSS funnel bars — width relative to the Total stage (same numbers as before).
+  const bars = stages.map((s) => ({
     ...s,
     label: STAGE_CONFIG[s.stage]?.label ?? s.stage,
-    color: STAGE_CONFIG[s.stage]?.color ?? '#94a3b8',
+    color: STAGE_CONFIG[s.stage]?.color ?? 'var(--ink-3)',
+    pct: totalCount > 0 ? Math.round((s.lead_count / totalCount) * 100) : 0,
   }))
-
-  const renderBarLabel = (props: any) => {
-    const { x, y, width, height, index } = props
-    const entry = chartData[index]
-    // F-5: skip label for zero-count bars (would render at y-axis left edge)
-    if (entry == null || entry.lead_count === 0) return null
-    const lx = (x as number) + (width as number) + 10
-    const cy = (y as number) + (height as number) / 2
-    return (
-      <g>
-        <text
-          x={lx}
-          y={cy - 6}
-          fontSize={12}
-          fill="hsl(var(--foreground))"
-          dominantBaseline="middle"
-          fontWeight={500}
-        >
-          {entry.lead_count} leads
-        </text>
-        {/* F-3: only show directional drop/gain text when dropoff_pct is non-null */}
-        {entry.dropoff_pct != null && entry.dropoff_pct > 0 && (
-          <text x={lx} y={cy + 8} fontSize={11} fill="#6b7280" dominantBaseline="middle">
-            ▼ {entry.dropoff_pct}% drop
-          </text>
-        )}
-        {entry.dropoff_pct != null && entry.dropoff_pct < 0 && (
-          <text x={lx} y={cy + 8} fontSize={11} fill="#6b7280" dominantBaseline="middle">
-            ▲ {Math.abs(entry.dropoff_pct)}% gain
-          </text>
-        )}
-      </g>
-    )
-  }
 
   const statCards = [
     {
@@ -135,24 +94,25 @@ export function FunnelView({
   ]
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Conversion Funnel</h1>
-        <p className="text-sm text-muted-foreground">
-          Pipeline drop-off from first contact to sale
-        </p>
-      </div>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <p className="eyebrow">Sales</p>
+          <h1 className="font-serif text-[29px] font-medium leading-[1.15] tracking-[-0.01em] text-ink">
+            Conversion Funnel
+          </h1>
+          <p className="text-[13.5px] text-ink-2">
+            Pipeline drop-off from first contact to sale
+          </p>
+        </div>
 
-      {/* Filters */}
-      <div className="rounded-lg border bg-card p-4 space-y-3">
-        {/* Employee filter */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground w-20 shrink-0">Employee</span>
+        {/* Filters — employee, project, range */}
+        <div className="flex flex-wrap items-center gap-2.5">
           <select
             value={activeEmployee}
             onChange={(e) => navigate(e.target.value, activeProject, activeRange)}
-            className="rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded-[9px] border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brass"
           >
             <option value="">All Employees</option>
             {employees.map((emp) => (
@@ -161,15 +121,10 @@ export function FunnelView({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Project filter */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground w-20 shrink-0">Project</span>
           <select
             value={activeProject}
             onChange={(e) => navigate(activeEmployee, e.target.value, activeRange)}
-            className="rounded-md border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            className="rounded-[9px] border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brass"
           >
             <option value="">All Projects</option>
             {projects.map((proj) => (
@@ -178,20 +133,15 @@ export function FunnelView({
               </option>
             ))}
           </select>
-        </div>
-
-        {/* Date range */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground w-20 shrink-0">Range</span>
-          <div className="flex items-center gap-1 rounded-lg border bg-muted p-1">
-            {(['', '1', '7', '30'] as const).map((r) => (
+          <div className="inline-flex gap-0.5 rounded-[10px] border border-line bg-mist p-[3px]">
+            {(['1', '7', '30', ''] as const).map((r) => (
               <button
                 key={r}
                 onClick={() => navigate(activeEmployee, activeProject, r)}
                 className={
                   activeRange === r
-                    ? 'rounded-md px-3 py-1.5 text-sm font-medium bg-background shadow-sm text-foreground'
-                    : 'rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition'
+                    ? 'rounded-[8px] bg-paper px-3.5 py-[5px] text-[12.5px] font-semibold text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]'
+                    : 'rounded-[8px] px-3.5 py-[5px] text-[12.5px] font-medium text-ink-2 transition hover:text-ink'
                 }
               >
                 {RANGE_LABELS[r]}
@@ -201,96 +151,81 @@ export function FunnelView({
         </div>
       </div>
 
+      <TabStrip />
+
       {/* Summary stat cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-4">
         {statCards.map((card) => (
-          <div key={card.label} className="rounded-lg border bg-card p-4">
-            <p className="text-xs text-muted-foreground">{card.label}</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">{card.value}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{card.sub}</p>
+          <div key={card.label} className="rounded-[14px] border border-line bg-paper p-4 shadow-[var(--shadow)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-2">{card.label}</p>
+            <p className="mt-1.5 font-serif text-[30px] font-medium tabular-nums text-ink">{card.value}</p>
+            <p className="mt-0.5 text-xs text-ink-3">{card.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Funnel chart */}
-      <div className="rounded-lg border bg-card p-6">
-        <p className="text-sm font-medium mb-1">Funnel Stages</p>
-        <p className="text-xs text-muted-foreground mb-4">
-          Lead count at each pipeline stage
-        </p>
-        {totalCount === 0 ? (
-          <p className="text-sm text-muted-foreground py-8 text-center">
-            No leads match the selected filters.
-          </p>
-        ) : (
-          <ResponsiveContainer width="100%" height={320}>
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 4, right: 180, bottom: 4, left: 4 }}
-              barCategoryGap="20%"
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                horizontal={false}
-                stroke="hsl(var(--border))"
-              />
-              <XAxis
-                type="number"
-                domain={[0, 'auto']}
-                tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-                axisLine={false}
-                tickLine={false}
-                allowDecimals={false}
-              />
-              <YAxis
-                type="category"
-                dataKey="label"
-                width={80}
-                tick={{ fontSize: 12, fill: 'hsl(var(--foreground))' }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip
-                cursor={{ fill: 'hsl(var(--muted))' }}
-                contentStyle={{
-                  background: 'hsl(var(--card))',
-                  border: '1px solid hsl(var(--border))',
-                  borderRadius: '8px',
-                  fontSize: 12,
-                }}
-                formatter={(value, _name, props) => {
-                  const d = props.payload?.dropoff_pct
-                  const dropText =
-                    d != null && d > 0 ? ` (▼ ${d}% drop)` :
-                    d != null && d < 0 ? ` (▲ ${Math.abs(d)}% gain)` : ''
-                  return [`${value} leads${dropText}`, props.payload?.label]
-                }}
-              />
-              <Bar dataKey="lead_count" radius={[0, 4, 4, 0]} maxBarSize={40}>
-                {chartData.map((entry) => (
-                  <Cell key={entry.stage} fill={entry.color} />
-                ))}
-                <LabelList content={renderBarLabel} />
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        )}
+      {/* Funnel — CSS bars (§7: replaces recharts, same numbers) */}
+      <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
+        <div className="flex items-center gap-2 border-b border-line px-5 py-3.5 text-[13.5px] font-semibold">
+          Funnel <span className="font-normal text-ink-2">· where leads drop off</span>
+        </div>
+        <div className="p-5">
+          {totalCount === 0 ? (
+            <p className="py-8 text-center text-sm text-ink-2">
+              No leads match the selected filters.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-3">
+              {bars.map((b) => (
+                <div
+                  key={b.stage}
+                  className="grid items-center gap-3.5"
+                  style={{ gridTemplateColumns: '80px 1fr 160px' }}
+                >
+                  <span className="text-right text-[13px] font-semibold">{b.label}</span>
+                  <div className="h-[30px] overflow-hidden rounded-[8px] bg-mist">
+                    <div
+                      className="flex h-full min-w-[34px] items-center rounded-[8px] pl-3 text-xs font-bold text-white"
+                      style={{ width: `${Math.max(b.pct, b.lead_count > 0 ? 8 : 0)}%`, background: b.color }}
+                    >
+                      {b.lead_count > 0 ? b.lead_count : ''}
+                    </div>
+                  </div>
+                  <span className="text-xs text-ink-2">
+                    <b className="text-[13px] text-ink">{b.lead_count}</b>
+                    {b.dropoff_pct == null ? (
+                      ' leads'
+                    ) : b.dropoff_pct >= 0 ? (
+                      <>
+                        {' · '}
+                        <span className={b.dropoff_pct > 50 ? 'font-semibold text-hot' : ''}>
+                          ▼ {b.dropoff_pct}%
+                        </span>
+                      </>
+                    ) : (
+                      <> · ▲ {Math.abs(b.dropoff_pct)}% gain</>
+                    )}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Drop-off table */}
-      <div className="rounded-lg border bg-card">
-        <div className="border-b px-4 py-3">
-          <p className="text-sm font-medium">Stage Breakdown</p>
+      <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
+        <div className="border-b border-line px-5 py-3.5">
+          <p className="text-[13.5px] font-semibold">Stage Breakdown</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left">
-                <th className="px-4 py-2.5 font-medium text-muted-foreground">Stage</th>
-                <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Count</th>
-                <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">Drop-off %</th>
-                <th className="px-4 py-2.5 font-medium text-muted-foreground text-right">vs Total %</th>
+              <tr className="border-b border-line text-left">
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Stage</th>
+                <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-ink-3">Count</th>
+                <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-ink-3">Drop-off %</th>
+                <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-ink-3">vs Total %</th>
               </tr>
             </thead>
             <tbody>

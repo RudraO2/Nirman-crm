@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { TabStrip } from '@/components/tab-strip'
 import {
   BarChart,
   Bar,
@@ -35,13 +36,14 @@ type EmployeeStat = {
 type ChartDay = { day: string; new_leads: number; status_changes: number }
 type StatusDist = { status: string; lead_count: number }
 
+// §3 status palette
 const STATUS_COLORS: Record<string, string> = {
-  warm: '#f59e0b',
-  cold: '#3b82f6',
-  hot: '#ef4444',
-  dead: '#6b7280',
-  sold: '#22c55e',
-  future: '#a855f7',
+  warm: '#C07A17',
+  cold: '#3E6DA6',
+  hot: '#C24638',
+  dead: '#78817B',
+  sold: '#2F7D4F',
+  future: '#7A5BA8',
 }
 
 const RANGE_LABELS: Record<string, string> = {
@@ -107,28 +109,29 @@ export function PerformanceDashboard({
   const totalLeads = statusDist.reduce((sum, s) => sum + s.lead_count, 0)
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2">
+          <p className="eyebrow">Sales</p>
+          <h1 className="font-serif text-[29px] font-medium leading-[1.15] tracking-[-0.01em] text-ink">
             Performance
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-[13.5px] text-ink-2">
             Team metrics — {totalLeads} total leads
           </p>
         </div>
 
         {/* Date range filter */}
-        <div className="flex items-center gap-1 rounded-lg border bg-muted p-1">
+        <div className="inline-flex gap-0.5 rounded-[10px] border border-line bg-mist p-[3px]">
           {(['1', '7', '30'] as const).map((r) => (
             <button
               key={r}
               onClick={() => router.push(`/performance?range=${r}`)}
               className={
                 initialRange === r
-                  ? 'rounded-md px-3 py-1.5 text-sm font-medium bg-background shadow-sm text-foreground'
-                  : 'rounded-md px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition'
+                  ? 'rounded-[8px] bg-paper px-3.5 py-[5px] text-[12.5px] font-semibold text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]'
+                  : 'rounded-[8px] px-3.5 py-[5px] text-[12.5px] font-medium text-ink-2 transition hover:text-ink'
               }
             >
               {RANGE_LABELS[r]}
@@ -137,13 +140,15 @@ export function PerformanceDashboard({
         </div>
       </div>
 
+      <TabStrip />
+
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
         {/* 14-day bar chart — spans 3 cols on lg */}
-        <div className="rounded-lg border bg-card p-6 lg:col-span-3">
+        <div className="rounded-[14px] border border-line bg-paper p-6 shadow-[var(--shadow)] lg:col-span-3">
           <div className="mb-4">
-            <p className="text-sm font-medium">Pipeline Activity — Last 14 Days</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[13.5px] font-semibold">Pipeline Activity — Last 14 Days</p>
+            <p className="text-xs text-ink-2">
               New leads + status changes per day (not affected by date filter)
             </p>
           </div>
@@ -177,10 +182,10 @@ export function PerformanceDashboard({
                   v === 'new_leads' ? 'New Leads' : 'Status Changes'
                 }
               />
-              <Bar dataKey="new_leads" fill="#3b82f6" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="new_leads" fill="#132A21" radius={[3, 3, 0, 0]} />
               <Bar
                 dataKey="status_changes"
-                fill="#f59e0b"
+                fill="#C9A354"
                 radius={[3, 3, 0, 0]}
               />
             </BarChart>
@@ -188,15 +193,15 @@ export function PerformanceDashboard({
         </div>
 
         {/* Status donut — spans 2 cols on lg */}
-        <div className="rounded-lg border bg-card p-6 lg:col-span-2">
+        <div className="rounded-[14px] border border-line bg-paper p-6 shadow-[var(--shadow)] lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium">Lead Status Distribution</p>
-              <p className="text-xs text-muted-foreground">Current snapshot</p>
+              <p className="text-[13.5px] font-semibold">Lead Status Distribution</p>
+              <p className="text-xs text-ink-2">Current snapshot</p>
             </div>
             <button
               onClick={() => setShowDonutExtra((v) => !v)}
-              className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition"
+              className="rounded-[8px] border border-line-2 px-2.5 py-1 text-xs font-medium text-ink-2 transition hover:bg-mist hover:text-ink"
             >
               {showDonutExtra ? 'Hide Dead/Sold/Future' : 'Show All'}
             </button>
@@ -255,62 +260,62 @@ export function PerformanceDashboard({
       </div>
 
       {/* Employee table */}
-      <div className="rounded-lg border bg-card">
-        <div className="flex items-center justify-between border-b px-4 py-3">
-          <p className="text-sm font-medium">
+      <div className="rounded-[14px] border border-line bg-paper shadow-[var(--shadow)]">
+        <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
+          <p className="text-[13.5px] font-semibold">
             Employee Performance
-            <span className="ml-2 text-xs text-muted-foreground font-normal">
-              ({employeeStats.length} active)
+            <span className="ml-2 text-xs font-normal text-ink-2">
+              ({employeeStats.length} active · click a row for their leads)
             </span>
           </p>
           <button
             onClick={() => setShowExtra((v) => !v)}
-            className="rounded-md border px-2 py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition"
+            className="rounded-[8px] border border-line-2 px-2.5 py-1 text-xs font-medium text-ink-2 transition hover:bg-mist hover:text-ink"
           >
-            {showExtra ? 'Hide Dead/Sold/Future' : 'Show Dead/Sold/Future'}
+            {showExtra ? 'Hide Dead/Sold/Future' : 'More columns'}
           </button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b text-left">
-                <th className="px-4 py-2.5 font-medium text-muted-foreground">
+              <tr className="border-b border-line text-left">
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   Name
                 </th>
                 <th
-                  className="px-4 py-2.5 font-medium text-muted-foreground cursor-pointer select-none hover:text-foreground"
+                  className="cursor-pointer select-none px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3 hover:text-ink"
                   onClick={() => setSortDesc((v) => !v)}
                 >
-                  Active Leads {sortDesc ? '↓' : '↑'}
+                  Active {sortDesc ? '↓' : '↑'}
                 </th>
-                <th className="px-4 py-2.5 font-medium text-amber-500">
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-warm">
                   Warm
                 </th>
-                <th className="px-4 py-2.5 font-medium text-blue-500">
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-cold">
                   Cold
                 </th>
-                <th className="px-4 py-2.5 font-medium text-red-500">Hot</th>
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-hot">Hot</th>
                 {showExtra && (
                   <>
-                    <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                       Dead
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-green-500">
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-sold">
                       Sold
                     </th>
-                    <th className="px-4 py-2.5 font-medium text-purple-500">
+                    <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-future">
                       Future
                     </th>
                   </>
                 )}
-                <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3 whitespace-nowrap">
                   Done ({p_days}d)
                 </th>
-                <th className="px-4 py-2.5 font-medium text-muted-foreground whitespace-nowrap">
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3 whitespace-nowrap">
                   Missed ({p_days}d)
                 </th>
-                <th className="px-4 py-2.5 font-medium text-muted-foreground">
+                <th className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                   Conv%
                 </th>
               </tr>
@@ -340,24 +345,24 @@ export function PerformanceDashboard({
                     <td className="px-4 py-3 tabular-nums">
                       {emp.active_leads}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-amber-600">
+                    <td className="px-4 py-3 tabular-nums text-warm">
                       {emp.warm_count}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-blue-600">
+                    <td className="px-4 py-3 tabular-nums text-cold">
                       {emp.cold_count}
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-red-600">
+                    <td className="px-4 py-3 tabular-nums text-hot">
                       {emp.hot_count}
                     </td>
                     {showExtra && (
                       <>
-                        <td className="px-4 py-3 tabular-nums text-muted-foreground">
+                        <td className="px-4 py-3 tabular-nums text-ink-2">
                           {emp.dead_count}
                         </td>
-                        <td className="px-4 py-3 tabular-nums text-green-600">
+                        <td className="px-4 py-3 tabular-nums text-sold">
                           {emp.sold_count}
                         </td>
-                        <td className="px-4 py-3 tabular-nums text-purple-600">
+                        <td className="px-4 py-3 tabular-nums text-future">
                           {emp.future_count}
                         </td>
                       </>
@@ -367,7 +372,7 @@ export function PerformanceDashboard({
                     </td>
                     <td className="px-4 py-3 tabular-nums">
                       {emp.followups_missed > 0 ? (
-                        <span className="text-red-600">
+                        <span className="text-hot">
                           {emp.followups_missed}
                         </span>
                       ) : (
