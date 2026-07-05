@@ -15,12 +15,11 @@ import '../../leads/providers/lead_providers.dart';
 import '../../leads/ui/lead_card.dart';
 import '../../leads/ui/new_lead_sheet.dart';
 import '../../leads/ui/filtered_leads_screen.dart';
-import '../../leads/ui/followups_screen.dart';
 import '../../leads/ui/pending_outcome_sheet.dart';
 import '../../alarms/data/alarm_sync_service.dart';
 import '../../motivation/providers/motivation_providers.dart';
-import '../../motivation/ui/personal_stats_card.dart';
-import '../../motivation/ui/monthly_best.dart';
+import '../../motivation/data/models/motivation_stats.dart';
+import '../../motivation/data/models/monthly_best.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -187,52 +186,41 @@ class _LeadsView extends StatelessWidget {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
-        // Today's Actions widget
+        // Combined dark header card: today counters + progress (§6.3).
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: _TodayWidget(leads: leads),
+            child: _HomeHeaderCard(leads: leads),
           ),
         ),
-
-        // Personal Performance Stats card (Story 7.1) — sits below Today's Actions
-        const SliverToBoxAdapter(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: PersonalStatsCard(),
-          ),
-        ),
-
-        // Monthly personal-best card + new-best banner (Story 7.4)
-        const SliverToBoxAdapter(child: MonthlyBestSection()),
 
         // Section header
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Row(
               children: [
                 Text(
-                  'MY LEADS',
+                  'My Leads',
                   style: TextStyle(
-                    fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 11.5 * 0.06,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 10.5 * 0.12,
                     color: AppColors.inkSecondary,
                   ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 7),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 1),
                   decoration: BoxDecoration(
-                    color: AppColors.surfaceSunk,
+                    color: AppColors.mist,
                     borderRadius: BorderRadius.circular(9999),
                   ),
                   child: Text(
                     '${leads.length}',
                     style: const TextStyle(
                       fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.inkSecondary,
                     ),
                   ),
@@ -247,25 +235,24 @@ class _LeadsView extends StatelessWidget {
                         extra: LeadFilter.untouched),
                     child: Container(
                       padding:
-                          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppColors.navy.withValues(alpha: 0.06),
+                        color: AppColors.statusColdBg,
                         borderRadius: BorderRadius.circular(9999),
-                        border: Border.all(
-                            color: AppColors.navy.withValues(alpha: 0.30)),
+                        border: Border.all(color: const Color(0xFFC6D6E9)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.fiber_new_rounded,
-                              size: 12, color: AppColors.navy),
+                          Icon(Icons.auto_awesome_rounded,
+                              size: 11, color: AppColors.statusCold),
                           const SizedBox(width: 4),
                           Text(
                             '$untouched untouched',
                             style: TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.navy,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.statusCold,
                             ),
                           ),
                         ],
@@ -307,7 +294,7 @@ class _LeadsView extends StatelessWidget {
                   margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                   decoration: BoxDecoration(
                     color: AppColors.error,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.only(right: 20),
@@ -341,137 +328,235 @@ class _LeadsView extends StatelessWidget {
   }
 }
 
-// ── Today's Actions widget ─────────────────────────────────────────────────
+// ── Combined header card: today counters + progress (§6.3) ─────────────────
 
-class _TodayWidget extends StatelessWidget {
+class _HomeHeaderCard extends ConsumerWidget {
   final List<LeadListItem> leads;
-  const _TodayWidget({required this.leads});
+  const _HomeHeaderCard({required this.leads});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final now   = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
-    int _sameDay(DateTime? dt) {
+    int sameDay(DateTime? dt) {
       if (dt == null) return 0;
       final l = dt.toLocal();
       return DateTime(l.year, l.month, l.day).isAtSameMomentAs(today) ? 1 : 0;
     }
 
-    final followupsToday = leads.fold(0, (s, l) => s + _sameDay(l.nextFollowupAt));
-    final visitsToday    = leads.fold(0, (s, l) => s + _sameDay(l.visitDate));
+    final followupsToday = leads.fold(0, (s, l) => s + sameDay(l.nextFollowupAt));
+    final visitsToday    = leads.fold(0, (s, l) => s + sameDay(l.visitDate));
     final incomplete     = leads.where((l) => l.isIncomplete).length;
     final pendingCalls   = leads.where((l) => l.hasPendingOutcome).length;
 
+    // Motivation providers — keep the offline/zero fallback (never a red error).
+    final stats = ref.watch(myMotivationStatsProvider).maybeWhen(
+          data: (s) => s,
+          orElse: MotivationStats.zero,
+        );
+    final best = ref.watch(myMonthlyBestProvider).maybeWhen(
+          data: (b) => b,
+          orElse: () => MonthlyBest.empty,
+        );
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
       decoration: BoxDecoration(
-        color: AppColors.surfaceRaised,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderHairline),
+        color: AppColors.evergreen,
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            "TODAY'S ACTIONS",
+            'Today · ${_eyebrowDate(now)}',
             style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 11.0 * 0.08,
-              color: AppColors.inkSecondary,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 10.5 * 0.12,
+              color: const Color(0xFFE9E4D6).withValues(alpha: 0.55),
             ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
-              _CountTile(
+              _HeaderTile(
                 count: followupsToday,
                 label: 'Follow-ups',
                 onTap: () => context.push('/leads/filtered', extra: LeadFilter.followupsToday),
               ),
               const SizedBox(width: 8),
-              _CountTile(
+              _HeaderTile(
                 count: visitsToday,
-                label: 'Visits today',
+                label: 'Visits',
                 onTap: () => context.push('/leads/filtered', extra: LeadFilter.visitsToday),
               ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              _CountTile(
+              const SizedBox(width: 8),
+              _HeaderTile(
                 count: incomplete,
                 label: 'Incomplete',
-                accent: incomplete > 0,
+                alert: incomplete > 0,
                 onTap: () => context.push('/leads/filtered', extra: LeadFilter.incomplete),
               ),
               const SizedBox(width: 8),
-              _CountTile(
+              _HeaderTile(
                 count: pendingCalls,
-                label: 'Calls pending',
-                accent: pendingCalls > 0,
+                label: 'Call pending',
+                alert: pendingCalls > 0,
                 onTap: () => context.push('/leads/filtered', extra: LeadFilter.pendingOutcome),
               ),
             ],
+          ),
+          // Progress footer line.
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            padding: const EdgeInsets.only(top: 10),
+            decoration: BoxDecoration(
+              border: Border(
+                top: BorderSide(
+                    color: const Color(0xFFE9E4D6).withValues(alpha: 0.12)),
+              ),
+            ),
+            child: Row(
+              children: [
+                _ProgItem(label: 'Sold this month', value: '${stats.soldThisMonth}'),
+                _ProgItem(label: 'Streak', value: '${stats.followupStreakDays} days'),
+                _BestHint(stats: stats, best: best),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
+
+  static String _eyebrowDate(DateTime dt) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul',
+      'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${days[dt.weekday - 1]} ${dt.day} ${months[dt.month]}';
+  }
 }
 
-class _CountTile extends StatelessWidget {
+class _HeaderTile extends StatelessWidget {
   final int count;
   final String label;
-  final bool accent;
+  final bool alert;
   final VoidCallback? onTap;
 
-  const _CountTile({
+  const _HeaderTile({
     required this.count,
     required this.label,
-    this.accent = false,
+    this.alert = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final countColor = accent && count > 0
-        ? AppColors.statusIncomplete
-        : AppColors.inkPrimary;
+    final numberColor = alert && count > 0
+        ? AppColors.brassBright
+        : const Color(0xFFF2EEE2);
 
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
           decoration: BoxDecoration(
-            color: AppColors.surfaceBase,
-            borderRadius: BorderRadius.circular(8),
+            color: const Color(0xFFE9E4D6).withValues(alpha: 0.07),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: const Color(0xFFE9E4D6).withValues(alpha: 0.10)),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 '$count',
-                style: TextStyle(
+                style: GoogleFonts.fraunces(
                   fontSize: 22,
-                  fontWeight: FontWeight.w600,
-                  color: countColor,
+                  fontWeight: FontWeight.w500,
+                  color: numberColor,
                   height: 1.1,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 label,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: AppColors.inkSecondary,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: const Color(0xFFE9E4D6).withValues(alpha: 0.60),
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProgItem extends StatelessWidget {
+  final String label;
+  final String value;
+  const _ProgItem({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(text: '$label '),
+            TextSpan(
+              text: value,
+              style: const TextStyle(
+                color: Color(0xFFF2EEE2),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 11.5,
+          color: const Color(0xFFE9E4D6).withValues(alpha: 0.60),
+        ),
+      ),
+    );
+  }
+}
+
+class _BestHint extends StatelessWidget {
+  final MotivationStats stats;
+  final MonthlyBest best;
+  const _BestHint({required this.stats, required this.best});
+
+  @override
+  Widget build(BuildContext context) {
+    final String text;
+    if (best.allTimeBest > 0) {
+      final toBeat = best.allTimeBest - best.thisMonthSold + 1;
+      text = toBeat <= 0
+          ? 'New personal best 🏆'
+          : '$toBeat ${toBeat == 1 ? 'sale' : 'sales'} to beat your best 🏆';
+    } else {
+      text = 'Conversion ${stats.conversionRate.toStringAsFixed(1)}%';
+    }
+    return Expanded(
+      child: Text(
+        text,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.right,
+        style: const TextStyle(
+          fontSize: 11.5,
+          fontWeight: FontWeight.w700,
+          color: AppColors.brassBright,
         ),
       ),
     );
