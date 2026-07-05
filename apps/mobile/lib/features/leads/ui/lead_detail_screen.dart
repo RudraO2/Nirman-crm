@@ -36,8 +36,8 @@ class LeadDetailScreen extends ConsumerWidget {
         iconTheme: const IconThemeData(color: AppColors.inkPrimary),
         title: Text(
           'Lead',
-          style: GoogleFonts.sourceSerif4(
-            fontSize: 20,
+          style: GoogleFonts.fraunces(
+            fontSize: 21,
             fontWeight: FontWeight.w500,
             color: AppColors.inkPrimary,
           ),
@@ -57,6 +57,21 @@ class LeadDetailScreen extends ConsumerWidget {
                 if (rescheduled == true) {
                   ref.invalidate(leadByIdProvider(leadId));
                   ref.invalidate(myLeadsProvider);
+                }
+              },
+            ),
+          // Edit moved from a FAB to the AppBar pencil (same showEditLeadSheet).
+          if (leadAsync.valueOrNull != null)
+            IconButton(
+              icon: const Icon(Icons.edit_rounded),
+              color: AppColors.inkSecondary,
+              tooltip: 'Edit lead',
+              onPressed: () async {
+                final lead = leadAsync.valueOrNull;
+                if (lead == null) return;
+                final updated = await showEditLeadSheet(context, lead);
+                if (updated == true) {
+                  ref.invalidate(leadByIdProvider(leadId));
                 }
               },
             ),
@@ -92,21 +107,6 @@ class LeadDetailScreen extends ConsumerWidget {
           return _LeadDetailView(lead: lead);
         },
       ),
-      floatingActionButton: leadAsync.valueOrNull == null
-          ? null
-          : FloatingActionButton(
-              onPressed: () async {
-                final lead = leadAsync.valueOrNull;
-                if (lead == null) return;
-                final updated = await showEditLeadSheet(context, lead);
-                if (updated == true) {
-                  ref.invalidate(leadByIdProvider(leadId));
-                }
-              },
-              backgroundColor: AppColors.accentStrong,
-              tooltip: 'Edit lead',
-              child: const Icon(Icons.edit_rounded, color: Colors.white),
-            ),
     );
   }
 }
@@ -124,11 +124,11 @@ class _LeadDetailView extends ConsumerWidget {
       children: [
         // ── Hero card ──────────────────────────────────────────────────
         Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             color: AppColors.surfaceRaised,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderHairline),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,72 +142,60 @@ class _LeadDetailView extends ConsumerWidget {
                       children: [
                         if (lead.isIncomplete)
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 8, height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.statusIncomplete,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 5),
-                                Text(
-                                  'Incomplete',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: AppColors.statusIncomplete,
-                                  ),
-                                ),
-                              ],
+                            padding: const EdgeInsets.only(bottom: 2),
+                            child: Text(
+                              '● Incomplete',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.statusHot,
+                              ),
                             ),
                           ),
                         Text(
                           lead.name ?? 'No name',
-                          style: GoogleFonts.sourceSerif4(
-                            fontSize: 22,
+                          style: GoogleFonts.fraunces(
+                            fontSize: 23,
                             fontWeight: FontWeight.w500,
                             color: AppColors.inkPrimary,
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 10),
                         if (lead.phone != null)
                           GestureDetector(
                             onTap: () => _onCallTap(context, ref),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                              padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF25D366),
-                                borderRadius: BorderRadius.circular(10),
+                                color: AppColors.waGreen,
+                                borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF25D366).withOpacity(0.35),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                                    color: AppColors.waGreen.withValues(alpha: 0.35),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 6),
                                   ),
                                 ],
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.call_rounded, size: 18, color: Colors.white),
-                                  const SizedBox(width: 8),
+                                  const Icon(Icons.call_rounded, size: 17, color: Colors.white),
+                                  const SizedBox(width: 9),
                                   Text(
                                     lead.displayPhone,
-                                    style: const TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w600),
+                                    style: const TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.w700),
                                   ),
-                                  const SizedBox(width: 8),
+                                  const SizedBox(width: 9),
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                                     decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.22),
+                                      color: Colors.white.withValues(alpha: 0.25),
                                       borderRadius: BorderRadius.circular(5),
                                     ),
                                     child: const Text(
                                       'CALL',
-                                      style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 0.6),
+                                      style: TextStyle(fontSize: 9.5, color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 0.8),
                                     ),
                                   ),
                                 ],
@@ -219,23 +207,30 @@ class _LeadDetailView extends ConsumerWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 10),
                   _StatusBadge(status: lead.status),
                 ],
               ),
               if (lead.hasPendingOutcome) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.accentSoft.withOpacity(0.35),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.brassSoft,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.access_time_rounded, size: 14, color: AppColors.accentStrong),
-                      const SizedBox(width: 6),
-                      Text('Call outcome pending', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: AppColors.accentStrong)),
+                      const Icon(Icons.access_time_rounded, size: 15, color: Color(0xFF7A5D24)),
+                      const SizedBox(width: 7),
+                      Flexible(
+                        child: Text(
+                          'Call outcome pending — log it when you hang up',
+                          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600, color: Color(0xFF7A5D24)),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -283,7 +278,8 @@ class _LeadDetailView extends ConsumerWidget {
                 child: _ActionButton(
                   icon: Icons.share_rounded,
                   label: 'Share',
-                  color: AppColors.navy,
+                  color: AppColors.evergreen,
+                  fgColor: AppColors.brassBright,
                   onTap: () async {
                     final shared = await showShareLeadSheet(context, lead.id);
                     if (shared == true) {
@@ -339,49 +335,74 @@ class _LeadDetailView extends ConsumerWidget {
 
         const SizedBox(height: 12),
 
-        // ── Details grid ───────────────────────────────────────────────
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.surfaceRaised,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderHairline),
-          ),
-          child: Column(
-            children: [
-              if (lead.source != null) _DetailRow(label: 'Source', value: _sourceLabel(lead.source!)),
-              if (lead.propertyType != null) _DetailRow(label: 'Property Type', value: lead.propertyType!),
-              if (lead.location != null) _DetailRow(label: 'Location', value: lead.location!),
-              if (lead.ticketSize != null) _DetailRow(label: 'Ticket Size', value: lead.ticketSize!),
-              if (lead.budgetMin != null || lead.budgetMax != null)
-                _DetailRow(label: 'Budget', value: _budgetLabel(lead.budgetMin, lead.budgetMax)),
-              if (lead.visitDate != null) _DetailRow(label: 'Visit Date', value: _dateLabel(lead.visitDate!)),
-              if (lead.nextFollowupAt != null) _DetailRow(label: 'Follow-up', value: _dateLabel(lead.nextFollowupAt!)),
-              if (lead.interestType != null) _DetailRow(label: 'Interest Type', value: lead.interestType!),
-            ],
-          ),
-        ),
-
-        if (lead.remarks != null && lead.remarks!.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Container(
+        // ── Combined details + remarks card (§6.4) ─────────────────────
+        Builder(builder: (context) {
+          // "Property · size" combines propertyType + ticketSize when both
+          // present, else whichever exists.
+          final propSize = [lead.propertyType, lead.ticketSize]
+              .where((v) => v != null && v.isNotEmpty)
+              .join(' · ');
+          final rows = <_DetailEntry>[
+            if (lead.source != null)
+              _DetailEntry('Source', _sourceLabel(lead.source!)),
+            if (propSize.isNotEmpty)
+              _DetailEntry('Property · size', propSize),
+            if (lead.location != null)
+              _DetailEntry('Location', lead.location!),
+            if (lead.budgetMin != null || lead.budgetMax != null)
+              _DetailEntry('Budget', _budgetLabel(lead.budgetMin, lead.budgetMax)),
+            if (lead.visitDate != null)
+              _DetailEntry('Visit', _dateLabel(lead.visitDate!)),
+            if (lead.nextFollowupAt != null)
+              _DetailEntry('Follow-up', _dateLabel(lead.nextFollowupAt!),
+                  valueColor: lead.hasOverdueFollowup ? AppColors.statusHot : null),
+            if (lead.interestType != null)
+              _DetailEntry('Interest', lead.interestType!),
+          ];
+          final hasRemarks = lead.remarks != null && lead.remarks!.isNotEmpty;
+          return Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
             decoration: BoxDecoration(
               color: AppColors.surfaceRaised,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.borderHairline),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.line),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('REMARKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: AppColors.inkSecondary)),
-                const SizedBox(height: 8),
-                Text(lead.remarks!, style: TextStyle(fontSize: 14, color: AppColors.inkPrimary, height: 1.5)),
+                for (var i = 0; i < rows.length; i++)
+                  _DetailRow(
+                    label: rows[i].label,
+                    value: rows[i].value,
+                    valueColor: rows[i].valueColor,
+                    // Bottom hairline between rows; none on the last row unless
+                    // remarks follow (the remarks block draws its own dashed rule).
+                    showBorder: i < rows.length - 1,
+                  ),
+                if (hasRemarks) ...[
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    padding: const EdgeInsets.only(top: 11),
+                    decoration: const BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: AppColors.borderStrong),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('REMARKS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.26, color: AppColors.inkSecondary)),
+                        const SizedBox(height: 5),
+                        Text(lead.remarks!, style: TextStyle(fontSize: 13, color: AppColors.inkPrimary, height: 1.55)),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
-          ),
-        ],
+          );
+        }),
 
         const SizedBox(height: 12),
 
@@ -390,13 +411,13 @@ class _LeadDetailView extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: AppColors.surfaceRaised,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderHairline),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.line),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('TIMELINE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, letterSpacing: 1.2, color: AppColors.inkSecondary)),
+              Text('TIMELINE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 1.26, color: AppColors.inkSecondary)),
               const SizedBox(height: 12),
               Consumer(builder: (context, ref, _) {
                 final timelineAsync = ref.watch(leadTimelineProvider(lead.id));
@@ -413,7 +434,12 @@ class _LeadDetailView extends ConsumerWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        for (final e in events) _TimelineRow(entry: e),
+                        for (var i = 0; i < events.length; i++)
+                          _TimelineRow(
+                            entry: events[i],
+                            isFirst: i == 0,
+                            isLast: i == events.length - 1,
+                          ),
                       ],
                     );
                   },
@@ -477,47 +503,78 @@ class _LeadDetailView extends ConsumerWidget {
 
 class _TimelineRow extends StatelessWidget {
   final TimelineEntry entry;
-  const _TimelineRow({required this.entry});
+  final bool isFirst;
+  final bool isLast;
+  const _TimelineRow({required this.entry, this.isFirst = false, this.isLast = false});
 
   @override
   Widget build(BuildContext context) {
-    final (label, icon, color) = _eventDisplay(entry.eventType);
+    final label = _eventDisplay(entry.eventType).$1;
     final detail = _eventDetail(entry);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return IntrinsicHeight(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 28, height: 28,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
-              shape: BoxShape.circle,
+          // Brass dot rail.
+          SizedBox(
+            width: 20,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  width: 2,
+                  height: 4,
+                  child: ColoredBox(
+                    color: isFirst ? Colors.transparent : AppColors.line,
+                  ),
+                ),
+                Container(
+                  width: 10, height: 10,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceRaised,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.brass, width: 2.5),
+                  ),
+                ),
+                Expanded(
+                  child: SizedBox(
+                    width: 2,
+                    child: ColoredBox(
+                      color: isLast ? Colors.transparent : AppColors.line,
+                    ),
+                  ),
+                ),
+              ],
             ),
-            child: Icon(icon, size: 14, color: color),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.inkPrimary)),
-                    ),
-                    Text(_when(entry.occurredAt), style: TextStyle(fontSize: 11, color: AppColors.inkDisabled)),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: isLast ? 0 : 15),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.inkPrimary)),
+                  if (detail != null) ...[
+                    const SizedBox(height: 2),
+                    Text(detail, style: TextStyle(fontSize: 12, color: AppColors.inkSecondary, height: 1.35)),
                   ],
-                ),
-                if (detail != null) ...[
                   const SizedBox(height: 2),
-                  Text(detail, style: TextStyle(fontSize: 12, color: AppColors.inkSecondary, height: 1.35)),
+                  Row(
+                    children: [
+                      Text(_when(entry.occurredAt), style: TextStyle(fontSize: 11, color: AppColors.inkDisabled)),
+                      if (entry.actorName != null && entry.actorRole != 'system') ...[
+                        Text(' · ', style: TextStyle(fontSize: 11, color: AppColors.inkDisabled)),
+                        Flexible(
+                          child: Text('by ${entry.actorName}',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11, color: AppColors.inkDisabled)),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
-                if (entry.actorName != null && entry.actorRole != 'system') ...[
-                  const SizedBox(height: 2),
-                  Text('by ${entry.actorName}', style: TextStyle(fontSize: 11, color: AppColors.inkDisabled)),
-                ],
-              ],
+              ),
             ),
           ),
         ],
@@ -610,26 +667,32 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
+  final Color fgColor;
   final VoidCallback onTap;
-  const _ActionButton({required this.icon, required this.label, required this.color, required this.onTap});
+  const _ActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    this.fgColor = Colors.white,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.25)),
+          color: color,
+          borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 16, color: color),
-            const SizedBox(width: 6),
-            Text(label, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color)),
+            Icon(icon, size: 18, color: fgColor),
+            const SizedBox(height: 4),
+            Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fgColor)),
           ],
         ),
       ),
@@ -637,24 +700,49 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
+class _DetailEntry {
+  final String label;
+  final String value;
+  final Color? valueColor;
+  const _DetailEntry(this.label, this.value, {this.valueColor});
+}
+
 class _DetailRow extends StatelessWidget {
   final String label;
   final String value;
-  const _DetailRow({required this.label, required this.value});
+  final Color? valueColor;
+  final bool showBorder;
+  const _DetailRow({
+    required this.label,
+    required this.value,
+    this.valueColor,
+    this.showBorder = true,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: showBorder
+          ? const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.line)),
+            )
+          : null,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(label, style: TextStyle(fontSize: 13, color: AppColors.inkSecondary)),
-          ),
+          Text(label, style: TextStyle(fontSize: 13.5, color: AppColors.inkSecondary)),
+          const SizedBox(width: 12),
           Expanded(
-            child: Text(value, style: TextStyle(fontSize: 13, color: AppColors.inkPrimary, fontWeight: FontWeight.w500)),
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(
+                fontSize: 13.5,
+                color: valueColor ?? AppColors.inkPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -674,23 +762,23 @@ class _ShareChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 4, 6, 4),
       decoration: BoxDecoration(
-        color: AppColors.navy.withValues(alpha: 0.08),
+        color: AppColors.statusFutureBg,
         borderRadius: BorderRadius.circular(9999),
-        border: Border.all(color: AppColors.navy.withValues(alpha: 0.25)),
+        border: Border.all(color: AppColors.statusFuture.withValues(alpha: 0.30)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.share_rounded, size: 12, color: AppColors.navy),
+          Icon(Icons.swap_horiz_rounded, size: 13, color: AppColors.statusFuture),
           const SizedBox(width: 5),
           Text(
             username,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppColors.navy),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.statusFuture),
           ),
           const SizedBox(width: 4),
           GestureDetector(
             onTap: onRevoke,
-            child: Icon(Icons.close_rounded, size: 14, color: AppColors.navy.withValues(alpha: 0.6)),
+            child: Icon(Icons.close_rounded, size: 14, color: AppColors.statusFuture.withValues(alpha: 0.7)),
           ),
         ],
       ),
@@ -704,17 +792,26 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = status.statusColor;
+    final fg = status.statusColor;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: status.statusBgColor,
         borderRadius: BorderRadius.circular(9999),
-        border: Border.all(color: color.withOpacity(0.4)),
       ),
-      child: Text(
-        status.statusLabel,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6, height: 6,
+            decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 5),
+          Text(
+            status.statusLabel,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: fg),
+          ),
+        ],
       ),
     );
   }
