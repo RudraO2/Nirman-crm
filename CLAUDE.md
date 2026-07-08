@@ -20,9 +20,10 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
 
 ## 🔒 Supabase migrations — DO NOT redo, DO NOT use MCP apply
 
-- Migrations are **file-based**, `supabase/migrations/0001…0084`, applied with
-  **`supabase db push --linked`** (CLI 2.101, already `link`ed). **Prod is at 0084
-  as of 2026-07-07** (builder-ops 0057–0084 deployed; lead data verified untouched).
+- Migrations are **file-based**, `supabase/migrations/0001…0086`, applied with
+  **`supabase db push --linked`** (CLI 2.101, already `link`ed). **Prod is at 0086
+  as of 2026-07-08** (0085 flexible unit numbering + 0086 unit add/rename/delete;
+  builder-ops 0057–0084 before that; lead data verified untouched).
 - **NEVER use the MCP `apply_migration` tool** — it creates timestamp-named entries
   that desync the migration history (this already had to be repaired once). Always
   add the next numbered file (after `0084`) and `db push`.
