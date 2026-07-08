@@ -1,7 +1,7 @@
 # Nirman CRM — Agent Operating Guide
 
 **Read this before touching git, Supabase, or migrations. It records work already
-done so a fresh session does not redo or break it.** Last updated: 2026-05-28.
+done so a fresh session does not redo or break it.** Last updated: 2026-07-07.
 
 Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpxuzuxfn`
 
@@ -20,13 +20,17 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
 
 ## 🔒 Supabase migrations — DO NOT redo, DO NOT use MCP apply
 
-- Migrations are **file-based**, `supabase/migrations/0001…0030`, applied with
-  **`supabase db push --linked`** (CLI 2.101, already `link`ed).
+- Migrations are **file-based**, `supabase/migrations/0001…0084`, applied with
+  **`supabase db push --linked`** (CLI 2.101, already `link`ed). **Prod is at 0084
+  as of 2026-07-07** (builder-ops 0057–0084 deployed; lead data verified untouched).
 - **NEVER use the MCP `apply_migration` tool** — it creates timestamp-named entries
   that desync the migration history (this already had to be repaired once). Always
-  add the next numbered file (after `0030`) and `db push`.
+  add the next numbered file (after `0084`) and `db push`.
 - Before adding a migration run `supabase migration list` to confirm state.
 - Inline hotfixes 0027/0028 were applied via SQL editor and also exist as files.
+- Ad-hoc **prod SQL (read or write) without service key: `supabase db query --linked "SQL"`**.
+- The local-only `00075_local_seed_tenant.sql` shim was deleted 2026-07-07 (pre-push);
+  recreate it only for a from-scratch local reset, and delete again before any push.
 
 ## 🔒 Push notifications (Epic 3.5/3.6/3.7) — DONE + verified, DO NOT redo
 
@@ -49,9 +53,15 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
 
 ## Current status (truth — see `_bmad-output/implementation-artifacts/sprint-status.yaml`)
 
-- **Epic 1 (1.1–1.8): done** · **Epic 2 (2.1–2.7): done** · **Epic 3 (3.1–3.9): done**
-- **Epic 7.1: review** (Personal stats card; migration 0030 + `features/motivation/`)
-- Remaining: Epic 7.2–7.4 (mobile, no blocker) → then Epic 4–6 (need `apps/admin` Next.js)
+- Epics 1–4, 7, 10 shipped; **Epic 11 (web WhatsApp templates) implemented 2026-07-07**:
+  admin `/templates` page (CRUD + variable chips + preview, Team nav group), mobile
+  8-token send-time substitution, and the **wa.me missing-`91` bug** fixed in
+  `whatsapp_sheet.dart`. See `_bmad-output/implementation-artifacts/11-web-whatsapp-template-management.md`.
+- **Builder-ops (Epics 12–16) backend DEPLOYED to prod 2026-07-07**: migrations
+  0057–0084 + edge fns (create-lead, update-lead, manage-employee, backfill-role-tier,
+  send-developer-update, send-amendment-notification). Before/after lead counts identical
+  (1673 total / Sangeeta 1668). `backfill-role-tier` fn not yet invoked (needs live admin
+  JWT; optional — `auth_role_tier()` falls back from role). Mobile builder-ops UI deferred.
 
 ## BMAD docs
 

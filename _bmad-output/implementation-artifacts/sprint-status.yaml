@@ -1,7 +1,7 @@
 # Sprint status — auto-tracked by bmad-create-story / bmad-dev-story / bmad-code-review.
 # Status values: backlog | ready-for-dev | in-progress | review | done
 
-last_updated: 2026-05-28  # ALL 7 EPICS DONE — 42/42 stories shipped
+last_updated: 2026-06-27  # Epics 12-16 (Builder Ops Extension) registered as backlog: 27 stories, migrations 0057-0066. Planning + arch + epics done, party-reviewed; story specs being cut into implementation-artifacts.
 project: nirman-crm
 repo: https://github.com/RudraO2/Nirman-crm
 supabase_project_id: vhgruadourflpxuzuxfn
@@ -60,6 +60,82 @@ development_status:
   7-2-sold-celebration-earned-moment-card: done
   7-3-streak-at-risk-push-notification: done
   7-4-monthly-personal-best-banner: done
+
+  # ── Epic 8: SaaS Onboarding & Multi-Tenant Activation (added 2026-05-29) ──
+  # Source: epics.md Epic 8 + architecture.md "SaaS Activation Layer (V2)".
+  # SEQUENCE GATE: 8-1 must be `done` before any other 8.x (security-gating).
+  # Manual prereqs that will pause the loop: 8-3 Cloudflare Turnstile keys,
+  # 8-5 SMTP/Resend creds, 9-1 Stripe account. Migrations: next is 0054.
+  epic-8: in-progress
+  8-1-harden-admin-role-guards: done                 # 0054 (17 admin fns) + 0055 (share_lead, code-review patch) applied+verified; gate OPEN
+  8-2-tenant-lifecycle-status-trial: done             # 0056 applied+verified; code review clean (no patches needed); confirmed
+  8-3-self-serve-signup-tenant-admin-provisioning: backlog  # signup-create-tenant fn + /signup /verify + Turnstile
+  8-4-team-invites-send-accept: backlog               # invitations 0055 + send-invite/accept-invite + /team /invite/[token]
+  8-5-transactional-email: backlog                    # SMTP (provider open decision)
+  8-6-starter-whatsapp-templates-on-tenant-create: backlog  # migration 0057
+  8-7-replace-vulnerable-excel-parser: backlog        # xlsx -> exceljs (D-6.1-2)
+
+  # ── Epic 9: Billing — Stripe per-seat (LATER, not this sprint) ──
+  epic-9: backlog
+  9-1-stripe-per-seat-billing: backlog                # migration 0058 + checkout/webhook + /billing + seat enforcement
+
+  # ── Epic 10: Alarm-Based Follow-Up Reminders (mobile) — added 2026-05-30 ──
+  # Source: epics.md Epic 10. Full-screen ringing local alarms atop FCM push.
+  # No new RLS surface (device-local); Android exact-alarm + full-screen-intent perms.
+  epic-10: in-progress
+  10-1-global-alarm-settings: done                    # features/alarms/ (toggle+offsets+perms UI), SharedPreferencesAsync, AlarmScheduler cancel-on-disable seam, manifest perms; analyze 0 err, 6/6 unit tests; review clean, confirmed by Rudra 2026-05-30
+  10-2-fullscreen-ringing-alarm: done                # exact alarm + full-screen intent + ring screen + snooze/dismiss + app wiring; code-review 4 patches fixed (auth-redirect exempt, null-extra guard, snooze-id collision, alarm-call try/catch); analyze 0, 20/20 tests. AC4 iOS notif deferred (Android-only ship). Story spec authored post-impl 2026-05-30
+  10-3-alarm-lifecycle-and-boot-sync: review          # reconcile model: cancelScheduled(selective)+rebuild from getMyLeads via single myLeadsProvider listener (all mutations + app-open) + controller reconcile on enable/offset. CODE-REVIEW CLEAN 2026-05-31: patched M1 (in-flight reconcile race guard + keepAlive) + M2 (AC6 reason threaded into per-alarm schedule/cancel logs); 28/28 alarms, 121/121 full suite, analyze 0. Closed 10.2 targeted-cancel. NOT done: device ring + reboot survival unverified on RMX5003
+
+  # ── Epic 11: Web WhatsApp Template Management (apps/admin) — added 2026-05-30 ──
+  # Source: epics.md Epic 11. CRUD on web + {{variable}} chips; reuses 0023 (no migration).
+  epic-11: review        # implemented 2026-07-07 — see 11-web-whatsapp-template-management.md
+  11-1-web-template-crud: review                     # /templates page CRUD via 0023 RLS + max-3 trigger; no migration; Team nav tab; tsc+build green
+  11-2-variable-chip-insertion: review               # 8-token chips insert at cursor + sample-lead live preview
+  11-3-mobile-send-variable-substitution: review     # render() catalog-driven all 8 tokens, null→'—', unknown stripped; wa.me 91-prefix send bug fixed; analyze 0, 133/133
+
+  # ── Builder Operations Extension: Epics 12-16 (added 2026-06-27) ──
+  # Source: epics.md Epics 12-16 + prd-builder-ops-v2.md (FR-39..57) + architecture-builder-ops-v2.md.
+  # Migrations: next is 0057 (current head 0056). File-based, db push --linked. NEVER MCP apply_migration.
+  # BUILD sequence: 12 -> 13||14 -> 15 -> 16. Epic 12 first (access-control gate).
+  # PITCH/DEMO delivery order (John, arch §13.7): seed roles+1 project -> 14.3 grid -> 15.2 hold -> 15.4 verify.
+  #   For a demo-first sprint, pull 14.1/14.2/14.3 + 15.1/15.2/15.4 forward; defer full 12 hardening, 13, 16 to post-yes.
+  # SEQUENCE GATE: 12-1 (schema) before 12.2-12.6; 12-2 predicate audit before enabling leader features.
+  # Manual prereq that will pause the loop: pitch seed data (real builder inventory) — sample tower assumed if absent.
+  # Decisions locked (arch §14): partner owns sourced lead until routed; partner same hold-timer; leader export DENY;
+  #   require_verified_before_hold default OFF; dedup backfill lock_started_at=now().
+  epic-12: review        # Org Hierarchy & Role Tiers — FR-39,40,41
+  12-1-role-tier-schema-agencies-helper: review         # 0057: role_tier enum(+receptionist), agencies, users cols, auth_role_tier()
+  12-2-role-vs-tier-predicate-audit-assignability: review  # audit 17 RPCs; assign targets filtered to front_line_rep
+  12-3-backfill-role-tier-jwt-edge-fn: review           # stamp app_metadata.role_tier (idempotent)
+  12-4-builder-head-manages-hierarchy: review           # create/edit users + reports_to; cycle reject; partner needs agency
+  12-5-hierarchical-lead-visibility: review             # visible_user_ids() + get_team_leads; reps unchanged
+  12-6-partner-sandbox-receptionist-provisioning: review # partner agency-scoped; receptionist gate-not-own; capability matrix
+  epic-13: review        # Lead Registration v2 — FR-42..47
+  13-1-lead-delta-columns-source-enum: review           # 0063: secondary phone, customer_code, visit_count, source_agency_id, lock_started_at; +cold_call,+employee_referral
+  13-2-secondary-phone-capture-validate: review         # mandatory at Complete; budget/config at registration (FR-43)
+  13-3-customer-code-gen-whatsapp-delivery: review       # code_delivery adapter (wa.me default; SMS deferred)
+  13-4-reception-verify-visit: review                   # verify_visit() + visit_count++; receptionist screen
+  13-5-90day-agent-lock-dedup-reclaim: review           # 0064: rework create_lead_with_pii; backfill lock_started_at=now()
+  13-6-excel-import-reclaim-aware: review               # set-based classify {new/reclaim/locked}; check_phone_hashes lock-state
+  13-7-visit-count-funnel-source-analytics: review      # 0066: backfill visit_count; get_funnel_stats visited=visit_count>0
+  epic-14: review        # Inventory & Developer Channel — FR-48..51
+  14-1-inventory-schema-unit-state-machine: review      # 0058: towers, units, unit_status enum, projects.hold_timer_hours
+  14-2-bulk-generate-unit-grid: review                  # generate_unit_grid RPC (head-only)
+  14-3-live-availability-grid: review                   # realtime grid; partner-scoped, no margin
+  14-4-developer-updates-broadcast: review              # 0060: developer_updates + FCM enqueue + in-app feed; opt-in partner
+  14-5-inventory-change-notify-held-protection: review  # release/new-stock notify; held/sold can't be withdrawn w/o head
+  epic-15: review        # Unit Booking & Holding — FR-52..55
+  15-1-unit-holds-schema-single-active: review          # 0059: unit_holds + partial-unique active-hold index
+  15-2-hold-unit-compare-and-swap: review               # hold_unit() CAS; require_verified flag (default OFF); race test
+  15-3-auto-release-expired-holds-cron: review          # 0061: pg_cron release_expired_holds() TOCTOU-safe, bounded batch
+  15-4-confirm-booking-hold-to-sold: review             # 0062: gated head/leader + payment_verified; reuses FR-34 celebration
+  15-5-booking-dashboard: review                        # active holds + countdown + hold->sold conversion (visible_user_ids scope)
+  epic-16: review        # Customization & Amendments — FR-56,57
+  16-1-amendment-schema-event-trail: review             # 0065: amendments + amendment_events + tenant_execution_team
+  16-2-log-amendment-against-unit: review               # log_amendment(); lead Timeline link; not partner
+  16-3-execution-team-manages-status: review            # membership surface; status transitions; no extra PII
+  16-4-auto-notify-execution-and-agent: review          # FCM on log + on status change; reuse pending_notifications
 
 # Verified end-to-end on RMX5003 (Android 15) — 2026-05-28
 # - login flow (test2006@gmail.com / rudra1)
