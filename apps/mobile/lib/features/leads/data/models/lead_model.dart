@@ -340,6 +340,7 @@ class WhatsAppTemplate {
   static const List<String> tokenCatalog = [
     'name', 'phone', 'project', 'property_type',
     'ticket_size', 'budget', 'status', 'followup_date',
+    'agent_name', // the logged-in sender (derived from their username)
   ];
 
   // Substitutes {{variable}} placeholders with lead data (Story 11.3).
@@ -354,6 +355,7 @@ class WhatsAppTemplate {
     String? projects,
     String? status,
     String? followupDate,
+    String? agentName,
   }) {
     final values = <String, String?>{
       'name':          name,
@@ -364,6 +366,7 @@ class WhatsAppTemplate {
       'budget':        budget,
       'status':        status,
       'followup_date': followupDate,
+      'agent_name':    agentName,
     };
     var out = body;
     for (final token in tokenCatalog) {

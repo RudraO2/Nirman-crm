@@ -8,9 +8,24 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/data/auth_repository.dart';
 import '../data/lead_repository.dart';
 import '../data/models/lead_model.dart';
 import '../providers/lead_providers.dart';
+
+// The logged-in sender's display name for the {{agent_name}} token, derived from
+// their username the same way the You tab does (email local-part), title-cased so
+// "sangeeta@employees.nirman.local" reads as "Sangeeta" in the message.
+String _senderName(WidgetRef ref) {
+  final email = ref.read(authRepositoryProvider).currentSession?.user.email ?? '';
+  final local = email.contains('@') ? email.split('@').first : email;
+  if (local.isEmpty) return '';
+  return local
+      .split(RegExp(r'[._\s]+'))
+      .where((w) => w.isNotEmpty)
+      .map((w) => w[0].toUpperCase() + w.substring(1))
+      .join(' ');
+}
 
 Future<void> showWhatsAppSheet(BuildContext context, LeadDetail lead) {
   return showModalBottomSheet<void>(
@@ -79,6 +94,7 @@ class _WhatsAppSheetState extends ConsumerState<_WhatsAppSheet> {
       followupDate: lead.nextFollowupAt == null
           ? null
           : DateFormat('EEE d MMM, h:mm a').format(lead.nextFollowupAt!.toLocal()),
+      agentName:    _senderName(ref),
     );
   }
 

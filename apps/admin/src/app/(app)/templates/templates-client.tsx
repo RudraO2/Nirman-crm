@@ -20,6 +20,7 @@ const MAX_TEMPLATES = 3
 const TOKENS = [
   'name', 'phone', 'project', 'property_type',
   'ticket_size', 'budget', 'status', 'followup_date',
+  'agent_name',
 ] as const
 
 const SAMPLE: Record<(typeof TOKENS)[number], string> = {
@@ -31,6 +32,7 @@ const SAMPLE: Record<(typeof TOKENS)[number], string> = {
   budget: '₹60L–₹70L',
   status: 'warm',
   followup_date: 'Tue 14 Jul, 5:00 pm',
+  agent_name: 'Sangeeta', // the sending employee — filled from their login at send time
 }
 
 // Same substitution rule as the mobile send: known tokens fill, empty → '—',
