@@ -10,3 +10,9 @@ VALUES (
   'Asia/Kolkata'
 )
 ON CONFLICT (id) DO NOTHING;
+
+-- LOCAL-DEV-ONLY — dummy PII encryption key so create_lead_with_pii / bulk_import_leads
+-- run in local tests. Prod's real 'lead_pii_key' vault secret is set out-of-band; this
+-- seed only affects the local stack (`supabase db reset`), never prod. Idempotent.
+SELECT vault.create_secret('local-dev-pii-key-not-a-real-secret', 'lead_pii_key')
+WHERE NOT EXISTS (SELECT 1 FROM vault.secrets WHERE name = 'lead_pii_key');

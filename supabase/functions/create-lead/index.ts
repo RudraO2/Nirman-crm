@@ -54,11 +54,14 @@ async function computePhoneHash(normalized: string): Promise<string> {
 // Input schema
 // ---------------------------------------------------------------------------
 const LeadStatus = z.enum(["warm", "cold", "hot", "dead", "sold", "future"]);
-const LeadSource = z.enum(["walk_in", "referral", "associate", "ad"]);
+// Story 13.1 — source enum extended to 6 values.
+const LeadSource = z.enum(["walk_in", "referral", "associate", "ad", "cold_call", "employee_referral"]);
 
 const CreateLeadInput = z.object({
   status: LeadStatus,
   phone: z.string().min(1, "Phone is required"),
+  // Story 13.2 — secondary phone: optional at quick-capture, required for Complete.
+  secondary_phone: z.string().optional().nullable(),
   source: LeadSource.optional().nullable(),
   name: z.string().max(255).optional().nullable(),
   property_type: z.string().max(100).optional().nullable(),
@@ -87,6 +90,7 @@ function computeIsIncomplete(
   return (
     !input.name?.trim() ||
     !input.source ||
+    !input.secondary_phone?.trim() || // Story 13.2 — secondary phone required for Complete (FR-42)
     !input.property_type?.trim() ||
     !input.location?.trim() ||
     !input.ticket_size?.trim() ||
@@ -138,44 +142,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Compute phone hash (mirrors DB encode(sha256(...), 'hex') expression)
   const hash = await computePhoneHash(normalizedPhone);
 
-  // Duplicate check (RLS ensures we only see leads in caller's tenant)
-  const { data: existing, error: dupCheckErr } = await supabase
-    .from("leads")
-    .select("id, assigned_to_user_id")
-    .eq("phone_hash", hash)
-    .maybeSingle();
-
-  if (dupCheckErr) {
-    console.error(
-      JSON.stringify({
-        ts: new Date().toISOString(),
-        level: "error",
-        event: "duplicate_check_failed",
-        error: dupCheckErr.message,
-        tenant_id: tenantId,
-      }),
-    );
-    return errorResponse("internal_error", "Failed to check for duplicate lead");
+  // Story 13.2 — secondary phone: optional, but if provided must be a valid 10-digit mobile.
+  // Stored encrypted + hashed (hash NOT used for dedup — A-11). Absence => Incomplete.
+  let secondaryNormalized: string | null = null;
+  let secondaryHash: string | null = null;
+  if (input.secondary_phone && input.secondary_phone.trim()) {
+    secondaryNormalized = normalizePhone(input.secondary_phone);
+    if (!secondaryNormalized) {
+      return errorResponse(
+        "validation_error",
+        "Invalid secondary phone. Enter a valid 10-digit Indian mobile number.",
+        { secondary_phone: ["Must be a valid 10-digit Indian mobile number"] },
+      );
+    }
+    secondaryHash = await computePhoneHash(secondaryNormalized);
   }
 
-  if (existing && !input.override_duplicate) {
-    // Look up the owning employee's username for the error message
-    const { data: ownerData } = await supabase
-      .from("users")
-      .select("email_or_username")
-      .eq("id", existing.assigned_to_user_id)
-      .maybeSingle();
-
-    const ownerName = ownerData?.email_or_username ?? "another employee";
-    return errorResponse(
-      "duplicate_lead",
-      `This lead already exists under ${ownerName}`,
-      { existing_lead_id: existing.id, owner: ownerName },
-    );
-  }
-
-  if (existing && input.override_duplicate && role !== "admin") {
-    return errorResponse("forbidden_role", "Only admins can override duplicate leads");
+  // Story 13.5 — dedup/reclaim is enforced atomically inside create_lead_with_pii (FOR UPDATE):
+  // a locked duplicate (≤90d & owner active ≤30d) raises duplicate_lead; an expired/inactive
+  // duplicate is reclaimed in place (same row reassigned + lead_reclaimed logged); otherwise a
+  // new lead is inserted. We only gate a non-admin override attempt here with a clear message.
+  if (input.override_duplicate && role !== "admin") {
+    const { data: lockedExisting } = await supabase
+      .from("leads").select("id").eq("phone_hash", hash).maybeSingle();
+    if (lockedExisting) {
+      return errorResponse("forbidden_role", "Only admins can override a locked duplicate lead");
+    }
   }
 
   const isIncomplete = computeIsIncomplete(input);
@@ -201,11 +193,29 @@ Deno.serve(async (req: Request): Promise<Response> => {
       p_next_followup_at: input.next_followup_at ?? null,
       p_interest_type:    input.interest_type?.trim() ?? null,
       p_is_incomplete:    isIncomplete,
+      p_secondary_phone_raw:  secondaryNormalized,
+      p_secondary_phone_hash: secondaryHash,
+      p_force_reclaim:        input.override_duplicate && role === "admin", // Story 13.5
     },
   );
 
   if (insertErr || !leadId) {
     const msg = insertErr?.message ?? "";
+    if (msg.includes("duplicate_lead")) {
+      // Story 13.5 — locked phone. Look up the owner for a friendly message.
+      const { data: lockRow } = await supabase
+        .from("leads").select("assigned_to_user_id").eq("phone_hash", hash).maybeSingle();
+      let ownerName = "another employee";
+      if (lockRow?.assigned_to_user_id) {
+        const { data: u } = await supabase
+          .from("users").select("email_or_username").eq("id", lockRow.assigned_to_user_id).maybeSingle();
+        ownerName = u?.email_or_username ?? ownerName;
+      }
+      return errorResponse(
+        "duplicate_lead",
+        `This lead is locked under ${ownerName}. It can be re-claimed after the 90-day lock or 30 days of owner inactivity.`,
+      );
+    }
     if (msg.includes("pii_key_missing")) {
       console.error(
         JSON.stringify({
@@ -253,28 +263,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
   }
 
-  // Admin override: log duplicate_override event on the newly created lead
-  if (existing && input.override_duplicate) {
-    const { error: overrideErr } = await supabase.rpc("log_timeline_event", {
-      p_lead_id: leadId as string,
-      p_event_type: "duplicate_override",
-      p_payload: {
-        original_lead_id: existing.id,
-        overridden_by_role: role,
-      },
-    });
-    if (overrideErr) {
-      console.error(
-        JSON.stringify({
-          ts: new Date().toISOString(),
-          level: "warn",
-          event: "duplicate_override_log_failed",
-          lead_id: leadId,
-          error: overrideErr.message,
-        }),
-      );
-    }
-  }
+  // Story 13.5 — reclaim (if it happened) is logged as lead_reclaimed inside the DB function;
+  // no duplicate_override event is emitted (no duplicate row is ever created).
 
   console.log(
     JSON.stringify({
@@ -285,9 +275,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
       actor_id: actorId,
       lead_id: leadId,
       is_incomplete: isIncomplete,
-      override: existing != null,
     }),
   );
 
-  return successResponse({ lead_id: leadId as string, is_incomplete: isIncomplete }, 201);
+  // Story 13.3 — fetch the generated customer code + build a free WhatsApp delivery link.
+  // SMS is a deferred paid adapter; default delivery is wa.me + on-screen display.
+  let customerCode: string | null = null;
+  let whatsappLink: string | null = null;
+  const { data: codeRow } = await supabase
+    .from("leads")
+    .select("customer_code")
+    .eq("id", leadId as string)
+    .maybeSingle();
+  customerCode = (codeRow?.customer_code as string | null) ?? null;
+  if (customerCode) {
+    const msg = `Your visit code is ${customerCode}. Show it at our reception to verify your visit.`;
+    whatsappLink = `https://wa.me/91${normalizedPhone}?text=${encodeURIComponent(msg)}`;
+  }
+
+  return successResponse(
+    { lead_id: leadId as string, is_incomplete: isIncomplete, customer_code: customerCode, whatsapp_link: whatsappLink },
+    201,
+  );
 });

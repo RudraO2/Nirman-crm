@@ -38,6 +38,7 @@ function computeIsIncomplete(input: z.infer<typeof UpdateLeadInput>): boolean {
   return (
     !input.name?.trim() ||
     !input.source ||
+    !input.secondary_phone?.trim() || // Story 13.2 — secondary phone required for Complete (FR-42)
     !input.property_type?.trim() ||
     !input.location?.trim() ||
     !input.ticket_size?.trim() ||
@@ -51,12 +52,14 @@ function computeIsIncomplete(input: z.infer<typeof UpdateLeadInput>): boolean {
 // Input schema
 // ---------------------------------------------------------------------------
 const LeadStatus = z.enum(["warm", "cold", "hot", "dead", "sold", "future"]);
-const LeadSource = z.enum(["walk_in", "referral", "associate", "ad"]);
+// Story 13.1 — source enum extended to 6 values.
+const LeadSource = z.enum(["walk_in", "referral", "associate", "ad", "cold_call", "employee_referral"]);
 
 const UpdateLeadInput = z.object({
   lead_id:           z.string().uuid(),
   status:            LeadStatus,
   phone:             z.string().min(1, "Phone is required"),
+  secondary_phone:   z.string().optional().nullable(), // Story 13.2
   source:            LeadSource.optional().nullable(),
   name:              z.string().max(255).optional().nullable(),
   property_type:     z.string().max(100).optional().nullable(),
@@ -152,6 +155,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const newHash = await computePhoneHash(normalizedPhone);
 
+  // Story 13.2 — secondary phone: optional, but if provided must be valid. Absence => Incomplete.
+  let secondaryNormalized: string | null = null;
+  let secondaryHash: string | null = null;
+  if (input.secondary_phone && input.secondary_phone.trim()) {
+    secondaryNormalized = normalizePhone(input.secondary_phone);
+    if (!secondaryNormalized) {
+      return errorResponse(
+        "validation_error",
+        "Invalid secondary phone. Enter a valid 10-digit Indian mobile number.",
+        { secondary_phone: ["Must be a valid 10-digit Indian mobile number"] },
+      );
+    }
+    secondaryHash = await computePhoneHash(secondaryNormalized);
+  }
+
   // Fetch current lead (ownership verified inside get_lead_by_id)
   const { data: currentRows, error: fetchErr } = await supabase.rpc("get_lead_by_id", {
     p_lead_id: input.lead_id,
@@ -213,6 +231,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     p_interest_type:    input.interest_type?.trim() ?? null,
     p_is_incomplete:    isIncomplete,
     p_changed_fields:   changed,
+    p_secondary_phone_raw:  secondaryNormalized,
+    p_secondary_phone_hash: secondaryHash,
   });
 
   if (updateErr) {

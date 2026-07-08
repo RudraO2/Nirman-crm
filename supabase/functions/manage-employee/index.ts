@@ -92,6 +92,31 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return successResponse({ is_active: newIsActive, already: true });
   }
 
+  // 7.5 Story 12.4 AC-4: block deactivating a user who still has active direct reports.
+  // The leader must re-parent their reports (set_user_hierarchy) first, mirroring FR-32.
+  if (action === "deactivate") {
+    const { count: reportCount, error: reportsErr } = await adminClient
+      .from("users")
+      .select("id", { count: "exact", head: true })
+      .eq("tenant_id", tenantId)
+      .eq("reports_to_user_id", targetUserId)
+      .eq("is_active", true);
+    if (reportsErr) {
+      console.error(JSON.stringify({
+        ts: new Date().toISOString(), level: "error",
+        event: "manage_employee_reports_check_failed",
+        target_user_id: targetUserId, error: reportsErr.message,
+      }));
+      return errorResponse("internal_error", "Failed to check direct reports");
+    }
+    if ((reportCount ?? 0) > 0) {
+      return errorResponse(
+        "validation_error",
+        "This user has active direct reports. Re-parent them before deactivating.",
+      );
+    }
+  }
+
   // 8. Update public.users.is_active
   const { error: updateErr } = await adminClient
     .from("users")

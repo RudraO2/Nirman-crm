@@ -87,7 +87,7 @@ BEGIN
     PERFORM cron.schedule(
       'send-followup-notifications',
       '* * * * *',
-      $$
+      $cron$
         SELECT net.http_post(
           url     := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_url' LIMIT 1)
                      || '/functions/v1/send-followup-notifications',
@@ -97,14 +97,14 @@ BEGIN
           ),
           body    := '{}'::jsonb
         );
-      $$
+      $cron$
     );
 
     -- Mark overdue follow-ups and send overdue push notifications every 5 minutes
     PERFORM cron.schedule(
       'process-overdue-followups',
       '*/5 * * * *',
-      $$
+      $cron$
         SELECT public.mark_overdue_followups();
         SELECT net.http_post(
           url     := (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'project_url' LIMIT 1)
@@ -115,7 +115,7 @@ BEGIN
           ),
           body    := '{}'::jsonb
         );
-      $$
+      $cron$
     );
 
   END IF;
