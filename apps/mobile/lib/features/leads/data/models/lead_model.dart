@@ -32,16 +32,23 @@ class TimelineEntry {
 class LeadCreationResult {
   final String leadId;
   final bool isIncomplete;
+  // Story 13.3 — system-generated visit code + free WhatsApp delivery link.
+  final String? customerCode;
+  final String? whatsappLink;
 
   const LeadCreationResult({
     required this.leadId,
     required this.isIncomplete,
+    this.customerCode,
+    this.whatsappLink,
   });
 
   factory LeadCreationResult.fromJson(Map<String, dynamic> json) {
     return LeadCreationResult(
       leadId: json['lead_id'] as String,
       isIncomplete: json['is_incomplete'] as bool,
+      customerCode: json['customer_code'] as String?,
+      whatsappLink: json['whatsapp_link'] as String?,
     );
   }
 }
@@ -328,20 +335,42 @@ class WhatsAppTemplate {
     );
   }
 
-  // Substitutes {{variable}} placeholders with lead data.
+  /// Story 11.2/11.3 — the single token catalog. Must stay identical to the
+  /// variable-chip list in apps/admin/src/app/(app)/templates.
+  static const List<String> tokenCatalog = [
+    'name', 'phone', 'project', 'property_type',
+    'ticket_size', 'budget', 'status', 'followup_date',
+  ];
+
+  // Substitutes {{variable}} placeholders with lead data (Story 11.3).
+  // Null/empty values render as "—"; unknown {{tokens}} are stripped so the
+  // composed message never carries raw braces.
   String render({
     String? name,
+    String? phone,
     String? propertyType,
     String? ticketSize,
     String? budget,
     String? projects,
+    String? status,
+    String? followupDate,
   }) {
-    return body
-        .replaceAll('{{name}}',          name          ?? '[Not set]')
-        .replaceAll('{{property_type}}', propertyType  ?? '[Not set]')
-        .replaceAll('{{ticket_size}}',   ticketSize    ?? '[Not set]')
-        .replaceAll('{{budget}}',        budget        ?? '[Not set]')
-        .replaceAll('{{project}}',       projects      ?? '[Not set]');
+    final values = <String, String?>{
+      'name':          name,
+      'phone':         phone,
+      'project':       projects,
+      'property_type': propertyType,
+      'ticket_size':   ticketSize,
+      'budget':        budget,
+      'status':        status,
+      'followup_date': followupDate,
+    };
+    var out = body;
+    for (final token in tokenCatalog) {
+      final v = values[token];
+      out = out.replaceAll('{{$token}}', (v == null || v.isEmpty) ? '—' : v);
+    }
+    return out.replaceAll(RegExp(r'\{\{[a-zA-Z_]+\}\}'), '').trim();
   }
 }
 

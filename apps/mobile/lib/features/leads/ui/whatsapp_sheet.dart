@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/lead_repository.dart';
@@ -62,11 +63,22 @@ class _WhatsAppSheetState extends ConsumerState<_WhatsAppSheet> {
     } else if (lead.budgetMin != null) {
       budget = '₹${(lead.budgetMin! / 100).round()}+';
     }
+    final projects = ref.read(availableProjectsProvider).valueOrNull;
+    final projectNames = projects
+        ?.where((p) => lead.projectIds.contains(p.id))
+        .map((p) => p.name)
+        .join(', ');
     return _selected!.render(
       name:         lead.name,
+      phone:        lead.displayPhone,
       propertyType: lead.propertyType,
       ticketSize:   lead.ticketSize,
       budget:       budget.isEmpty ? null : budget,
+      projects:     (projectNames == null || projectNames.isEmpty) ? null : projectNames,
+      status:       lead.status,
+      followupDate: lead.nextFollowupAt == null
+          ? null
+          : DateFormat('EEE d MMM, h:mm a').format(lead.nextFollowupAt!.toLocal()),
     );
   }
 
@@ -86,9 +98,12 @@ class _WhatsAppSheetState extends ConsumerState<_WhatsAppSheet> {
       );
       ref.invalidate(myLeadsProvider);
       ref.invalidate(leadByIdProvider(widget.lead.id));
-      // Open WhatsApp
+      // Open WhatsApp — wa.me needs the country code; leads store raw 10-digit
+      // Indian numbers (same 91-prefix rule as the create-lead edge fn).
+      final digits = phone.replaceAll(RegExp(r'\D'), '');
+      final e164 = digits.length == 10 ? '91$digits' : digits;
       final encoded = Uri.encodeComponent(body);
-      final uri = Uri.parse('https://wa.me/$phone?text=$encoded');
+      final uri = Uri.parse('https://wa.me/$e164?text=$encoded');
       if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (mounted) Navigator.of(context).pop();
     } catch (_) {

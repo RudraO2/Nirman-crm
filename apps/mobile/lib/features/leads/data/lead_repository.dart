@@ -9,6 +9,7 @@ part 'lead_repository.g.dart';
 class CreateLeadPayload {
   final String status;
   final String phone;
+  final String? secondaryPhone;
   final String? source;
   final String? name;
   final String? propertyType;
@@ -26,6 +27,7 @@ class CreateLeadPayload {
   const CreateLeadPayload({
     required this.status,
     required this.phone,
+    this.secondaryPhone,
     this.source,
     this.name,
     this.propertyType,
@@ -44,6 +46,7 @@ class CreateLeadPayload {
   Map<String, dynamic> toJson() => {
     'status': status,
     'phone': phone,
+    if (secondaryPhone != null) 'secondary_phone': secondaryPhone,
     if (source != null) 'source': source,
     if (name != null) 'name': name,
     if (propertyType != null) 'property_type': propertyType,
