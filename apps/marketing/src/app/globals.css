@@ -1,0 +1,117 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Nirman CRM — real-estate sales pipeline. Dark #050505 base, brass (#C9A354)
+   accent system echoing the admin dashboard's evergreen + brass brand.
+   ───────────────────────────────────────────────────────────────────────── */
+@theme inline {
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-display: var(--font-bricolage), var(--font-inter), sans-serif;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    background-color: #050505;
+  }
+  body {
+    background-color: #050505;
+    color: #fff;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background: rgba(201, 163, 84, 0.3);
+  }
+}
+
+/* Fixed star field — radial dot pattern tiled at 200x200, dimmed to 0.2 */
+.stars {
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.35) 1px, transparent 0);
+  background-size: 200px 200px;
+  opacity: 0.2;
+}
+
+/* electric-card — orange glow + border on hover, per fidelity constraint */
+.electric-card {
+  transition: box-shadow 0.4s ease, border-color 0.4s ease, transform 0.4s ease;
+}
+.electric-card:hover {
+  box-shadow: 0 0 30px rgba(201, 163, 84, 0.3);
+  border-color: rgba(201, 163, 84, 0.5);
+  transform: translateY(-2px);
+}
+
+/* Entry animation — translateY 20->0, blur 10->0 */
+@keyframes entry {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+.animate-entry {
+  animation: entry 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Scroll-triggered reveal — hidden until .is-visible is added by observer */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+  filter: blur(10px);
+  transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.animate-on-scroll.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+}
+
+/* Pricing connector dashed flow */
+@keyframes flow {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+.animate-flow {
+  animation: flow 1s linear infinite;
+}
+
+/* Live pulse for the "Viral Result" badge dot */
+@keyframes livepulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+}
+.animate-livepulse {
+  animation: livepulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-on-scroll {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
