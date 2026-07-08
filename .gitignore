@@ -58,3 +58,6 @@ coverage/
 # Misc
 *.tsbuildinfo
 .next/
+*.bak
+# Local-only per-app MCP config
+apps/*/.mcp.json
