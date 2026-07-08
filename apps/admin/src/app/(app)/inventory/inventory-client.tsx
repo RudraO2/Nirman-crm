@@ -81,12 +81,19 @@ function GenerateGridDialog({
   const [carpet, setCarpet] = useState('')
   const [listPrice, setListPrice] = useState('')
   const [cost, setCost] = useState('')
+  // Flexible numbering (0085)
+  const [startFloor, setStartFloor] = useState('1')
+  const [unitStart, setUnitStart] = useState('1')
+  const [prefix, setPrefix] = useState('')
+  const [pad, setPad] = useState('0')
+  const [skip, setSkip] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
   function reset() {
     setTowerId(NO_TOWER); setFloors('5'); setPerFloor('4'); setConfig('2BHK')
     setHoldHours(String(defaultHoldHours ?? 24)); setCarpet(''); setListPrice(''); setCost('')
+    setStartFloor('1'); setUnitStart('1'); setPrefix(''); setPad('0'); setSkip('')
     setError(null)
   }
 
@@ -95,14 +102,21 @@ function GenerateGridDialog({
     const nFloors = parseInt(floors, 10)
     const nPer = parseInt(perFloor, 10)
     const nHold = parseInt(holdHours, 10)
+    const nStartFloor = parseInt(startFloor, 10)
+    const nUnitStart = parseInt(unitStart, 10)
+    const nPad = parseInt(pad, 10) || 0
     if (!nFloors || nFloors < 1) { setError('Floors must be ≥ 1.'); return }
     if (!nPer || nPer < 1) { setError('Units per floor must be ≥ 1.'); return }
     if (!nHold || nHold < 1) { setError('Hold timer (hours) is required and must be ≥ 1.'); return }
+    if (Number.isNaN(nStartFloor)) { setError('Start floor must be a number.'); return }
+    if (Number.isNaN(nUnitStart) || nUnitStart < 0) { setError('First unit position must be ≥ 0.'); return }
+    // skip floors: comma-separated ints
+    const skipFloors = skip.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !Number.isNaN(n))
 
-    // config_map: apply the single configuration to every position on the floor
+    // config_map keyed by actual position (unitStart … unitStart+nPer-1)
     const configMap: Record<string, string> = {}
     if (config.trim()) {
-      for (let p = 1; p <= nPer; p++) configMap[String(p)] = config.trim()
+      for (let p = nUnitStart; p < nUnitStart + nPer; p++) configMap[String(p)] = config.trim()
     }
 
     startTransition(async () => {
@@ -117,6 +131,11 @@ function GenerateGridDialog({
         p_carpet_area_sqft: carpet.trim() ? Number(carpet) : null,
         p_list_price_paise: rupeesToPaise(listPrice),
         p_cost_paise: rupeesToPaise(cost),
+        p_start_floor: nStartFloor,
+        p_unit_start: nUnitStart,
+        p_prefix: prefix.trim(),
+        p_pad_width: nPad,
+        p_skip_floors: skipFloors,
       })
       if (rpcErr) { setError(rpcErr.message); return }
       const created = (data as { created?: number })?.created ?? 0
@@ -182,9 +201,42 @@ function GenerateGridDialog({
               <Input id="g-cost" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="—" />
             </div>
           </div>
+          <details className="rounded-[10px] border border-line bg-mist/40 px-3 py-2">
+            <summary className="cursor-pointer text-sm font-medium text-ink-2">Advanced numbering</summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="g-startfloor">Start floor</Label>
+                  <Input id="g-startfloor" type="number" value={startFloor} onChange={(e) => setStartFloor(e.target.value)} placeholder="1" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="g-unitstart">First unit no.</Label>
+                  <Input id="g-unitstart" type="number" min={0} value={unitStart} onChange={(e) => setUnitStart(e.target.value)} placeholder="1" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="g-pad">Pad digits</Label>
+                  <Input id="g-pad" type="number" min={0} max={12} value={pad} onChange={(e) => setPad(e.target.value)} placeholder="0" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="g-prefix">Prefix</Label>
+                  <Input id="g-prefix" value={prefix} onChange={(e) => setPrefix(e.target.value)} placeholder="e.g. A-" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="g-skip">Skip floors</Label>
+                  <Input id="g-skip" value={skip} onChange={(e) => setSkip(e.target.value)} placeholder="e.g. 13" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Start floor 0 = ground. First unit no. offsets the position (e.g. 1 → 101, 5 → 105).
+                Pad digits zero-fills the number (pad 4 → 0101). Prefix prepends (A- → A-101).
+                Skip floors omits those floor numbers (comma-separated, e.g. 13).
+              </p>
+            </div>
+          </details>
           <p className="text-xs text-muted-foreground">
-            Creates {(parseInt(floors, 10) || 0) * (parseInt(perFloor, 10) || 0)} units. Unit no. = floor×100 + position.
-            Re-running skips units that already exist.
+            Unit no. = prefix + (floor×100 + position). Re-running skips units that already exist.
           </p>
           {error && <p className="text-destructive text-sm">{error}</p>}
         </div>
@@ -239,12 +291,114 @@ function AddTowerDialog({ projectId, onDone }: { projectId: string; onDone: () =
   )
 }
 
+// ── Add single unit dialog (0086 add_unit) ───────────────────────────────────
+function AddUnitDialog({ projectId, towers, onDone }: { projectId: string; towers: Tower[]; onDone: () => void }) {
+  const [open, setOpen] = useState(false)
+  const [towerId, setTowerId] = useState<string>(NO_TOWER)
+  const [unitNo, setUnitNo] = useState('')
+  const [floor, setFloor] = useState('')
+  const [config, setConfig] = useState('')
+  const [carpet, setCarpet] = useState('')
+  const [listPrice, setListPrice] = useState('')
+  const [cost, setCost] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [pending, startTransition] = useTransition()
+
+  function reset() {
+    setTowerId(NO_TOWER); setUnitNo(''); setFloor(''); setConfig('')
+    setCarpet(''); setListPrice(''); setCost(''); setError(null)
+  }
+
+  function handleSubmit() {
+    setError(null)
+    if (!unitNo.trim()) { setError('Unit number is required.'); return }
+    startTransition(async () => {
+      const supabase = createClient()
+      const { error: rpcErr } = await supabase.rpc('add_unit', {
+        p_project_id: projectId,
+        p_tower_id: towerId === NO_TOWER ? null : towerId,
+        p_unit_no: unitNo.trim(),
+        p_floor: floor.trim() ? parseInt(floor, 10) : null,
+        p_configuration: config.trim() || null,
+        p_carpet_area_sqft: carpet.trim() ? Number(carpet) : null,
+        p_list_price_paise: rupeesToPaise(listPrice),
+        p_cost_paise: rupeesToPaise(cost),
+      })
+      if (rpcErr) { setError(rpcErr.message); return }
+      toast.success(`Unit ${unitNo.trim()} added`)
+      setOpen(false); reset(); onDone()
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) reset() }}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline">Add unit</Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold">Add a single unit</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label htmlFor="au-tower">Tower</Label>
+            <Select value={towerId} onValueChange={setTowerId}>
+              <SelectTrigger id="au-tower" className="w-full">
+                <SelectValue placeholder="— No tower —" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_TOWER}>— No tower —</SelectItem>
+                {towers.map((t) => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="au-no">Unit no. *</Label>
+              <Input id="au-no" value={unitNo} onChange={(e) => setUnitNo(e.target.value)} placeholder="e.g. G-01" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="au-floor">Floor</Label>
+              <Input id="au-floor" type="number" value={floor} onChange={(e) => setFloor(e.target.value)} placeholder="—" />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="au-config">Config</Label>
+              <Input id="au-config" value={config} onChange={(e) => setConfig(e.target.value)} placeholder="2BHK" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="au-carpet">Carpet</Label>
+              <Input id="au-carpet" type="number" value={carpet} onChange={(e) => setCarpet(e.target.value)} placeholder="—" />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="au-price">Price (₹)</Label>
+              <Input id="au-price" value={listPrice} onChange={(e) => setListPrice(e.target.value)} placeholder="—" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="au-cost">Cost / margin (₹)</Label>
+            <Input id="au-cost" value={cost} onChange={(e) => setCost(e.target.value)} placeholder="—" />
+          </div>
+          {error && <p className="text-destructive text-sm">{error}</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={pending || !unitNo.trim()}>{pending ? 'Adding…' : 'Add unit'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ── Unit detail dialog (reprice + state transitions) ─────────────────────────
 function UnitDialog({ unit, onClose, onChanged }: { unit: Unit | null; onClose: () => void; onChanged: () => void }) {
   const [listPrice, setListPrice] = useState('')
   const [cost, setCost] = useState('')
   const [config, setConfig] = useState('')
   const [carpet, setCarpet] = useState('')
+  const [renameNo, setRenameNo] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [pending, startTransition] = useTransition()
 
@@ -254,6 +408,8 @@ function UnitDialog({ unit, onClose, onChanged }: { unit: Unit | null; onClose: 
       setCost(unit.cost_paise != null ? String(unit.cost_paise / 100) : '')
       setConfig(unit.configuration ?? '')
       setCarpet(unit.carpet_area_sqft != null ? String(unit.carpet_area_sqft) : '')
+      setRenameNo(unit.unit_no)
+      setConfirmDelete(false)
       setError(null)
     }
   }, [unit])
@@ -275,6 +431,36 @@ function UnitDialog({ unit, onClose, onChanged }: { unit: Unit | null; onClose: 
       })
       if (rpcErr) { setError(rpcErr.message); return }
       toast.success(`Unit ${unit.unit_no} updated`)
+      onChanged()
+    })
+  }
+
+  function rename() {
+    if (!unit) return
+    setError(null)
+    const next = renameNo.trim()
+    if (!next) { setError('Unit number is required.'); return }
+    if (next === unit.unit_no) return
+    startTransition(async () => {
+      const supabase = createClient()
+      const { error: rpcErr } = await supabase.rpc('rename_unit', {
+        p_unit_id: unit.unit_id,
+        p_new_unit_no: next,
+      })
+      if (rpcErr) { setError(rpcErr.message); return }
+      toast.success(`Renamed to ${next}`)
+      onChanged()
+    })
+  }
+
+  function del() {
+    if (!unit) return
+    setError(null)
+    startTransition(async () => {
+      const supabase = createClient()
+      const { error: rpcErr } = await supabase.rpc('delete_unit', { p_unit_id: unit.unit_id })
+      if (rpcErr) { setError(rpcErr.message); return }
+      toast.success(`Unit ${unit.unit_no} deleted`)
       onChanged()
     })
   }
@@ -342,6 +528,20 @@ function UnitDialog({ unit, onClose, onChanged }: { unit: Unit | null; onClose: 
                   <Input id="u-carpet" value={carpet} onChange={(e) => setCarpet(e.target.value)} />
                 </div>
               </div>
+              <div className="space-y-1.5 border-t border-line pt-3">
+                <Label htmlFor="u-rename">Unit number</Label>
+                <div className="flex gap-2">
+                  <Input id="u-rename" value={renameNo} onChange={(e) => setRenameNo(e.target.value)} />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={rename}
+                    disabled={pending || !renameNo.trim() || renameNo.trim() === unit.unit_no}
+                  >
+                    Rename
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -363,6 +563,17 @@ function UnitDialog({ unit, onClose, onChanged }: { unit: Unit | null; onClose: 
               <Button variant="destructive" size="sm" onClick={() => transition('force_release')} disabled={pending}>
                 Force release
               </Button>
+            )}
+            {!locked && (
+              confirmDelete ? (
+                <Button variant="destructive" size="sm" onClick={del} disabled={pending}>
+                  {pending ? 'Deleting…' : 'Confirm delete'}
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={() => setConfirmDelete(true)} disabled={pending}>
+                  Delete
+                </Button>
+              )
             )}
           </div>
           {!locked && (
@@ -465,6 +676,7 @@ export function InventoryClient({ projects }: { projects: InventoryProjectRow[] 
             </Select>
           </div>
           {projectId && <AddTowerDialog projectId={projectId} onDone={load} />}
+          {projectId && <AddUnitDialog projectId={projectId} towers={towers} onDone={load} />}
           {projectId && (
             <GenerateGridDialog
               projectId={projectId}
