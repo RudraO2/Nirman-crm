@@ -1,7 +1,7 @@
 # Nirman CRM — Agent Operating Guide
 
 **Read this before touching git, Supabase, or migrations. It records work already
-done so a fresh session does not redo or break it.** Last updated: 2026-07-07.
+done so a fresh session does not redo or break it.** Last updated: 2026-07-08.
 
 Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpxuzuxfn`
 
@@ -43,6 +43,27 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
 - Verified live 2026-05-28: invoking the fn returned `{"sent":1}` (FCM accepted token).
 - **There is no outstanding manual Supabase/Firebase config.**
 
+## 🔒 Admin `next dev` points at PROD (footgun — 2026-07-08)
+
+- `apps/admin/.env.development.local` (which overrode `.env.local` in `next dev` to
+  hit the local Docker stack `127.0.0.1:54321`) was **renamed to `.env.development.local.bak`**.
+  So `npm run dev` in `apps/admin` now talks to **PRODUCTION** Supabase.
+- **Consequence:** editing employees / running admin actions in local dev mutates
+  **real prod data**. There is no visual difference. Treat local admin as prod.
+- To go back to the local stack: `mv .env.development.local.bak .env.development.local`
+  (and `supabase start` for the Docker stack). Delete the `.bak` to make prod permanent.
+
+## Password reset (2026-07-08) — DO NOT special-case
+
+- Edge fn `reset-employee-password` (admin-only, tenant-scoped, deployed to prod)
+  generates a temp password and updates **BOTH** stores in lockstep, same as
+  `create-employee`: `auth.users` (GoTrue) **and** `public.users.bcrypt_password_hash`
+  (login verifies the latter first, then `signInWithPassword`). Sets
+  `must_change_password=true`, signs out all sessions, audit-logs `password_reset_by_admin`
+  (enum value already in 0004). Surfaced in Team→Accounts. Uniform — no per-user/role guards.
+- To reset a password directly in SQL (both stores), use pgcrypto in `extensions` schema:
+  `crypt('<pw>', extensions.gen_salt('bf', 12))` — bcryptjs-compatible ($2a).
+
 ## Auth gotcha (don't regress)
 
 - Mobile login uses `supabase.auth.setSession(refreshToken)` — NOT `recoverSession`
@@ -62,6 +83,14 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
   send-developer-update, send-amendment-notification). Before/after lead counts identical
   (1673 total / Sangeeta 1668). `backfill-role-tier` fn not yet invoked (needs live admin
   JWT; optional — `auth_role_tier()` falls back from role). Mobile builder-ops UI deferred.
+- **Git ↔ prod reconciled 2026-07-08.** All the above shipped/prod work was previously
+  **disk-only (uncommitted)** — migrations 0054–0084, edge fns, admin builder-ops pages,
+  mobile alarms (Epic 10) + whatsapp fix (11), and the whole `apps/marketing` landing page.
+  Now committed + pushed to `main` (fast-forward, 23 commits). Generated `ios/Flutter/*`
+  glue untracked + gitignored; `*.bak` and `apps/*/.mcp.json` gitignored. `main` = truth again.
+- **App icon** set to the Nirman logo via `flutter_launcher_icons` (config in
+  `apps/mobile/pubspec.yaml`, source `apps/mobile/assets/icon/app_logo.png`). Re-run
+  `dart run flutter_launcher_icons` after changing it (iOS gen is disabled — no appiconset).
 
 ## BMAD docs
 
