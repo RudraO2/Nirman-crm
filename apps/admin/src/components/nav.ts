@@ -68,13 +68,14 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     key: 'team',
     label: 'Team',
-    hint: 'accounts · hierarchy',
+    hint: 'accounts · hierarchy · templates',
     icon: UsersRound,
     href: '/team',
-    match: ['/team', '/hierarchy'],
+    match: ['/team', '/hierarchy', '/templates'],
     tabs: [
       { label: 'Accounts', href: '/team' },
       { label: 'Hierarchy', href: '/hierarchy' },
+      { label: 'Templates', href: '/templates' },
     ],
   },
   {

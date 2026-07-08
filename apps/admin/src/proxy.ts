@@ -1,7 +1,14 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
+// Renamed from middleware.ts per Next 16's deprecation. Proxy runs in the
+// Node.js runtime, where outbound fetch works in dev (the edge-runtime sandbox
+// fetch is broken on this machine). Auth/redirect logic is byte-identical.
+export function proxy(request: NextRequest) {
+  return handle(request)
+}
+
+async function handle(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
