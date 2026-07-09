@@ -216,6 +216,17 @@ input,textarea{font:inherit}
    shell can iframe just the phone (avoids double-frame / stray dev picker) ═══ */
 body.embed{background:none;padding:0;min-height:100vh}
 body.embed .stage-head,body.embed .picker{display:none}
+
+/* ═══ Demo hotspots (toggled by the /demo shell) ═══ */
+.demo-hints{position:fixed;inset:0;pointer-events:none;z-index:9998}
+.demo-dot{position:fixed;width:22px;height:22px;padding:0;border:none;background:none;pointer-events:auto;cursor:pointer;transform:translate(-50%,-50%)}
+.demo-dot i{position:absolute;inset:5px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 3px rgba(201,163,84,.30)}
+.demo-dot::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--brass);animation:demoPing 1.7s ease-out infinite}
+.demo-dot[data-open="1"] i{background:var(--brass-bright)}
+@keyframes demoPing{0%{transform:scale(.55);opacity:.85}100%{transform:scale(1.7);opacity:0}}
+.demo-tip{position:fixed;pointer-events:auto;max-width:210px;background:var(--evergreen);color:#F2EEE2;border:1px solid rgba(201,163,84,.45);border-radius:12px;padding:9px 12px;font-size:12px;line-height:1.5;box-shadow:0 14px 34px rgba(0,0,0,.5)}
+.demo-tip b{color:var(--brass-bright)}
+@media(prefers-reduced-motion:reduce){.demo-dot::after{animation:none}}
 </style>
 </head>
 <body>
@@ -596,16 +607,16 @@ function toast(msg){
   // Embed mode strips this file's own stage-head + picker.
   var params = new URLSearchParams(location.search);
   if (params.get('embed') === '1') document.body.classList.add('embed');
-  // Announce screen changes from free taps + programmatic nav.
+  // Announce screen changes from free taps + programmatic nav; refresh hotspots.
   if (typeof nav === 'function') {
     var _nav = nav;
-    nav = function(s){ _nav(s); emit('navigated', {screen: s}); };
+    nav = function(s){ _nav(s); emit('navigated', {screen: s}); scheduleHints(); };
     window.nav = nav;
   }
-  // The call-outcome checklist item maps to a sheet, not a screen.
+  // The call-outcome hotspot maps to a sheet, not a screen.
   if (typeof openSheet === 'function') {
     var _openSheet = openSheet;
-    openSheet = function(id){ _openSheet(id); if (id === 'sheet-outcome') emit('navigated', {screen: 'outcome'}); };
+    openSheet = function(id){ _openSheet(id); if (id === 'sheet-outcome') emit('navigated', {screen: 'outcome'}); scheduleHints(); };
     window.openSheet = openSheet;
   }
   window.demoNavigate = function(target){
@@ -616,11 +627,54 @@ function toast(msg){
     }
     if (typeof nav === 'function') nav(target);
   };
+
+  /* ── In-context hotspots ── */
+  var HINTS = [
+    {sel:'#s-home .today', text:'<b>Your morning.</b> Follow-ups, visits, incomplete and call-pending at a glance.'},
+    {sel:'#s-home .untouched-chip', text:'<b>Never sit on a lead.</b> Untouched imported leads are flagged instantly.'},
+    {sel:'#s-home .lead.pending-edge', text:'<b>One-tap call logging.</b> Tap a lead to record the outcome the moment you hang up.'},
+    {sel:'#s-detail .callbtn', text:'<b>Call or WhatsApp in one tap.</b> Numbers stay masked until you act.'},
+    {sel:'#s-detail .qa-row', text:'<b>Everything one tap away.</b> WhatsApp, follow-up, share the lead.'},
+    {sel:'#s-plan .date-head', text:'<b>Your day, planned.</b> Overdue plus scheduled follow-ups and visits.'},
+    {sel:'#s-alarms .switch', text:'<b>Never miss a follow-up.</b> Alarms ring even when the app is closed.'}
+  ];
+  var hintsOn=false, layer=null, raf=0;
+  function ensureLayer(){ if(!layer){ layer=document.createElement('div'); layer.className='demo-hints'; document.body.appendChild(layer);} }
+  function clearTips(){ if(!layer) return; layer.querySelectorAll('.demo-tip').forEach(function(t){t.remove()}); layer.querySelectorAll('.demo-dot').forEach(function(d){d.removeAttribute('data-open')}); }
+  function showTip(dot,text){
+    var tip=document.createElement('div'); tip.className='demo-tip'; tip.innerHTML=text; layer.appendChild(tip);
+    var dr=dot.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight;
+    var left=Math.min(Math.max(6, dr.left+dr.width/2 - tw + 20), window.innerWidth - tw - 6);
+    var top=dr.bottom + 8; if(top+th>window.innerHeight-6) top=Math.max(6, dr.top - th - 8);
+    tip.style.left=left+'px'; tip.style.top=top+'px';
+  }
+  function renderHints(){
+    ensureLayer(); layer.innerHTML='';
+    if(!hintsOn) return;
+    HINTS.forEach(function(h){
+      var el=document.querySelector(h.sel); if(!el) return;
+      var r=el.getBoundingClientRect();
+      if(r.width===0||r.height===0) return;
+      if(r.bottom<10||r.top>window.innerHeight-10||r.right<6||r.left>window.innerWidth-6) return;
+      var dot=document.createElement('button'); dot.type='button'; dot.className='demo-dot'; dot.setAttribute('aria-label','Feature highlight'); dot.innerHTML='<i></i>';
+      var x=Math.min(window.innerWidth-14, Math.max(14, r.left + r.width - 16));
+      var y=Math.max(14, r.top + 14);
+      dot.style.left=x+'px'; dot.style.top=y+'px';
+      dot.addEventListener('click', function(ev){ ev.stopPropagation(); var open=dot.getAttribute('data-open')==='1'; clearTips(); if(!open){ dot.setAttribute('data-open','1'); showTip(dot,h.text); } });
+      layer.appendChild(dot);
+    });
+  }
+  function scheduleHints(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(function(){ setTimeout(renderHints, 40); }); }
+  window.addEventListener('scroll', scheduleHints, true);
+  window.addEventListener('resize', scheduleHints);
+  document.addEventListener('click', function(e){ if(!(e.target.closest && e.target.closest('.demo-dot,.demo-tip'))) clearTips(); }, true);
+
   window.addEventListener('message', function(e){
     if (e.origin !== ORIGIN) return;
     var d = e.data || {};
     if (d.source !== 'nirman-demo') return;
     if (d.action === 'navigate') window.demoNavigate(d.target);
+    else if (d.action === 'hints'){ hintsOn=!!d.on; renderHints(); }
   });
   emit('ready');
 })();

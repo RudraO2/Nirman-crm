@@ -195,6 +195,16 @@ dialog::backdrop{background:rgba(13,31,24,.45)}
 .grid-53{display:grid;grid-template-columns:3fr 2fr;gap:16px}
 @media(max-width:980px){.grid-53,.grid2{grid-template-columns:1fr}.sidebar{display:none}}
 .section-gap{margin-top:18px}
+/* ═══ Demo hotspots (toggled by the /demo shell) ═══ */
+.demo-hints{position:fixed;inset:0;pointer-events:none;z-index:9998}
+.demo-dot{position:fixed;width:22px;height:22px;padding:0;border:none;background:none;pointer-events:auto;cursor:pointer;transform:translate(-50%,-50%)}
+.demo-dot i{position:absolute;inset:5px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 3px rgba(201,163,84,.30)}
+.demo-dot::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--brass);animation:demoPing 1.7s ease-out infinite}
+.demo-dot[data-open="1"] i{background:var(--brass-bright)}
+@keyframes demoPing{0%{transform:scale(.55);opacity:.85}100%{transform:scale(1.7);opacity:0}}
+.demo-tip{position:fixed;pointer-events:auto;max-width:232px;background:var(--evergreen);color:#F2EEE2;border:1px solid rgba(201,163,84,.45);border-radius:12px;padding:10px 13px;font-size:12.5px;line-height:1.5;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.demo-tip b{color:var(--brass-bright)}
+@media(prefers-reduced-motion:reduce){.demo-dot::after{animation:none}}
 </style>
 </head>
 <body>
@@ -722,19 +732,61 @@ document.querySelectorAll('#l-future .chip').forEach(c=>c.addEventListener('clic
   function emit(ev, extra){
     try { parent.postMessage(Object.assign({source:'nirman-demo-inner', event:ev}, extra||{}), ORIGIN); } catch(e){}
   }
-  // Wrap go() so BOTH checklist-driven and free-click navigation announce themselves.
+  // Wrap go() so free-click navigation announces itself + refreshes hotspots.
   if (typeof go === 'function') {
     var _go = go;
-    go = function(v){ _go(v); emit('navigated', {screen: v}); };
+    go = function(v){ _go(v); emit('navigated', {screen: v}); scheduleHints(); };
     window.go = go;
   }
-  // Shell entry point.
   window.demoNavigate = function(target){ if (typeof go === 'function') go(target); };
+
+  /* ── In-context hotspots ── */
+  var HINTS = [
+    {sel:'.metric-grid', text:'<b>Your day at a glance.</b> Today\'s leads, missed follow-ups and sales — first thing.'},
+    {sel:'#home-bars', text:'<b>Pipeline pulse.</b> New leads vs status changes across 14 days.'},
+    {sel:'#leads-table', text:'<b>Every lead in one table.</b> Filter, search, bulk-select and reassign in seconds.'},
+    {sel:'.funnel-rows', text:'<b>Where leads drop off.</b> The exact stage you\'re losing deals.'},
+    {sel:'#view-team table', text:'<b>Team &amp; hierarchy.</b> Accounts, tiers and reporting lines together.'},
+    {sel:'.tower-grid', text:'<b>Live unit inventory.</b> Available, on-hold, sold and blocked at a glance.'},
+    {sel:'.dropzone', text:'<b>Import in minutes.</b> Map spreadsheet columns to fields; duplicates auto-skipped.'}
+  ];
+  var hintsOn=false, layer=null, raf=0;
+  function ensureLayer(){ if(!layer){ layer=document.createElement('div'); layer.className='demo-hints'; document.body.appendChild(layer);} }
+  function clearTips(){ if(!layer) return; layer.querySelectorAll('.demo-tip').forEach(function(t){t.remove()}); layer.querySelectorAll('.demo-dot').forEach(function(d){d.removeAttribute('data-open')}); }
+  function showTip(dot,text){
+    var tip=document.createElement('div'); tip.className='demo-tip'; tip.innerHTML=text; layer.appendChild(tip);
+    var dr=dot.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight;
+    var left=Math.min(Math.max(8, dr.left+dr.width/2 - tw + 24), window.innerWidth - tw - 8);
+    var top=dr.bottom + 8; if(top+th>window.innerHeight-8) top=Math.max(8, dr.top - th - 8);
+    tip.style.left=left+'px'; tip.style.top=top+'px';
+  }
+  function renderHints(){
+    ensureLayer(); layer.innerHTML='';
+    if(!hintsOn) return;
+    HINTS.forEach(function(h){
+      var el=document.querySelector(h.sel); if(!el) return;
+      var r=el.getBoundingClientRect();
+      if(r.width===0||r.height===0) return;
+      if(r.bottom<10||r.top>window.innerHeight-10||r.right<10||r.left>window.innerWidth-10) return;
+      var dot=document.createElement('button'); dot.type='button'; dot.className='demo-dot'; dot.setAttribute('aria-label','Feature highlight'); dot.innerHTML='<i></i>';
+      var x=Math.min(window.innerWidth-14, Math.max(14, r.left + Math.min(r.width-14, r.width*0.5+40)));
+      var y=Math.max(14, r.top + 16);
+      dot.style.left=x+'px'; dot.style.top=y+'px';
+      dot.addEventListener('click', function(ev){ ev.stopPropagation(); var open=dot.getAttribute('data-open')==='1'; clearTips(); if(!open){ dot.setAttribute('data-open','1'); showTip(dot,h.text); } });
+      layer.appendChild(dot);
+    });
+  }
+  function scheduleHints(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(function(){ setTimeout(renderHints, 40); }); }
+  window.addEventListener('scroll', scheduleHints, true);
+  window.addEventListener('resize', scheduleHints);
+  document.addEventListener('click', function(e){ if(!(e.target.closest && e.target.closest('.demo-dot,.demo-tip'))) clearTips(); }, true);
+
   window.addEventListener('message', function(e){
     if (e.origin !== ORIGIN) return;
     var d = e.data || {};
     if (d.source !== 'nirman-demo') return;
     if (d.action === 'navigate') window.demoNavigate(d.target);
+    else if (d.action === 'hints'){ hintsOn=!!d.on; renderHints(); }
   });
   emit('ready');
 })();
