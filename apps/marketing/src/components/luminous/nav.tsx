@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { Logo } from "@/components/luminous/logo";
 
 const links = [
   { label: "Home", href: "#top", active: true },
+  { label: "Live Demo", href: "/demo" },
   { label: "The Console", href: "#platform" },
   { label: "Builders", href: "#testimonials" },
   { label: "Pricing", href: "#pricing" },
@@ -15,7 +17,7 @@ export function Nav() {
 
       <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 px-1.5 py-1.5 backdrop-blur-md md:flex">
         {links.map((link) => (
-          <a
+          <Link
             key={link.label}
             href={link.href}
             className={
@@ -26,7 +28,7 @@ export function Nav() {
           >
             {link.active && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
             {link.label}
-          </a>
+          </Link>
         ))}
       </div>
 

@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nirman CRM — Simple Mobile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══ Same brand as rich version — simpler structure: 3 bottom tabs ═══ */
+:root{
+  --evergreen:#132A21; --evergreen-2:#1B382C; --evergreen-3:#0D1F18;
+  --ivory:#F6F3EC; --paper:#FFFFFF; --mist:#EDE8DD;
+  --ink:#1C231F; --ink-2:#5C665F; --ink-3:#98A29A;
+  --line:#E4DFD3; --line-2:#CFC8B8;
+  --brass:#A8823C; --brass-soft:#EADFC4; --brass-bright:#C9A354;
+  --hot:#C24638; --hot-bg:#F9E9E6;
+  --warm:#C07A17; --warm-bg:#F7EDD9;
+  --cold:#3E6DA6; --cold-bg:#E6EDF6;
+  --dead:#78817B; --dead-bg:#ECEEEC;
+  --sold:#2F7D4F; --sold-bg:#E3F0E7;
+  --future:#7A5BA8; --future-bg:#EEE8F6;
+  --wa:#25D366; --danger:#B3372B;
+  --font-ui:'Inter',system-ui,sans-serif;
+  --font-display:'Fraunces',Georgia,serif;
+  --font-mono:'JetBrains Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-ui);background:radial-gradient(1200px 800px at 50% -10%,#1E3B2E,var(--evergreen-3));min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px 48px;color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font:inherit;border:none;background:none;cursor:pointer;color:inherit;text-align:left}
+input,textarea{font:inherit}
+
+.stage-head{text-align:center;margin-bottom:18px;color:#E9E4D6}
+.stage-head h1{font-family:var(--font-display);font-weight:500;font-size:24px}
+.stage-head h1 em{color:var(--brass-bright)}
+.stage-head p{font-size:13px;color:rgba(233,228,214,.55);margin-top:4px}
+.picker{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:24px;max-width:480px}
+.picker button{font-size:12px;font-weight:600;color:rgba(233,228,214,.65);border:1px solid rgba(233,228,214,.22);border-radius:99px;padding:6px 14px;transition:all .15s}
+.picker button.on{background:var(--brass-bright);border-color:var(--brass-bright);color:var(--evergreen-3)}
+
+/* phone */
+.phone{width:388px;height:812px;background:#000;border-radius:52px;padding:11px;box-shadow:0 30px 80px rgba(0,0,0,.55),inset 0 0 3px rgba(255,255,255,.28);flex-shrink:0}
+.viewport{width:100%;height:100%;background:var(--ivory);border-radius:42px;overflow:hidden;position:relative}
+.notch{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:118px;height:30px;background:#000;border-radius:99px;z-index:99}
+.statusbar{height:48px;display:flex;align-items:flex-end;justify-content:space-between;padding:0 26px 5px;font-size:12.5px;font-weight:700;position:relative;z-index:50}
+
+.screen{position:absolute;inset:0;background:var(--ivory);display:none;flex-direction:column}
+.screen.on{display:flex;animation:fade .2s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.scroll{flex:1;overflow-y:auto;overscroll-behavior:contain;padding-bottom:150px}
+.scroll::-webkit-scrollbar{width:0}
+.appbar{display:flex;align-items:center;gap:6px;padding:56px 16px 8px}
+.appbar h2{font-family:var(--font-display);font-size:21px;font-weight:500;flex:1}
+.icon-btn{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:var(--ink-2)}
+.icon-btn:active{background:var(--mist)}
+.icon-btn svg{width:19px;height:19px}
+.pad{padding:0 16px}
+
+/* ── bottom tab bar: the whole app in 3 places ── */
+.tabbar{position:absolute;left:0;right:0;bottom:0;display:flex;background:rgba(246,243,236,.92);backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:8px 8px 22px;z-index:45}
+.tabbar button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;font-weight:600;color:var(--ink-3);padding:6px 0;border-radius:12px;text-align:center}
+.tabbar button svg{width:21px;height:21px}
+.tabbar button.on{color:var(--evergreen)}
+.tabbar button.on .tab-ic{background:var(--brass-soft);color:var(--evergreen)}
+.tab-ic{width:44px;height:26px;border-radius:99px;display:grid;place-items:center;transition:background .2s}
+.tab-badge{position:absolute;margin-left:26px;margin-top:-2px;background:var(--hot);color:#fff;font-size:9px;font-weight:800;border-radius:99px;padding:1px 5px}
+
+/* pills / tags */
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:99px;text-transform:capitalize}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-hot{background:var(--hot-bg);color:var(--hot)} .p-warm{background:var(--warm-bg);color:var(--warm)}
+.p-cold{background:var(--cold-bg);color:var(--cold)} .p-dead{background:var(--dead-bg);color:var(--dead)}
+.p-sold{background:var(--sold-bg);color:var(--sold)} .p-future{background:var(--future-bg);color:var(--future)}
+
+/* ── ONE header card: today + progress together ── */
+.today{background:var(--evergreen);border-radius:18px;padding:15px 16px;color:#E9E4D6;position:relative;overflow:hidden}
+.today::after{content:'';position:absolute;right:-30px;top:-40px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(201,163,84,.22),transparent 70%)}
+.eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.today .eyebrow{color:rgba(233,228,214,.55)}
+.trow{display:flex;gap:8px;margin-top:10px}
+.tile{flex:1;background:rgba(233,228,214,.07);border:1px solid rgba(233,228,214,.1);border-radius:12px;padding:9px 10px}
+.tile:active{background:rgba(233,228,214,.15)}
+.tile b{font-family:var(--font-display);font-size:22px;font-weight:500;display:block;line-height:1.1}
+.tile span{font-size:10.5px;color:rgba(233,228,214,.6)}
+.tile.alert b{color:var(--brass-bright)}
+.today .prog{display:flex;justify-content:space-between;margin-top:12px;padding-top:10px;border-top:1px solid rgba(233,228,214,.12);font-size:11.5px;color:rgba(233,228,214,.6)}
+.today .prog b{color:#F2EEE2;font-weight:700}
+.today .prog .hl b{color:var(--brass-bright)}
+
+/* lead card */
+.lead{display:block;width:100%;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:13px 15px;margin-bottom:10px;transition:transform .12s}
+.lead:active{transform:scale(.985)}
+.lead.pending-edge{box-shadow:inset 3px 0 0 var(--brass-bright)}
+.lead .r1{display:flex;align-items:center;gap:7px}
+.lead .name{font-size:15px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lead.dim .name{color:var(--ink-3)}
+.reddot{width:8px;height:8px;border-radius:50%;background:var(--hot);flex-shrink:0}
+.lead .meta{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+.lead .flag{font-size:11.5px;font-weight:600;margin-top:5px}
+.section-row{display:flex;align-items:center;gap:7px;padding:16px 16px 8px}
+.count-chip{background:var(--mist);border-radius:99px;font-size:11px;font-weight:700;padding:1px 8px;color:var(--ink-2)}
+.untouched-chip{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--cold);background:var(--cold-bg);border:1px solid #C6D6E9;padding:3px 9px;border-radius:99px}
+
+/* FAB */
+.fab{position:absolute;right:16px;bottom:96px;width:56px;height:56px;border-radius:18px;background:var(--evergreen);color:var(--brass-bright);display:grid;place-items:center;box-shadow:0 10px 26px rgba(13,31,24,.45);z-index:40;transition:transform .15s}
+.fab:active{transform:scale(.93)}
+.fab svg{width:23px;height:23px}
+
+/* detail */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:16px}
+.hero{padding:18px}
+.hero .name{font-family:var(--font-display);font-size:23px;font-weight:500;margin-top:2px}
+.t-incomplete{color:var(--hot);font-size:10.5px;font-weight:700}
+.callbtn{margin-top:10px;display:inline-flex;align-items:center;gap:9px;background:var(--wa);color:#fff;border-radius:12px;padding:10px 15px;font-weight:700;font-size:15px;box-shadow:0 6px 18px rgba(37,211,102,.35)}
+.callbtn:active{transform:scale(.96)}
+.callbtn .cta{background:rgba(255,255,255,.25);font-size:9.5px;letter-spacing:.08em;padding:2px 7px;border-radius:5px;font-weight:800}
+.pending-strip{margin-top:12px;display:flex;align-items:center;gap:7px;background:var(--brass-soft);border-radius:10px;padding:8px 11px;font-size:12.5px;font-weight:600;color:#7A5D24}
+.qa-row{display:flex;gap:8px;margin-top:10px}
+.qa{flex:1;border-radius:14px;padding:11px 6px;text-align:center;font-size:12px;font-weight:700;color:#fff}
+.qa:active{transform:scale(.95)}
+.qa svg{width:18px;height:18px;display:block;margin:0 auto 4px}
+.share-note{font-size:12px;color:var(--ink-2);margin-top:8px}
+.share-note b{color:var(--future)} .share-note button{color:var(--danger);font-weight:700;font-size:11.5px}
+.details{margin-top:10px;padding:6px 16px 12px}
+.drow{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.drow:last-of-type{border-bottom:none}
+.drow span{color:var(--ink-2)} .drow b{font-weight:600;text-align:right}
+.remarks{border-top:1px dashed var(--line-2);margin-top:2px;padding-top:11px}
+.remarks p{font-size:13px;color:var(--ink);line-height:1.55;margin-top:5px}
+.blockcard{margin-top:10px;padding:14px 16px}
+.tl{margin-top:12px;position:relative;padding-left:20px}
+.tl::before{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl-item{position:relative;padding-bottom:15px}
+.tl-item:last-child{padding-bottom:0}
+.tl-item::before{content:'';position:absolute;left:-19px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--paper);border:2.5px solid var(--brass)}
+.tl-item b{font-size:13px;display:block}
+.tl-item span{font-size:11px;color:var(--ink-3)}
+
+/* list rows */
+.date-head{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);padding:14px 16px 8px}
+.date-head.red{color:var(--hot)}
+.row-item{display:flex;align-items:center;gap:13px;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:10px;width:100%}
+.row-item:active{transform:scale(.985)}
+.row-item .ri{width:38px;height:38px;border-radius:12px;background:var(--mist);display:grid;place-items:center;font-size:16px;flex-shrink:0}
+.row-item b{font-size:14px;display:block}
+.row-item span{font-size:12px;color:var(--ink-2)}
+.row-item .chev{margin-left:auto;color:var(--ink-3)}
+.switch{margin-left:auto;width:44px;height:26px;border-radius:99px;background:var(--line-2);position:relative;transition:background .2s;flex-shrink:0}
+.switch::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch.on{background:var(--sold)} .switch.on::after{left:21px}
+
+/* profile (You tab) */
+.profile-card{background:var(--evergreen);border-radius:18px;padding:18px;color:#E9E4D6;display:flex;align-items:center;gap:13px}
+.pavatar{width:50px;height:50px;border-radius:16px;background:var(--brass-soft);color:#6E5423;display:grid;place-items:center;font-weight:800;font-size:16px}
+.profile-card b{font-size:16px;display:block;color:#F2EEE2}
+.profile-card span{font-size:12px;color:rgba(233,228,214,.55)}
+.stats-row{display:flex;gap:8px;margin-top:10px}
+.stat{flex:1;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:11px 12px;text-align:center}
+.stat b{font-family:var(--font-display);font-size:20px;font-weight:500;display:block}
+.stat span{font-size:10px;color:var(--ink-2)}
+.best{margin-top:10px;background:linear-gradient(100deg,var(--brass-soft),#F3EAD3);border:1px solid #DCC998;border-radius:14px;padding:11px 14px;display:flex;align-items:center;gap:10px}
+.best b{font-size:12.5px;color:#6E5423;display:block}
+.best span{font-size:11px;color:#957A3D}
+
+/* sheets */
+.sheet-veil{position:absolute;inset:0;background:rgba(13,31,24,.45);opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
+.sheet-veil.on{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--ivory);border-radius:26px 26px 0 0;transform:translateY(105%);transition:transform .3s cubic-bezier(.2,.9,.25,1);z-index:70;max-height:92%;display:flex;flex-direction:column}
+.sheet.on{transform:none}
+.grab{width:42px;height:4.5px;border-radius:99px;background:var(--line-2);margin:10px auto 6px;flex-shrink:0}
+.sheet-body{overflow-y:auto;padding:8px 22px 28px}
+.sheet-body::-webkit-scrollbar{width:0}
+.sheet h3{font-family:var(--font-display);font-size:21px;font-weight:500}
+.sheet .sub{font-size:13px;color:var(--ink-2);margin-top:3px}
+.flabel{display:flex;gap:3px;font-size:12px;font-weight:700;color:var(--ink-2);margin:16px 0 6px}
+.flabel em{color:var(--hot);font-style:normal}
+.finput{width:100%;background:var(--paper);border:1.5px solid var(--line-2);border-radius:12px;padding:12px 14px;font-size:15px;outline:none;transition:border-color .15s}
+.finput:focus{border-color:var(--brass);box-shadow:0 0 0 3px rgba(168,130,60,.14)}
+.fhint{font-size:11px;color:var(--ink-3);margin-top:5px;line-height:1.4}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.fchip{border:1.5px solid var(--line-2);background:var(--paper);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--ink-2);transition:all .15s}
+.fchip.on{background:var(--evergreen);border-color:var(--evergreen);color:var(--brass-bright)}
+/* status chips in the one-sheet form */
+.schip{border:1.5px solid var(--line-2);background:var(--paper);border-radius:99px;padding:7px 14px;font-size:12.5px;font-weight:700;color:var(--ink-2);text-transform:capitalize;display:inline-flex;align-items:center;gap:6px}
+.schip::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--c)}
+.schip.on{border-color:var(--c);color:var(--c);background:color-mix(in srgb,var(--c) 9%,white)}
+.budget-row{display:flex;align-items:center;gap:10px}
+.save-btn{width:100%;margin-top:22px;background:var(--evergreen);color:#F2EEE2;border-radius:14px;padding:15px;font-size:15px;font-weight:700;text-align:center}
+.save-btn:active{transform:scale(.98)}
+.outcome-opt{display:flex;align-items:center;gap:12px;width:100%;background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:13px 14px;margin-top:9px}
+.outcome-opt:active{border-color:var(--brass)}
+.outcome-opt .oc{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;font-size:16px;flex-shrink:0}
+.outcome-opt b{font-size:13.5px;display:block}
+.outcome-opt span{font-size:11.5px;color:var(--ink-2)}
+
+/* login */
+.login-screen{background:linear-gradient(175deg,var(--evergreen) 0%,var(--evergreen-3) 55%,#0A1912 100%)}
+.login-wrap{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 28px 40px}
+.login-mark{width:58px;height:58px;border-radius:17px;background:var(--brass);display:grid;place-items:center;font-family:var(--font-display);font-style:italic;font-weight:600;font-size:27px;color:var(--evergreen-3);margin-bottom:20px}
+.login-wrap h2{font-family:var(--font-display);font-weight:500;font-size:30px;color:#F2EEE2;line-height:1.15}
+.login-wrap h2 em{color:var(--brass-bright)}
+.login-wrap>p{font-size:13.5px;color:rgba(233,228,214,.55);margin:8px 0 30px}
+.login-field{margin-bottom:14px}
+.login-field label{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(233,228,214,.5);margin-bottom:7px}
+.login-field input{width:100%;background:rgba(233,228,214,.07);border:1.5px solid rgba(233,228,214,.16);border-radius:13px;padding:13px 15px;font-size:15px;color:#F2EEE2;outline:none}
+.login-field input:focus{border-color:var(--brass-bright)}
+.login-field input::placeholder{color:rgba(233,228,214,.3)}
+.login-btn{width:100%;margin-top:14px;background:var(--brass);color:#fff;border-radius:13px;padding:15px;font-weight:700;font-size:15px;text-align:center}
+.login-btn:active{transform:scale(.98)}
+
+.snack{position:absolute;left:16px;right:16px;bottom:100px;background:var(--evergreen);color:#F2EEE2;border-radius:13px;padding:12px 16px;font-size:13px;display:flex;align-items:center;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:80;transform:translateY(200px);transition:transform .3s cubic-bezier(.2,.9,.25,1)}
+.snack.on{transform:none}
+.snack button{margin-left:auto;color:var(--brass-bright);font-weight:700}
+
+/* ═══ Embed mode (?embed=1) — hide this file's own page chrome so the /demo
+   shell can iframe just the phone (avoids double-frame / stray dev picker) ═══ */
+body.embed{background:none;padding:0;min-height:100vh}
+body.embed .stage-head,body.embed .picker{display:none}
+</style>
+</head>
+<body>
+
+<div class="stage-head">
+  <h1>Nirman <em>CRM</em> — Field App, simplified</h1>
+  <p>Same features · 3 bottom tabs instead of hidden icon nav</p>
+</div>
+<div class="picker" id="picker">
+  <button data-s="login">Login</button>
+  <button data-s="home" class="on">Leads</button>
+  <button data-s="plan">Plan</button>
+  <button data-s="you">You</button>
+  <button data-s="detail">Lead detail</button>
+  <button data-s="archived">Archived</button>
+  <button data-s="alarms">Alarms</button>
+</div>
+
+<div class="phone">
+<div class="viewport">
+<div class="notch"></div>
+
+<!-- ═════ LOGIN ═════ -->
+<div class="screen login-screen" id="s-login">
+  <div class="statusbar" style="color:#E9E4D6"><span>9:41</span><span>▮▮▮ ⬤</span></div>
+  <div class="login-wrap">
+    <div class="login-mark">N</div>
+    <h2>Welcome<br>back, <em>closer.</em></h2>
+    <p>Sign in with the credentials your admin gave you.</p>
+    <div class="login-field"><label>Username</label><input placeholder="ravi.kumar"></div>
+    <div class="login-field"><label>Password</label><input type="password" placeholder="••••••••"></div>
+    <button class="login-btn" onclick="nav('home')">Log In</button>
+  </div>
+</div>
+
+<!-- ═════ TAB 1 · LEADS (home) ═════ -->
+<div class="screen on" id="s-home">
+  <div class="statusbar"><span>9:41</span><span>▮▮▮ ⬤</span></div>
+  <div class="appbar"><h2>My Leads</h2></div>
+  <div class="scroll">
+    <!-- ONE header card: today's actions + progress line -->
+    <div class="pad">
+      <div class="today">
+        <span class="eyebrow">Today · Wed 4 Jul</span>
+        <div class="trow">
+          <button class="tile"><b>4</b><span>Follow-ups</span></button>
+          <button class="tile"><b>2</b><span>Visits</span></button>
+          <button class="tile alert"><b>3</b><span>Incomplete</span></button>
+          <button class="tile alert"><b>1</b><span>Call pending</span></button>
+        </div>
+        <div class="prog">
+          <span>Sold this month <b>3</b></span>
+          <span>Streak <b>6 days</b></span>
+          <span class="hl">1 sale to beat your best <b>🏆</b></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-row">
+      <span class="eyebrow">My Leads</span><span class="count-chip">23</span>
+      <button class="untouched-chip">✦ 5 untouched</button>
+    </div>
+
+    <div class="pad">
+      <button class="lead pending-edge" onclick="openSheet('sheet-outcome')">
+        <div class="r1"><span class="name">Anil Traders</span><span class="pill p-hot">hot</span></div>
+        <div class="meta">•••4821 · Baner</div>
+        <div class="flag" style="color:#7A5D24">⏱ Call outcome pending — tap to log</div>
+      </button>
+      <button class="lead" onclick="nav('detail')">
+        <div class="r1"><span class="reddot"></span><span class="name">Meena Shah</span><span class="pill p-warm">warm</span></div>
+        <div class="meta">•••7734 · Wakad</div>
+        <div class="flag" style="color:var(--hot)">Follow-up overdue · yesterday</div>
+      </button>
+      <button class="lead" onclick="nav('detail')">
+        <div class="r1"><span class="name">Farhan Ali</span><span class="pill p-cold">cold</span></div>
+        <div class="meta">•••0925 · Hinjewadi</div>
+        <div class="flag" style="color:var(--cold)">✦ Untouched · imported 30 Jun</div>
+      </button>
+      <button class="lead" onclick="nav('detail')">
+        <div class="r1"><span class="name">Rhea Kapoor</span><span class="pill p-warm">warm</span></div>
+        <div class="meta">•••8810 · Balewadi</div>
+        <div class="flag" style="color:var(--future)">⇄ Shared with you · visit Sat 11 am</div>
+      </button>
+      <button class="lead dim" onclick="nav('detail')">
+        <div class="r1"><span class="name">Joseph M.</span><span class="pill p-cold">cold</span></div>
+        <div class="meta">•••2245 · Kharadi</div>
+        <div class="flag" style="color:var(--warm)">Stale · 9 days quiet · swipe ← to mark dead</div>
+      </button>
+      <button class="lead" onclick="nav('detail')">
+        <div class="r1"><span class="name">Sunita Devi</span><span class="pill p-future">future</span></div>
+        <div class="meta">•••6672 · Aundh</div>
+        <div class="flag" style="color:var(--ink-3)">Revisit in October</div>
+      </button>
+    </div>
+  </div>
+  <button class="fab" onclick="openSheet('sheet-new')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>
+</div>
+
+<!-- ═════ TAB 2 · PLAN (follow-ups + visits) ═════ -->
+<div class="screen" id="s-plan">
+  <div class="statusbar"><span>9:41</span><span>▮▮▮ ⬤</span></div>
+  <div class="appbar"><h2>Plan</h2></div>
+  <div class="scroll">
+    <div class="date-head red">Overdue</div>
+    <div class="pad">
+      <button class="row-item" onclick="nav('detail')" style="border-color:#EFC9C2"><span class="ri" style="background:var(--hot-bg)">⚠️</span><div><b>Meena Shah</b><span>Yesterday 5:00 pm · warm</span></div><span class="chev">›</span></button>
+    </div>
+    <div class="date-head">Today · Wed 4 Jul</div>
+    <div class="pad">
+      <button class="row-item" onclick="nav('detail')"><span class="ri">📞</span><div><b>Anil Traders</b><span>6:00 pm · hot · discuss token</span></div><span class="chev">›</span></button>
+      <button class="row-item" onclick="nav('detail')"><span class="ri">📞</span><div><b>Deepa Rao</b><span>7:30 pm · warm</span></div><span class="chev">›</span></button>
+    </div>
+    <div class="date-head">Sat 6 Jul</div>
+    <div class="pad">
+      <button class="row-item" onclick="nav('detail')"><span class="ri">🏠</span><div><b>Rhea Kapoor</b><span>11:00 am · site visit · Prestige Sunrise</span></div><span class="chev">›</span></button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════ TAB 3 · YOU (stats + settings + archive) ═════ -->
+<div class="screen" id="s-you">
+  <div class="statusbar"><span>9:41</span><span>▮▮▮ ⬤</span></div>
+  <div class="appbar"><h2>You</h2></div>
+  <div class="scroll pad" style="padding-top:4px">
+    <div class="profile-card">
+      <div class="pavatar">RK</div>
+      <div><b>ravi.kumar</b><span>Front-line rep · Nirman Developers</span></div>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><b>3</b><span>Sold this month</span></div>
+      <div class="stat"><b>6</b><span>Day streak 🔥</span></div>
+      <div class="stat"><b>8.2%</b><span>Conversion</span></div>
+    </div>
+    <div class="best"><span style="font-size:20px">🏆</span><div><b>Personal best in sight</b><span>1 more sale beats your March record of 4</span></div></div>
+
+    <div class="section-row" style="padding-left:0;padding-right:0"><span class="eyebrow">Settings</span></div>
+    <button class="row-item" onclick="nav('archived')"><span class="ri">🗄️</span><div><b>Archived leads</b><span>Dead &amp; closed · restore from here</span></div><span class="chev">›</span></button>
+    <button class="row-item" onclick="nav('alarms')"><span class="ri">⏰</span><div><b>Follow-up alarms</b><span>Ring &amp; reminder settings</span></div><span class="chev">›</span></button>
+    <button class="row-item"><span class="ri">🔑</span><div><b>Change password</b><span>Update your login credentials</span></div><span class="chev">›</span></button>
+    <button class="row-item" onclick="nav('login')"><span class="ri" style="background:var(--hot-bg)">↪</span><div><b style="color:var(--danger)">Log out</b><span>Sign out of this device</span></div></button>
+  </div>
+</div>
+
+<!-- ═════ LEAD DETAIL ═════ -->
+<div class="screen" id="s-detail">
+  <div class="statusbar"><span>9:41</span><span>▮▮▮ ⬤</span></div>
+  <div class="appbar">
+    <button class="icon-btn" onclick="nav('home')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2>Lead</h2>
+    <button class="icon-btn" title="Reschedule visit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg></button>
+    <button class="icon-btn" title="Edit" onclick="openSheet('sheet-new')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
+  </div>
+  <div class="scroll pad">
+    <div class="card hero">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <div style="flex:1">
+          <span class="t-incomplete">● Incomplete</span>
+          <div class="name">Meena Shah</div>
+          <button class="callbtn">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.08 4.18 2 2 0 0 1 4.06 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            98220 •7734 <span class="cta">CALL</span>
+          </button>
+        </div>
+        <span class="pill p-warm">warm</span>
+      </div>
+      <div class="pending-strip">⏱ Call outcome pending — log it when you hang up</div>
+    </div>
+
+    <div class="qa-row">
+      <button class="qa" style="background:var(--wa)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z"/></svg>WhatsApp</button>
+      <button class="qa" style="background:var(--brass)" onclick="openSheet('sheet-followup')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Follow-up</button>
+      <button class="qa" style="background:var(--evergreen);color:var(--brass-bright)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/></svg>Share</button>
+    </div>
+    <p class="share-note">⇄ Shared with <b>suresh.b</b> · <button onclick="toast('Share revoked')">Revoke</button></p>
+
+    <!-- ONE card: details + remarks together -->
+    <div class="card details">
+      <div class="drow"><span>Source</span><b>Walk-in</b></div>
+      <div class="drow"><span>Property · size</span><b>Flat · 3BHK</b></div>
+      <div class="drow"><span>Location</span><b>Wakad</b></div>
+      <div class="drow"><span>Budget</span><b>₹75 L – ₹95 L</b></div>
+      <div class="drow"><span>Visit</span><b>Sat 6 Jul, 11:00</b></div>
+      <div class="drow"><span>Follow-up</span><b style="color:var(--hot)">Overdue · yesterday</b></div>
+      <div class="drow"><span>Interest</span><b>Prestige Sunrise</b></div>
+      <div class="remarks">
+        <span class="eyebrow">Remarks</span>
+        <p>Prefers east-facing. Husband works in Hinjewadi — commute matters. Comparing with the site next door.</p>
+      </div>
+    </div>
+
+    <div class="card blockcard" style="margin-bottom:14px">
+      <span class="eyebrow">Timeline</span>
+      <div class="tl">
+        <div class="tl-item"><b>Call placed → outcome pending</b><span>Today · 9:28 am</span></div>
+        <div class="tl-item"><b>Status changed cold → warm</b><span>Tue 2 Jul</span></div>
+        <div class="tl-item"><b>Follow-up scheduled</b><span>Mon 1 Jul · for 3 Jul 5 pm</span></div>
+        <div class="tl-item"><b>Lead created · walk-in</b><span>Mon 1 Jul · 9:05 am</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════ ARCHIVED (from You tab) ═════ -->
+<div class="screen" id="s-archived">
+  <div class="statusbar"><span>9:41</span><span>▮▮▮ ⬤</span></div>
+  <div class="appbar">
+    <button class="icon-btn" onclick="nav('you')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2>Archived</h2>
+  </div>
+  <div class="scroll pad" style="padding-top:6px">
+    <div class="lead dim">
+      <div class="r1"><span class="name">Kiran B.</span><span class="pill p-dead">dead</span></div>
+      <div class="meta">•••9911 · bought elsewhere</div>
+      <div class="flag"><button style="color:var(--brass);font-weight:700" onclick="toast('Restored to warm')">Restore</button></div>
+    </div>
+    <div class="lead dim">
+      <div class="r1"><span class="name">Prakash &amp; Sons</span><span class="pill p-dead">dead</span></div>
+      <div class="meta">•••3378 · budget mismatch</div>
+      <div class="flag"><button style="color:var(--brass);font-weight:700" onclick="toast('Restored to cold')">Restore</button></div>
+    </div>
+    <div class="lead">
+      <div class="r1"><span class="name">Deepa Rao</span><span class="pill p-sold">sold</span></div>
+      <div class="meta">•••5567 · Unit A-303 · closed 21 Jun 🎉</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═════ ALARM SETTINGS (from You tab) ═════ -->
+<div class="screen" id="s-alarms">
+  <div class="statusbar"><span>9:41</span><span>▮▮▮ ⬤</span></div>
+  <div class="appbar">
+    <button class="icon-btn" onclick="nav('you')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg></button>
+    <h2>Follow-up alarms</h2>
+  </div>
+  <div class="scroll pad" style="padding-top:6px">
+    <div class="row-item"><span class="ri">⏰</span><div><b>Alarm at follow-up time</b><span>Rings even when app is closed</span></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+    <div class="row-item"><span class="ri">🔔</span><div><b>Remind 10 min before</b><span>Heads-up notification</span></div><button class="switch on" onclick="this.classList.toggle('on')"></button></div>
+    <div class="row-item"><span class="ri">📳</span><div><b>Vibrate</b><span>Pulse with the ringtone</span></div><button class="switch" onclick="this.classList.toggle('on')"></button></div>
+    <div class="card" style="padding:14px 16px;margin-top:6px">
+      <span class="eyebrow">Permissions</span>
+      <p style="font-size:12.5px;color:var(--ink-2);margin-top:7px;line-height:1.5">Alarms need “Alarms &amp; reminders” permission and battery-optimisation exemption to ring reliably.</p>
+      <button style="margin-top:10px;font-size:13px;font-weight:700;color:var(--brass)">Check permissions →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════ BOTTOM TAB BAR ═════ -->
+<div class="tabbar" id="tabbar">
+  <button class="on" data-s="home"><span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg></span>Leads</button>
+  <button data-s="plan"><span class="tab-badge">5</span><span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Plan</button>
+  <button data-s="you"><span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>You</button>
+</div>
+
+<!-- ═════ SHEETS ═════ -->
+<div class="sheet-veil" id="veil" onclick="closeSheets()"></div>
+
+<!-- new lead: ONE sheet — status chips inline, no separate step -->
+<div class="sheet" id="sheet-new" style="height:92%">
+  <div class="grab"></div>
+  <div class="sheet-body">
+    <h3>New lead</h3>
+    <p class="sub">Status first, details below — one screen</p>
+    <div class="flabel">Status <em>*</em></div>
+    <div class="chips" id="status-chips">
+      <button class="schip on" style="--c:var(--warm)">warm</button>
+      <button class="schip" style="--c:var(--hot)">hot</button>
+      <button class="schip" style="--c:var(--cold)">cold</button>
+      <button class="schip" style="--c:var(--future)">future</button>
+      <button class="schip" style="--c:var(--sold)">sold</button>
+      <button class="schip" style="--c:var(--dead)">dead</button>
+    </div>
+    <div class="flabel">Phone <em>*</em></div>
+    <input class="finput" inputmode="tel" placeholder="98765 43210">
+    <div class="flabel">Secondary phone</div>
+    <input class="finput" inputmode="tel" placeholder="Alternative / spouse number">
+    <p class="fhint">Needed to mark the lead complete.</p>
+    <div class="flabel">Name</div>
+    <input class="finput" placeholder="Customer name">
+    <div class="flabel">Source</div>
+    <div class="chips"><button class="fchip on">Walk-in</button><button class="fchip">Referral</button><button class="fchip">Cold Calling</button><button class="fchip">Employee Ref</button><button class="fchip">Associate</button><button class="fchip">Ad</button></div>
+    <div class="flabel">Project</div>
+    <div class="chips"><button class="fchip">Prestige Sunrise</button><button class="fchip">Nirman Heights</button><button class="fchip">Green Acres</button></div>
+    <div class="flabel">Property type</div>
+    <div class="chips"><button class="fchip">Flat</button><button class="fchip">Plot</button><button class="fchip">Villa</button><button class="fchip">Commercial</button></div>
+    <div class="flabel">Ticket size</div>
+    <div class="chips"><button class="fchip">2BHK</button><button class="fchip">3BHK</button><button class="fchip">4BHK</button><button class="fchip">Penthouse</button></div>
+    <div class="flabel">Location</div>
+    <input class="finput" placeholder="Area or city">
+    <div class="flabel">Budget (₹)</div>
+    <div class="budget-row"><input class="finput" inputmode="numeric" placeholder="Min"><span style="color:var(--ink-3)">–</span><input class="finput" inputmode="numeric" placeholder="Max"></div>
+    <div class="flabel">Remarks</div>
+    <textarea class="finput" rows="3" placeholder="Anything worth remembering…"></textarea>
+    <button class="save-btn" onclick="closeSheets();toast('Lead saved · added to your queue')">Save lead</button>
+  </div>
+</div>
+
+<!-- call outcome -->
+<div class="sheet" id="sheet-outcome">
+  <div class="grab"></div>
+  <div class="sheet-body">
+    <h3>How did the call go?</h3>
+    <p class="sub">Anil Traders · called 12 min ago</p>
+    <button class="outcome-opt" onclick="closeSheets();toast('Outcome logged — nice momentum 🔥')"><span class="oc" style="background:var(--sold-bg)">✅</span><div><b>Connected — moving forward</b><span>Update status / schedule next step</span></div></button>
+    <button class="outcome-opt" onclick="closeSheets();openSheet('sheet-followup')"><span class="oc" style="background:var(--brass-soft)">📅</span><div><b>Asked to call later</b><span>Schedule the follow-up now</span></div></button>
+    <button class="outcome-opt" onclick="closeSheets();toast('Marked no-answer · try again later')"><span class="oc" style="background:var(--cold-bg)">📵</span><div><b>No answer</b><span>Keep the lead as-is</span></div></button>
+    <button class="outcome-opt" onclick="closeSheets();toast('Marked Dead — undo from Archive')"><span class="oc" style="background:var(--hot-bg)">✕</span><div><b>Not interested</b><span>Mark lead dead</span></div></button>
+  </div>
+</div>
+
+<!-- follow-up -->
+<div class="sheet" id="sheet-followup">
+  <div class="grab"></div>
+  <div class="sheet-body">
+    <h3>Schedule follow-up</h3>
+    <p class="sub">Alarm rings on your phone at this time</p>
+    <div class="flabel">Quick pick</div>
+    <div class="chips"><button class="fchip on">Tomorrow 10 am</button><button class="fchip">This evening</button><button class="fchip">In 3 days</button><button class="fchip">Next week</button></div>
+    <div class="flabel">Or exact date &amp; time</div>
+    <input class="finput" type="datetime-local" value="2026-07-05T10:00">
+    <div class="flabel">Note</div>
+    <input class="finput" placeholder="e.g. discuss token amount">
+    <button class="save-btn" onclick="closeSheets();toast('Follow-up set · alarm scheduled ⏰')">Set follow-up</button>
+  </div>
+</div>
+
+<div class="snack" id="snack"><span id="snack-txt">Saved</span><button onclick="this.parentElement.classList.remove('on')">OK</button></div>
+
+</div><!-- /viewport -->
+</div><!-- /phone -->
+
+<script>
+const TABS=['home','plan','you'];
+function nav(s){
+  document.querySelectorAll('.screen').forEach(el=>el.classList.toggle('on',el.id==='s-'+s));
+  document.querySelectorAll('#picker button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+  // tab bar: highlight owning tab; hide bar on login
+  const owner = TABS.includes(s)?s : (s==='detail'||s==='archived'?'home':(s==='alarms'?'you':null));
+  document.getElementById('tabbar').style.display = s==='login'?'none':'flex';
+  document.querySelectorAll('#tabbar button').forEach(b=>b.classList.toggle('on',b.dataset.s===owner));
+  closeSheets();
+}
+document.querySelectorAll('#picker button').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.s)));
+document.querySelectorAll('#tabbar button').forEach(b=>b.addEventListener('click',()=>nav(b.dataset.s)));
+
+function openSheet(id){event&&event.stopPropagation();document.getElementById('veil').classList.add('on');document.getElementById(id).classList.add('on')}
+function closeSheets(){document.getElementById('veil').classList.remove('on');document.querySelectorAll('.sheet').forEach(s=>s.classList.remove('on'))}
+
+// chip groups: status + form chips (Project = multi-select)
+document.querySelectorAll('.chips').forEach(g=>{
+  g.querySelectorAll('.fchip,.schip').forEach(c=>c.addEventListener('click',e=>{
+    e.stopPropagation();
+    const lbl=g.previousElementSibling?g.previousElementSibling.textContent.trim():'';
+    const multi=lbl==='Project';
+    if(!multi)g.querySelectorAll('.fchip,.schip').forEach(x=>{if(x!==c)x.classList.remove('on')});
+    c.classList.toggle('on');
+  }));
+});
+
+let snackT;
+function toast(msg){
+  event&&event.stopPropagation();
+  const s=document.getElementById('snack');
+  document.getElementById('snack-txt').textContent=msg;
+  s.classList.add('on');clearTimeout(snackT);
+  snackT=setTimeout(()=>s.classList.remove('on'),3200);
+}
+
+/* ═══ Demo bridge — postMessage seam for the /demo React shell ═══
+   Contract: shell → {source:'nirman-demo', action:'navigate', target}
+             inner → {source:'nirman-demo-inner', event:'ready'|'navigated', screen}
+   Targets map 1:1 onto nav() except 'outcome', which is a bottom sheet. */
+(function(){
+  var ORIGIN = location.origin;
+  function emit(ev, extra){
+    try { parent.postMessage(Object.assign({source:'nirman-demo-inner', event:ev}, extra||{}), ORIGIN); } catch(e){}
+  }
+  // Embed mode strips this file's own stage-head + picker.
+  var params = new URLSearchParams(location.search);
+  if (params.get('embed') === '1') document.body.classList.add('embed');
+  // Announce screen changes from free taps + programmatic nav.
+  if (typeof nav === 'function') {
+    var _nav = nav;
+    nav = function(s){ _nav(s); emit('navigated', {screen: s}); };
+    window.nav = nav;
+  }
+  // The call-outcome checklist item maps to a sheet, not a screen.
+  if (typeof openSheet === 'function') {
+    var _openSheet = openSheet;
+    openSheet = function(id){ _openSheet(id); if (id === 'sheet-outcome') emit('navigated', {screen: 'outcome'}); };
+    window.openSheet = openSheet;
+  }
+  window.demoNavigate = function(target){
+    if (target === 'outcome') {
+      if (typeof nav === 'function') nav('detail');
+      if (typeof openSheet === 'function') openSheet('sheet-outcome');
+      return;
+    }
+    if (typeof nav === 'function') nav(target);
+  };
+  window.addEventListener('message', function(e){
+    if (e.origin !== ORIGIN) return;
+    var d = e.data || {};
+    if (d.source !== 'nirman-demo') return;
+    if (d.action === 'navigate') window.demoNavigate(d.target);
+  });
+  emit('ready');
+})();
+</script>
+</body>
+</html>

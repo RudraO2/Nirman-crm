@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ArrowRight, Play, TrendingUp } from "lucide-react";
 
 function GrowthVelocityCard() {
@@ -108,13 +109,13 @@ export function Hero() {
               Book a live demo
               <ArrowRight className="h-4 w-4" />
             </a>
-            <a
-              href="#platform"
+            <Link
+              href="/demo"
               className="inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
             >
               <Play className="h-4 w-4" />
-              See the pipeline
-            </a>
+              See it live
+            </Link>
           </div>
         </div>
 
