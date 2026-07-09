@@ -2,16 +2,19 @@
 // Triggered by the admin server action immediately after a successful assign_lead RPC.
 // Fans out FCM push to every device_token row of the new assignee.
 //
-// verify_jwt = false (deployed with --no-verify-jwt) — admin server action calls with
-// the service-role key in the Authorization header; we trust the gateway + service-role
-// bearer. Anonymous callers cannot reach this fn because the gateway enforces the
-// service-role bearer (set in supabase.config + verified by Authorization header check).
+// verify_jwt = false (deployed with --no-verify-jwt) — but this fn is invoked from the
+// admin web app's BROWSER client (assign-dialog.tsx), so the bearer is the admin's real
+// user JWT, not the service-role key. Story 8.3: authenticate that JWT in-function via
+// verifyJwtAndScope() and require role === 'admin', then scope all work to the caller's
+// tenant. (Previously it only checked `Bearer ` prefix — any anonymous caller passed.)
 //
 // Body: { lead_id: uuid, assignee_user_id: uuid }
 // Response: { sent: number, reason?: string }
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendFcmNotification } from '../_shared/fcm.ts';
+import { verifyJwtAndScope, isAuthFailure } from '../_shared/auth.ts';
+import { errorResponse } from '../_shared/errors.ts';
 
 interface AssignmentNotificationBody {
   lead_id: string;
@@ -30,11 +33,13 @@ Deno.serve(async (req) => {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
-  // Bearer guard — only service-role (or anon, which we reject below) can reach this.
-  const auth = req.headers.get('Authorization') ?? '';
-  if (!auth.startsWith('Bearer ')) {
-    return jsonResponse({ error: 'unauthorized' }, 401);
+  // Authenticate the admin's user JWT and bind the caller's tenant BEFORE any work.
+  const authCtx = await verifyJwtAndScope(req);
+  if (isAuthFailure(authCtx)) return authCtx.response;
+  if (authCtx.role !== 'admin') {
+    return errorResponse('forbidden_role', 'Admin only');
   }
+  const { tenantId } = authCtx;
 
   let payload: AssignmentNotificationBody;
   try {
@@ -65,11 +70,13 @@ Deno.serve(async (req) => {
   const title = 'New lead assigned';
   const body = (typeof leadName === 'string' && leadName.length > 0) ? leadName : 'New lead';
 
-  // Resolve tenant_id + device tokens for the assignee
+  // Device tokens for the assignee, scoped to the caller's tenant (defense in depth:
+  // an admin can only notify assignees inside their own tenant).
   const { data: tokens, error: tokErr } = await supabase
     .from('device_tokens')
-    .select('token, tenant_id')
-    .eq('user_id', assignee_user_id);
+    .select('token')
+    .eq('user_id', assignee_user_id)
+    .eq('tenant_id', tenantId);
   if (tokErr) {
     return jsonResponse({ error: 'token_lookup_failed', detail: tokErr.message }, 500);
   }
@@ -77,7 +84,6 @@ Deno.serve(async (req) => {
     return jsonResponse({ sent: 0, reason: 'no_tokens' });
   }
 
-  const tenantId = tokens[0].tenant_id as string;
   let sent = 0;
   for (const { token } of tokens) {
     const ok = await sendFcmNotification({

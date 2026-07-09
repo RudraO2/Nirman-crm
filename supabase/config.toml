@@ -380,6 +380,27 @@ deno_version = 2
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 
+# ── Story 8.3 — pin verify_jwt=false for the 7 auth-hardened fns ───────────────
+# These fns authenticate the caller IN-FUNCTION (admin JWT / service-role bearer /
+# cron secret), so the gateway must NOT also verify a JWT (cron + service-role callers
+# carry no user JWT). Codifying it here makes AC-7 durable: a plain `supabase functions
+# deploy <name>` keeps the gateway off, even if someone forgets the `--no-verify-jwt`
+# flag. Do NOT flip any of these to true — see 8-3-harden-edge-function-auth.md.
+[functions.send-assignment-notification]
+verify_jwt = false
+[functions.send-bulk-assignment-notification]
+verify_jwt = false
+[functions.send-developer-update]
+verify_jwt = false
+[functions.send-amendment-notification]
+verify_jwt = false
+[functions.process-overdue-followups]
+verify_jwt = false
+[functions.send-followup-notifications]
+verify_jwt = false
+[functions.streak-at-risk]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

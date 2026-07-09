@@ -38,11 +38,18 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
 - `FCM_SERVICE_ACCOUNT` edge secret **is set** (Firebase project `crm-lms-57c5d`).
 - `process-overdue-followups` + `send-followup-notifications` edge fns deployed.
 - pg_cron jobs **scheduled + active** (every 1 min / 5 min). pg_cron + pg_net enabled.
-- **vault `service_role_key` is NOT needed** — both notification fns are
-  `verify_jwt=false`, so the cron's gateway call works without it. Do not chase it.
 - `SUPABASE_SERVICE_ROLE_KEY` env is platform-injected; do not set it.
 - Verified live 2026-05-28: invoking the fn returned `{"sent":1}` (FCM accepted token).
-- **There is no outstanding manual Supabase/Firebase config.**
+- **Story 8.3 (2026-07-09) superseded the old "cron needs no secret" note.** The 3
+  cron fns (`process-overdue-followups`, `send-followup-notifications`, `streak-at-risk`)
+  now enforce a shared `CRON_SECRET` in the `x-cron-secret` header (in-function, still
+  `--no-verify-jwt`). Migration `0087_cron_secret_auth.sql` re-schedules the jobs to send it.
+  **Required post-deploy config (both values identical):**
+    - `SELECT vault.create_secret('<SECRET>', 'cron_secret');` (for the cron SQL)
+    - `supabase secrets set CRON_SECRET='<SECRET>'` (for the edge fns)
+  Generate once (`openssl rand -hex 32`). Without both, scheduled pushes will 401.
+  The 4 admin fns also now authenticate their caller (2 via admin JWT, 2 via service-role
+  bearer) — see story `8-3-harden-edge-function-auth.md`.
 
 ## 🔒 Admin `next dev` points at PROD (footgun — 2026-07-08)
 
