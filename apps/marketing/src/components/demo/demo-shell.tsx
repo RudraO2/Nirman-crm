@@ -104,6 +104,20 @@ export function DemoShell() {
     [ready],
   );
 
+  // Mark a surface ready and flush any queued navigate. Called both from the
+  // iframe's `ready` message AND its onLoad — onLoad is race-proof for a
+  // same-origin iframe (the inline bridge has run by load), so a `ready`
+  // message that arrives before this listener attaches can't strand the tour.
+  const markReady = useCallback((s: Surface) => {
+    setReady((r) => (r[s] ? r : { ...r, [s]: true }));
+    const q = pending.current[s];
+    const win = iframes.current[s]?.contentWindow;
+    if (q && win) {
+      win.postMessage({ source: "nirman-demo", action: "navigate", target: q }, window.location.origin);
+      pending.current[s] = null;
+    }
+  }, []);
+
   // ── postMessage listener (ready handshake + navigated auto-tick) ────────
   useEffect(() => {
     function onMsg(e: MessageEvent) {
@@ -115,15 +129,7 @@ export function DemoShell() {
       );
       if (!src) return;
       if (d.event === "ready") {
-        setReady((r) => ({ ...r, [src]: true }));
-        const q = pending.current[src];
-        if (q && iframes.current[src]?.contentWindow) {
-          iframes.current[src]!.contentWindow!.postMessage(
-            { source: "nirman-demo", action: "navigate", target: q },
-            window.location.origin,
-          );
-          pending.current[src] = null;
-        }
+        markReady(src);
       } else if (d.event === "navigated" && d.screen) {
         const screen = d.screen;
         setVisited((v) => {
@@ -142,7 +148,7 @@ export function DemoShell() {
     }
     window.addEventListener("message", onMsg);
     return () => window.removeEventListener("message", onMsg);
-  }, [surface]);
+  }, [surface, markReady]);
 
   // ── Deep link on mount: ?d=surface#slug, else device default ────────────
   useEffect(() => {
@@ -382,6 +388,7 @@ export function DemoShell() {
                       ref={(el) => {
                         iframes.current[s] = el;
                       }}
+                      onLoad={() => markReady(s)}
                       src={SRC[s]}
                       title={
                         s === "admin"
