@@ -44,12 +44,13 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
   cron fns (`process-overdue-followups`, `send-followup-notifications`, `streak-at-risk`)
   now enforce a shared `CRON_SECRET` in the `x-cron-secret` header (in-function, still
   `--no-verify-jwt`). Migration `0087_cron_secret_auth.sql` re-schedules the jobs to send it.
-  **Required post-deploy config (both values identical):**
-    - `SELECT vault.create_secret('<SECRET>', 'cron_secret');` (for the cron SQL)
-    - `supabase secrets set CRON_SECRET='<SECRET>'` (for the edge fns)
-  Generate once (`openssl rand -hex 32`). Without both, scheduled pushes will 401.
+  **✅ DEPLOYED TO PROD + VERIFIED 2026-07-10** (migrations 0087/0088/0089 pushed; all 7
+  fns redeployed). `cron_secret` set in **both** vault + edge `CRON_SECRET` (identical);
+  live cron ticks return 200, bad/no secret → 401. To ROTATE: update BOTH values.
   The 4 admin fns also now authenticate their caller (2 via admin JWT, 2 via service-role
-  bearer) — see story `8-3-harden-edge-function-auth.md`.
+  bearer) — see story `8-3-harden-edge-function-auth.md`. The 2 service-role fns
+  (`send-developer-update`, `send-amendment-notification`) are currently **dormant** (no
+  app-side caller yet — builder-ops UI deferred); a future caller MUST send the service-role bearer.
 
 ## 🔒 Admin `next dev` points at PROD (footgun — 2026-07-08)
 
