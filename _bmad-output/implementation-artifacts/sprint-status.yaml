@@ -74,6 +74,11 @@ development_status:
   8-5-transactional-email: backlog                    # SMTP (provider open decision)
   8-6-starter-whatsapp-templates-on-tenant-create: backlog  # migration 0057
   8-7-replace-vulnerable-excel-parser: backlog        # xlsx -> exceljs (D-6.1-2)
+  # ⚠️ NUMBERING COLLISION: the P0 security fix below was designated "Story 8.3" by
+  # Winston's 2026-07-09 security review, but that slot is taken by self-serve-signup
+  # above. Tracked under a distinct key here pending re-number. See story file
+  # 8-3-harden-edge-function-auth.md.
+  8-3-harden-edge-function-auth: in-review            # 7 verify_jwt=false fns auth in-fn (admin-JWT/service-role/cron-secret) + 0087 + config.toml pin. Review-loop 2026-07-10: 3-lens re-review clean (no new findings), verified free/local (deno 11/11, 0087 applied+idempotent on local pg_cron). Deploy-ready; 0087→0088→0089 push together pending prod
 
   # ── Epic 9: Billing — Stripe per-seat (LATER, not this sprint) ──
   epic-9: backlog

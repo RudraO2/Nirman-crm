@@ -12,6 +12,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendFcmNotification } from '../_shared/fcm.ts';
+import { requireServiceRole } from '../_shared/serviceAuth.ts';
 
 interface DeveloperUpdateBody {
   update_id: string;
@@ -36,10 +37,9 @@ Deno.serve(async (req) => {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
-  const auth = req.headers.get('Authorization') ?? '';
-  if (!auth.startsWith('Bearer ')) {
-    return jsonResponse({ error: 'unauthorized' }, 401);
-  }
+  // Service-role bearer required (invoked from a trusted service-role context, not a browser).
+  const unauth = requireServiceRole(req);
+  if (unauth) return unauth;
 
   let payload: DeveloperUpdateBody;
   try {

@@ -5,11 +5,16 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendFcmNotification } from '../_shared/fcm.ts';
+import { requireCronSecret } from '../_shared/serviceAuth.ts';
 
 Deno.serve(async (req) => {
   if (req.method !== 'POST' && req.method !== 'GET') {
     return new Response('Method Not Allowed', { status: 405 });
   }
+
+  // pg_cron caller must present the shared CRON_SECRET (story 8.3).
+  const unauth = requireCronSecret(req);
+  if (unauth) return unauth;
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,

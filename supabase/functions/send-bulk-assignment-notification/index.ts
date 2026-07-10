@@ -4,10 +4,14 @@
 // Body: { assignments: [{ user_id: string, count: number }] }
 // Response: { sent: number }
 //
-// verify_jwt = false (deployed with --no-verify-jwt) — same pattern as send-assignment-notification.
+// verify_jwt = false (deployed with --no-verify-jwt) — invoked from the admin web app's
+// BROWSER client (bulk-assign-dialog.tsx), so the bearer is the admin's real user JWT.
+// Story 8.3: authenticate that JWT and require role === 'admin', then tenant-scope all work.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendFcmNotification } from '../_shared/fcm.ts';
+import { verifyJwtAndScope, isAuthFailure } from '../_shared/auth.ts';
+import { errorResponse } from '../_shared/errors.ts';
 
 interface EmployeeAssignment {
   user_id: string;
@@ -30,10 +34,13 @@ Deno.serve(async (req) => {
     return new Response('Method Not Allowed', { status: 405 });
   }
 
-  const auth = req.headers.get('Authorization') ?? '';
-  if (!auth.startsWith('Bearer ')) {
-    return jsonResponse({ error: 'unauthorized' }, 401);
+  // Authenticate the admin's user JWT and bind the caller's tenant BEFORE any work.
+  const authCtx = await verifyJwtAndScope(req);
+  if (isAuthFailure(authCtx)) return authCtx.response;
+  if (authCtx.role !== 'admin') {
+    return errorResponse('forbidden_role', 'Admin only');
   }
+  const { tenantId } = authCtx;
 
   let payload: BulkNotificationBody;
   try {
@@ -60,7 +67,8 @@ Deno.serve(async (req) => {
     const { data: tokens, error: tokErr } = await supabase
       .from('device_tokens')
       .select('token')
-      .eq('user_id', user_id);
+      .eq('user_id', user_id)
+      .eq('tenant_id', tenantId);
 
     if (tokErr || !tokens?.length) continue;
 
