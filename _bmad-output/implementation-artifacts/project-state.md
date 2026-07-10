@@ -14,17 +14,15 @@ Repo: `nirman-crm/` (github.com/RudraO2/Nirman-crm, branch `main`). Supabase pro
 | **Admin web** | `apps/admin` | Next 16 + shadcn + Tailwind v4 + `@supabase/ssr` | **Prod** (leads, team, templates, inventory, builder-ops pages) |
 | **Marketing/landing** | `apps/marketing` | Next.js (Luminous template → branded) | **Built** (hero/pricing/footer; testimonials placeholder). Deploy status unconfirmed |
 | **Landing demo** | `/demo` route in marketing | React shell iframing ui-redesign HTML | **Built** |
-| **Ops console (founder cockpit)** | `apps/ops` | Next 16 + shadcn + Tailwind v4 | **Built LOCAL only** — NOT committed, NOT pushed, no Vercel (see §Ops) |
+| **Ops console (founder cockpit)** | `apps/ops` | Next 16 + shadcn + Tailwind v4 | **Committed to git `main`** (commit `ad0bbe4`, pushed origin 2026-07-10). Migrations `0090/0091` in git but **NOT yet pushed to prod DB**; no Vercel deploy yet (see §Ops) |
 | **Backend / DB** | `supabase/migrations` + `supabase/functions` | Postgres RLS + edge fns (Deno) | **Prod head = migration `0089`** |
 
 ---
 
 ## Backend state
 
-- **Prod migration head: `0089`.** Sequence recap: 0056 tenant-status chokepoint · 0057–0086 builder-ops + unit CRUD · 0087 cron-secret auth (8.3) · 0088 prepaid billing seam (9.1) · 0089 ops-console backend (9.2).
-- **Local-only, NOT pushed (this session):**
-  - `0090_ops_list_plans.sql` — guarded read of the plan catalogue (ops renew form needs a `plan_id`; `plans` is deny-all RLS).
-  - `0091_provision_tenant.sql` — guarded provisioning fn (creates tenant + first admin, dual-store, audit-logged).
+- **Prod migration head: `0091`** (pushed 2026-07-10). Sequence recap: 0056 tenant-status chokepoint · 0057–0086 builder-ops + unit CRUD · 0087 cron-secret auth (8.3) · 0088 prepaid billing seam (9.1) · 0089 ops-console backend (9.2) · **0090 ops_list_plans (9.4) + 0091 provision_tenant (9.5) — DONE, live on prod, verified `has_list_plans=1 has_provision=1 active_plans=1`**.
+  - ⚠️ `platform_admins` is **empty on prod (0 rows)** — until one row (your `auth.uid()`) is inserted, NOBODY can log into the ops console. This is the next unlock. See §Ops "Deploy checkpoint".
 - **Billing/lifecycle model (Epic 9, LOCKED):** per-project monthly **prepaid**. Access gated purely on `tenants.status` via `auth_tenant_id()` (0056). Money is collected **out-of-band** (UPI/cash); the app only *records* it. Razorpay is later.
 - **The ops RPC surface (0089 + 0090/0091), all `is_platform_admin()`-guarded, audit-logged, RLS-native (NO service-role key in any client):**
   - `ops_list_tenants()` · `ops_list_tenant_payments(tenant)` · `ops_list_audit(limit,offset)` · `ops_list_plans()` (0090)
@@ -56,7 +54,17 @@ Verified this session end-to-end via the local API gateway: login gate, tenant l
 
 Key files: `apps/ops/src/app/{layout,globals.css,(auth)/login,(app)/layout,(app)/page,(app)/audit,(app)/provision}` · `apps/ops/src/components/{ops-sidebar,status-pill,tenant-console,tenant-detail-sheet,confirm-modal,renew-dialog,audit-table,provision-flow}.tsx` · `apps/ops/src/lib/{types,format,utils,supabase/*}.ts`.
 
-**⚠️ At risk:** all of `apps/ops` + migrations 0090/0091 are **uncommitted, local-only.** If not committed to git they are lost on a clean checkout. First action for the next session should be to decide whether to `git add apps/ops supabase/migrations/0090* supabase/migrations/0091*` and commit to `main` (a commit is free; no prod push).
+### Deploy checkpoint (last updated 2026-07-10) — sale motion = FOUNDER-LED (manual provisioning, no self-serve signup)
+
+Goal: ops console live on the web so Rudra can provision paying builders from anywhere. Progress:
+
+- [x] **Step 1 — Commit + push code.** `apps/ops` + migrations 0090/0091 committed to git `main` (`ad0bbe4`), pushed to origin 2026-07-10. No longer at risk on clean checkout. **DONE.**
+- [x] **Step 2 — Push migrations to prod DB.** `supabase db push --linked` applied 0090/0091. Prod head `0091`. Verified `has_list_plans=1 has_provision=1 active_plans=1`. **DONE.**
+- [ ] **Step 3 — Seed platform admin (BLOCKS console login).** `platform_admins` = 0 rows on prod. Needs: (a) Rudra creates an ops auth user via Supabase dashboard → Auth → Add user (email + strong pw, **Auto Confirm**); (b) Amelia `INSERT INTO public.platform_admins(user_id) SELECT id FROM auth.users WHERE email='<that email>'`. Login flow = `signInWithPassword` → `is_platform_admin()` gate (guard = `user_id = auth.uid()`). **PENDING Rudra's email.**
+- [ ] **Step 4 — Deploy apps/ops to Vercel.** Import repo `RudraO2/Nirman-crm`, **Root Directory = `apps/ops`** (npm workspaces monorepo, single root lockfile; no vercel.json — same per-app pattern as admin/marketing). Env (Production): `NEXT_PUBLIC_SUPABASE_URL=https://vhgruadourflpxuzuxfn.supabase.co`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<prod anon/public key from dashboard Settings→API>`. **NEVER add `service_role`.** **PENDING Rudra (needs interactive Vercel login + the prod anon key; Vercel CLI not installed locally).**
+- [ ] **Step 5 — Verify end-to-end on prod URL:** login gate, tenant list, provision a builder, that new builder-admin signs into the mobile/admin app.
+
+After Step 5: fully sellable — demo → `/provision` → hand builder their login → collect UPI/cash → record payment in console.
 
 ---
 
@@ -75,7 +83,7 @@ Key files: `apps/ops/src/app/{layout,globals.css,(auth)/login,(app)/layout,(app)
 
 Ask by story key so a fresh chat has context:
 - **9.6 tenant-side recharge/lockout screen** — the friendly "account paused → recharge" UI a suspended builder sees (mobile Flutter + `apps/admin` web), via `get_my_billing_status()`. Warm amber, Hindi-first, NOT the cockpit style. _Biggest UX gap._
-- **Commit + deploy the ops console** — git commit `apps/ops` + push 0090/0091; stand up `apps/ops` on its own Vercel subdomain (design §3), point env at prod, seed a `platform_admins` row on prod.
+- ~~Commit + deploy the ops console~~ — **IN PROGRESS, see §Ops "Deploy checkpoint"**: code pushed ✓, 0090/0091 on prod ✓; remaining = seed platform_admins row + Vercel deploy (both need Rudra). Not a fresh handle — resume that checklist.
 - **9.7 ops hardening** — enforce MFA/TOTP on login + step-up on suspend/provision; SECURITY DEFINER sweep; optional IP allowlist.
 - **Razorpay** — bolts onto `renew_tenant()` (zero rework by design); the mobile "recharge" screen.
 - **Mobile builder-ops UI** — Epics 12–16 backend is on prod; the mobile screens were deferred.
