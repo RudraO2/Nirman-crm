@@ -84,8 +84,8 @@ After Step 5: fully sellable — demo → `/provision` → hand builder their lo
 ## Next handles (NOT built — names to hand Amelia later)
 
 Ask by story key so a fresh chat has context:
-- **9.6 tenant-side recharge/lockout screen** — the friendly "account paused → recharge" UI a suspended builder sees (mobile Flutter + `apps/admin` web), via `get_my_billing_status()`. Warm amber, Hindi-first, NOT the cockpit style. _Biggest UX gap._
-- ~~Commit + deploy the ops console~~ — **IN PROGRESS, see §Ops "Deploy checkpoint"**: code pushed ✓, 0090/0091 on prod ✓; remaining = seed platform_admins row + Vercel deploy (both need Rudra). Not a fresh handle — resume that checklist.
+- ~~9.6 tenant-side recharge/lockout screen~~ — **BUILT 2026-07-10 (status `review`, commit `933f647`).** Mobile `features/billing` (repo+provider+`PausedScreen`) gated at `AppShell`; admin web server-layout billing gate + `PausedRecharge`. Server-enforced (0056), UI display-only + fail-open. 10/10 mobile tests, analyze clean, admin tsc+next build green. NO migration. **Left:** device/browser look-pass, live authed AC#1 run on local stack, set real `OperatorContact` support number, then code-review. Story: `9-6-tenant-side-recharge-lockout.md`.
+- ~~Commit + deploy the ops console~~ — **Steps 1–4 DONE (see §Ops "Deploy checkpoint"): code pushed ✓, 0090/0091 on prod ✓, platform_admins seeded ✓, Vercel live ✓.** Left = Step 5 (verify login + provision loop on the live URL). Record the vercel.app URL in §Ops (still a TODO).
 - **9.7 ops hardening** — enforce MFA/TOTP on login + step-up on suspend/provision; SECURITY DEFINER sweep; optional IP allowlist.
 - **Razorpay** — bolts onto `renew_tenant()` (zero rework by design); the mobile "recharge" screen.
 - **Mobile builder-ops UI** — Epics 12–16 backend is on prod; the mobile screens were deferred.
