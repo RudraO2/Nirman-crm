@@ -21,7 +21,7 @@ Repo: `nirman-crm/` (github.com/RudraO2/Nirman-crm, branch `main`). Supabase pro
 
 ## Backend state
 
-- **Prod migration head: `0091`** (pushed 2026-07-10). Sequence recap: 0056 tenant-status chokepoint · 0057–0086 builder-ops + unit CRUD · 0087 cron-secret auth (8.3) · 0088 prepaid billing seam (9.1) · 0089 ops-console backend (9.2) · **0090 ops_list_plans (9.4) + 0091 provision_tenant (9.5) — DONE, live on prod, verified `has_list_plans=1 has_provision=1 active_plans=1`**.
+- **Prod migration head: `0092`** (pushed 2026-07-10). Sequence recap: 0056 tenant-status chokepoint · 0057–0086 builder-ops + unit CRUD · 0087 cron-secret auth (8.3) · 0088 prepaid billing seam (9.1) · 0089 ops-console backend (9.2) · 0090 ops_list_plans (9.4) + 0091 provision_tenant (9.5) · **0092 hard_tenant_cutoff (9.6) — DONE on prod: guarded `get_my_leads` on tenant status (closes the last un-gated employee read) + relaxed `get_my_billing_status` to any tenant member. Verified: `get_my_leads` has_guard+calls_chokepoint, billing admin-gate removed, live tenant still `active` (guard is a no-op for active/trial).**
   - ⚠️ `platform_admins` is **empty on prod (0 rows)** — until one row (your `auth.uid()`) is inserted, NOBODY can log into the ops console. This is the next unlock. See §Ops "Deploy checkpoint".
 - **Billing/lifecycle model (Epic 9, LOCKED):** per-project monthly **prepaid**. Access gated purely on `tenants.status` via `auth_tenant_id()` (0056). Money is collected **out-of-band** (UPI/cash); the app only *records* it. Razorpay is later.
 - **The ops RPC surface (0089 + 0090/0091), all `is_platform_admin()`-guarded, audit-logged, RLS-native (NO service-role key in any client):**
