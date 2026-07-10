@@ -4,7 +4,11 @@ baseline_commit: b8a94a56d76b54229a5162c146ab153f5faefeea
 
 # Story 9.6: Tenant-side recharge / lockout screen
 
-Status: review
+Status: done
+<!-- done 2026-07-10: 3-layer code review complete, CRITICAL resolved via migration 0092
+     (deployed prod, head 0092, verified), all patches applied, 143/143 tests. Non-blocking
+     follow-ups (Rudra, before selling): device/browser look-pass + set real operator support #. -->
+
 
 <!-- Epics.md numbers this "9.3" (mobile recharge screen). Tracked as 9.6 to avoid the
      ops-console numbering collision, matching sprint-status.yaml / project-state.md. -->
