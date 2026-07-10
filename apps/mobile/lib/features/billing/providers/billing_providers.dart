@@ -5,74 +5,67 @@ import '../data/billing_repository.dart';
 
 part 'billing_providers.g.dart';
 
-/// Which lockout face to show (story 9.6).
-enum PausedKind {
-  /// Tenant is active/trial — normal app.
-  notPaused,
+/// Tenant access state for the current session (story 9.6).
+enum TenantAccess {
+  /// Active/trial, not near expiry — normal app.
+  ok,
 
-  /// Tenant admin whose subscription lapsed → full recharge screen.
-  adminLockedOut,
+  /// Active/trial but within the advance-warning window — normal app + banner.
+  warning,
 
-  /// Employee inside a suspended tenant → simple "contact your admin" screen.
-  employeeLockedOut,
+  /// Suspended/lapsed — locked out, show the recharge screen.
+  lockedOut,
 }
 
-class PausedState {
-  final PausedKind kind;
+class BillingGate {
+  final TenantAccess access;
 
-  /// Only populated for [PausedKind.adminLockedOut] (billing is admin-only).
+  /// Billing snapshot (present for [TenantAccess.warning] and [lockedOut]).
   final BillingStatus? billing;
 
-  const PausedState(this.kind, [this.billing]);
+  /// JWT `role == 'admin'` — selects recharge (admin) vs "contact admin" (employee) copy.
+  final bool isAdmin;
 
-  static const notPaused = PausedState(PausedKind.notPaused);
+  const BillingGate(this.access, {this.billing, this.isAdmin = false});
 
-  bool get isLockedOut => kind != PausedKind.notPaused;
+  static const ok = BillingGate(TenantAccess.ok);
+
+  bool get isLockedOut => access == TenantAccess.lockedOut;
+  bool get isWarning => access == TenantAccess.warning;
 }
 
-/// Resolves whether the current tenant is locked out, and which screen to show.
+/// Resolves the current tenant's access state from its billing status.
 ///
-/// SECURITY NOTE (AC #1): this is a *display* decision only. Access is enforced
-/// server-side by `auth_tenant_id()` (0056); if this provider is wrong or errors,
-/// the worst case is a suspended user briefly sees an empty app shell whose data
-/// RPCs all still fail-closed at Postgres. It therefore fails OPEN on the display
-/// (treats ambiguous/network errors as "not paused" → normal retry, AC #7) rather
-/// than risk locking out a paying, active customer over a transient blip.
+/// SECURITY (AC #1): display decision only. Access is enforced server-side — the
+/// `auth_tenant_id()` chokepoint (0056) plus migration 0092 (which closed the last
+/// un-gated read, `get_my_leads`) mean a suspended tenant has NO reachable data on
+/// any RPC. So this provider FAILS OPEN on read/network error (returns `ok` → normal
+/// app) rather than risk locking out a paying customer over a transient blip; the
+/// server stays the gate regardless.
+///
+/// `get_my_billing_status()` is now readable by any tenant member (0092), so both
+/// admins and employees resolve reliably — no fragile data-RPC probe.
 @riverpod
-Future<PausedState> pausedState(PausedStateRef ref) async {
-  // Re-evaluate on auth events — notably TOKEN_REFRESHED (fires on app resume)
-  // and SIGNED_IN, so a builder is let back in after the operator renews without
-  // a reinstall, and re-checked whenever the app comes to the foreground.
+Future<BillingGate> billingGate(BillingGateRef ref) async {
+  // Re-evaluate on auth events — TOKEN_REFRESHED (fires on app resume) and SIGNED_IN —
+  // so a builder is let back in after the operator renews, without a reinstall.
   ref.watch(authStateChangesProvider);
 
   final session = Supabase.instance.client.auth.currentSession;
-  if (session == null) return PausedState.notPaused;
+  if (session == null) return BillingGate.ok;
 
-  final repo = ref.watch(billingRepositoryProvider);
-  final role = session.user.appMetadata['role'] as String?;
-
-  if (role == 'admin') {
-    try {
-      final billing = await repo.getMyBillingStatus();
-      return billing.isLockedOut
-          ? PausedState(PausedKind.adminLockedOut, billing)
-          : PausedState.notPaused;
-    } catch (_) {
-      // Network / unexpected error reading billing → don't false-lock an admin.
-      return PausedState.notPaused;
-    }
-  }
-
-  // Employee: cannot read billing (admin-only). Detect via the data-RPC
-  // chokepoint failure instead.
+  final isAdmin = session.user.appMetadata['role'] == 'admin';
   try {
-    final locked = await repo.probeLockedOut();
-    return locked
-        ? const PausedState(PausedKind.employeeLockedOut)
-        : PausedState.notPaused;
+    final b = await ref.watch(billingRepositoryProvider).getMyBillingStatus();
+    if (b.isLockedOut) {
+      return BillingGate(TenantAccess.lockedOut, billing: b, isAdmin: isAdmin);
+    }
+    if (b.isExpiringSoon) {
+      return BillingGate(TenantAccess.warning, billing: b, isAdmin: isAdmin);
+    }
+    return BillingGate.ok;
   } catch (_) {
-    // Non-lockout error (network etc.) → treat as not paused; the normal
-    // screens will surface their own retry.
-    return PausedState.notPaused;
+    // Network / unexpected error → don't false-lock; server still enforces access.
+    return BillingGate.ok;
   }
 }

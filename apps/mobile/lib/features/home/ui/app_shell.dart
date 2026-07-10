@@ -10,7 +10,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../billing/providers/billing_providers.dart';
-import '../../billing/ui/paused_screen.dart';
 import '../../leads/data/models/lead_model.dart';
 import '../../leads/providers/lead_providers.dart';
 
@@ -20,18 +19,13 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Story 9.6 — single interception point for a locked-out tenant. When the
-    // subscription has lapsed (server-enforced via 0056), replace the entire
-    // tab shell with the recharge screen so no tab/lead surface is reachable.
-    // Fail-open on loading/error (show normal app) — data RPCs still fail-closed
-    // server-side, so this is a display choice only, never the access gate.
-    final paused = ref.watch(pausedStateProvider).maybeWhen(
-          data: (s) => s.isLockedOut ? s : null,
+    // Story 9.6 — lockout ROUTING is handled by the router (`/paused`), so every
+    // route (not just tabs) is covered. Here we only surface the non-blocking
+    // "subscription ending soon" warning banner when within the warning window.
+    final warnBilling = ref.watch(billingGateProvider).maybeWhen(
+          data: (g) => g.isWarning ? g.billing : null,
           orElse: () => null,
         );
-    if (paused != null) {
-      return PausedScreen(state: paused);
-    }
 
     // Overdue follow-up count → red badge on the Plan tab. Reads the existing
     // myLeadsProvider (same source FollowupsScreen groups under "OVERDUE"); no
@@ -43,7 +37,13 @@ class AppShell extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.surfaceBase,
-      body: navigationShell,
+      body: Column(
+        children: [
+          if (warnBilling != null)
+            _ExpiryBanner(daysRemaining: warnBilling.daysRemaining),
+          Expanded(child: navigationShell),
+        ],
+      ),
       bottomNavigationBar: _TabBar(
         currentIndex: navigationShell.currentIndex,
         planBadge: overdue,
@@ -65,6 +65,45 @@ class AppShell extends ConsumerWidget {
       final loc = dt.toLocal();
       return DateTime(loc.year, loc.month, loc.day).isBefore(today);
     }).length;
+  }
+}
+
+/// Story 9.6 — non-blocking "subscription ending soon" banner (last few days
+/// before expiry). Amber, Hindi-first. The app still works fully; this is the
+/// friendly heads-up before the hard cutoff.
+class _ExpiryBanner extends StatelessWidget {
+  const _ExpiryBanner({required this.daysRemaining});
+  final int? daysRemaining;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = daysRemaining ?? 0;
+    return Material(
+      color: AppColors.accentSoft,
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: Row(
+            children: [
+              const Icon(Icons.info_outline,
+                  size: 18, color: AppColors.statusWarm),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Subscription $d din में समाप्त हो रहा है — कृपया recharge करें।',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.inkPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
 

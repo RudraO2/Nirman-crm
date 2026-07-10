@@ -8,17 +8,41 @@ import '../../auth/data/auth_repository.dart';
 import '../data/billing_repository.dart';
 import '../providers/billing_providers.dart';
 
-/// Story 9.6 — the friendly "account paused → recharge" face shown when a tenant
-/// is locked out. The real lockout is server-side (0056); this screen only
-/// explains it and offers a way back. Warm amber, Hindi-first.
-class PausedScreen extends ConsumerWidget {
-  const PausedScreen({super.key, required this.state});
-
-  final PausedState state;
+/// Route wrapper for `/paused`. Reads the billing gate and renders the recharge
+/// screen when locked out; otherwise shows a brief loader (the router redirect
+/// carries a recovered/renewed tenant back to `/home`).
+class PausedRouteScreen extends ConsumerWidget {
+  const PausedRouteScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isAdmin = state.kind == PausedKind.adminLockedOut;
+    final gate = ref.watch(billingGateProvider);
+    return gate.maybeWhen(
+      data: (g) => g.isLockedOut
+          ? PausedScreen(gate: g)
+          : const Scaffold(
+              backgroundColor: AppColors.surfaceBase,
+              body: Center(child: CircularProgressIndicator()),
+            ),
+      orElse: () => const Scaffold(
+        backgroundColor: AppColors.surfaceBase,
+        body: Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+}
+
+/// Story 9.6 — the friendly "account paused → recharge" face shown when a tenant
+/// is locked out. The real lockout is server-side (0056 + 0092); this screen only
+/// explains it and offers a way back. Warm amber, Hindi-first.
+class PausedScreen extends ConsumerWidget {
+  const PausedScreen({super.key, required this.gate});
+
+  final BillingGate gate;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isAdmin = gate.isAdmin;
     return Scaffold(
       backgroundColor: AppColors.surfaceBase,
       body: SafeArea(
@@ -68,15 +92,15 @@ class PausedScreen extends ConsumerWidget {
                       color: AppColors.inkDisabled,
                     ),
                   ),
-                  if (isAdmin && state.billing != null) ...[
+                  if (isAdmin && gate.billing != null) ...[
                     const SizedBox(height: 22),
-                    _BillingCard(billing: state.billing!),
+                    _BillingCard(billing: gate.billing!),
                     const SizedBox(height: 22),
                     _RechargeButtons(),
                   ],
                   const SizedBox(height: 24),
                   TextButton(
-                    onPressed: () => ref.invalidate(pausedStateProvider),
+                    onPressed: () => ref.invalidate(billingGateProvider),
                     child: const Text(
                       'मैंने payment कर दी — दोबारा जाँचें',
                       style: TextStyle(
@@ -182,9 +206,22 @@ class _BillingCard extends StatelessWidget {
 }
 
 class _RechargeButtons extends StatelessWidget {
-  Future<void> _launch(Uri uri) async {
-    if (await canLaunchUrl(uri)) {
+  Future<void> _launch(BuildContext context, Uri uri) async {
+    final ok = await canLaunchUrl(uri);
+    if (ok) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+      return;
+    }
+    // No app to handle the intent (e.g. no dialer / WhatsApp not installed).
+    // Never leave the only way back as a dead tap — show the number to copy.
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'संपर्क नहीं खुल सका। कृपया कॉल करें: ${OperatorContact.phoneDisplay}',
+          ),
+        ),
+      );
     }
   }
 
@@ -194,12 +231,13 @@ class _RechargeButtons extends StatelessWidget {
       'https://wa.me/${OperatorContact.phoneE164}'
       '?text=${Uri.encodeComponent(OperatorContact.whatsappMessage)}',
     );
-    final tel = Uri.parse('tel:${OperatorContact.phoneE164}');
+    // tel: needs the leading '+' so the country code (91) is not read as a local prefix.
+    final tel = Uri.parse('tel:+${OperatorContact.phoneE164}');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         FilledButton.icon(
-          onPressed: () => _launch(wa),
+          onPressed: () => _launch(context, wa),
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.statusSold,
             padding: const EdgeInsets.symmetric(vertical: 14),
@@ -209,7 +247,7 @@ class _RechargeButtons extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(
-          onPressed: () => _launch(tel),
+          onPressed: () => _launch(context, tel),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppColors.inkPrimary,
             side: const BorderSide(color: AppColors.borderStrong),

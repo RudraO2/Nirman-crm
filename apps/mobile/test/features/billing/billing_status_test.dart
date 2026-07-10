@@ -1,10 +1,8 @@
-// Story 9.6 — pure billing/lockout logic tests (no backend, no plugins).
-// Covers the two risky decisions: (1) BillingStatus interpretation of the
-// get_my_billing_status() payload, (2) classifying a caught error as
-// "tenant locked out" vs a generic error we must NOT misread as paused (AC #7).
+// Story 9.6 — pure billing/lockout/warning logic tests (no backend, no plugins).
+// The lockout itself is server-enforced (0056 + 0092); these cover the client's
+// interpretation of get_my_billing_status() that picks screen vs banner vs normal.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:nirman_crm/features/billing/data/billing_repository.dart';
 
 void main() {
@@ -22,6 +20,7 @@ void main() {
       expect(s.daysRemaining, 12);
       expect(s.isLockedOut, isFalse);
       expect(s.isOverdue, isFalse);
+      expect(s.isExpiringSoon, isFalse);
     });
 
     test('null paid_until / days_remaining is tolerated', () {
@@ -30,26 +29,26 @@ void main() {
       expect(s.paidUntil, isNull);
       expect(s.daysRemaining, isNull);
       expect(s.isOverdue, isFalse);
+      expect(s.isExpiringSoon, isFalse);
     });
   });
 
-  group('BillingStatus.isLockedOut mirrors the 0056 chokepoint', () {
+  group('isLockedOut mirrors the 0056/0092 chokepoint', () {
     test('active and trial are the only allowed states', () {
       expect(const BillingStatus(status: 'active').isLockedOut, isFalse);
       expect(const BillingStatus(status: 'trial').isLockedOut, isFalse);
     });
-
     test('suspended / cancelled / unknown are locked out', () {
       expect(const BillingStatus(status: 'suspended').isLockedOut, isTrue);
       expect(const BillingStatus(status: 'cancelled').isLockedOut, isTrue);
-      expect(const BillingStatus(status: 'grace').isLockedOut, isTrue);
       expect(const BillingStatus(status: 'unknown').isLockedOut, isTrue);
     });
   });
 
-  group('BillingStatus.isOverdue', () {
+  group('isOverdue', () {
     test('negative days_remaining is overdue', () {
-      expect(const BillingStatus(status: 'suspended', daysRemaining: -3).isOverdue,
+      expect(
+          const BillingStatus(status: 'suspended', daysRemaining: -3).isOverdue,
           isTrue);
     });
     test('zero/positive/null is not overdue', () {
@@ -61,26 +60,29 @@ void main() {
     });
   });
 
-  group('isTenantLockedOutError (AC #7 — no false positives)', () {
-    test('P0001 code is a lockout signal', () {
-      const e = PostgrestException(
-          message: 'missing_tenant_context', code: 'P0001');
-      expect(isTenantLockedOutError(e), isTrue);
+  group('isExpiringSoon (3-day advance warning)', () {
+    test('active within the window (0..3 days) warns', () {
+      expect(const BillingStatus(status: 'active', daysRemaining: 3)
+          .isExpiringSoon, isTrue);
+      expect(const BillingStatus(status: 'active', daysRemaining: 1)
+          .isExpiringSoon, isTrue);
+      expect(const BillingStatus(status: 'active', daysRemaining: 0)
+          .isExpiringSoon, isTrue);
     });
-
-    test('message match alone is enough', () {
-      const e = PostgrestException(
-          message: 'error: missing_tenant_context', code: null);
-      expect(isTenantLockedOutError(e), isTrue);
+    test('outside the window does not warn', () {
+      expect(const BillingStatus(status: 'active', daysRemaining: 4)
+          .isExpiringSoon, isFalse);
+      expect(const BillingStatus(status: 'active', daysRemaining: 30)
+          .isExpiringSoon, isFalse);
     });
-
-    test('a different Postgrest error is NOT a lockout', () {
-      const e = PostgrestException(message: 'permission denied', code: '42501');
-      expect(isTenantLockedOutError(e), isFalse);
+    test('locked-out or overdue is NOT a warning (that is the lockout state)', () {
+      expect(const BillingStatus(status: 'suspended', daysRemaining: 2)
+          .isExpiringSoon, isFalse);
+      expect(const BillingStatus(status: 'active', daysRemaining: -1)
+          .isExpiringSoon, isFalse);
     });
-
-    test('a generic/network error is NOT a lockout', () {
-      expect(isTenantLockedOutError(Exception('SocketException')), isFalse);
+    test('null days_remaining does not warn', () {
+      expect(const BillingStatus(status: 'active').isExpiringSoon, isFalse);
     });
   });
 }

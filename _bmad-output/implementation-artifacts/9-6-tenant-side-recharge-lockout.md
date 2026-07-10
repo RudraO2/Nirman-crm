@@ -139,6 +139,27 @@ JWT refresh — no code change here. See memory `project_business_model`, [Sourc
 - [Source: memory project_business_model — per-project prepaid, decoupled collection]
 - [Source: nirman-crm/CLAUDE.md — migrations file-based; admin dev points at prod footgun]
 
+## Review Findings (code-review 2026-07-10, 3-layer: blind + edge + auditor)
+
+### Decision needed — RESOLVED 2026-07-10 (Rudra: hard cutoff, both roles, no bypass, clean UI; warn 3 days, no grace)
+- [x] **[Review][Decision] CRITICAL — suspended employees still read leads; employee lockout never triggers.** FIXED via **migration `0092_hard_tenant_cutoff.sql`**: (a) added the `auth_tenant_id() IS NULL → RAISE missing_tenant_context` guard to `get_my_leads` (the ONLY employee RPC that lacked it — audited all 20; every other already gated), so a suspended tenant now has NO reachable data on ANY RPC; (b) relaxed `get_my_billing_status` from admin-only to any tenant member (own-tenant, no ledger) so BOTH roles detect lockout + see the warning — dropped the fragile probe entirely (dissolves the P0001 patch below). **Verified on local Docker (authed JWT sim): suspended→get_my_leads `missing_tenant_context`, employee reads billing `status:suspended`, active tenant returns 2 leads unaffected, status restored.** Prod push of 0092 PENDING Rudra's OK.
+
+### Patches — all applied 2026-07-10
+- [x] **[Review][Patch] `isTenantLockedOutError` bare `P0001` false-positive** — DISSOLVED: the probe is gone (both roles now read `get_my_billing_status` authoritatively). No P0001 classification anymore.
+- [x] **[Review][Patch] AC#4 routing gap — non-shell routes bypass the paused gate.** FIXED: moved lockout gating into the `app_router.dart` `redirect` via a global `billingLockNotifier` (fed by `billingGateProvider` from the app root, `Listenable.merge` refresh). EVERY route now bounces to `/paused` when locked out; `/paused`, password-change, alarm-ring exempt; recovered→/home. [app_router.dart, app.dart, paused_screen.dart PausedRouteScreen]
+- [x] **[Review][Patch] `tel:` missing `+`.** FIXED `tel:+<e164>` on both surfaces. [paused_screen.dart, paused-recharge.tsx]
+- [x] **[Review][Patch] `_launch` dead-tap on `canLaunchUrl==false`.** FIXED: SnackBar fallback showing the number. [paused_screen.dart]
+
+### Deferred (pre-existing / low, revisit)
+- [x] **[Review][Defer] Admin web swallows `tenant_missing` (42501) as fail-open** → a deleted/malformed-JWT admin sees an empty app, not recharge. Rare edge. [apps/admin/src/app/(app)/layout.tsx]
+- [x] **[Review][Defer] Startup/refresh flash of the tab shell during `AsyncLoading`** before paused resolves (compounds the employee-read gap until Decision is fixed). Retain previous value / show a neutral loader. [app_shell.dart]
+- [x] **[Review][Defer] `pausedState` fires an RPC on every auth event** incl. hourly `TOKEN_REFRESHED` — recurring round-trip for active tenants. [billing_providers.dart]
+- [x] **[Review][Defer] Operator contact is a placeholder with no build/runtime guard** — could ship a fake number. [operator_contact.dart / operator-contact.ts]
+
+### Dismissed (2)
+- Admin uses raw `amber-*` Tailwind utilities vs custom tokens — amber+Hindi brief still met (no defined amber token exists).
+- `grace`/`unknown` allow-list "drift" + `status:''` cross-platform disagreement — `grace` isn't in the `tenant_status` enum (dead branch that correctly fails closed); not a bug.
+
 ## Dev Agent Record
 
 ### Agent Model Used
@@ -174,15 +195,21 @@ claude-opus-4-8 (Amelia / bmad-dev-story)
 - `test/features/billing/billing_status_test.dart`
 
 **Mobile — MODIFIED**
-- `lib/features/home/ui/app_shell.dart` (paused-state gate at the shell)
+- `lib/features/home/ui/app_shell.dart` (warning banner; lockout now router-gated)
+- `lib/router/app_router.dart` (billingLockNotifier + `/paused` route + redirect gate)
+- `lib/app.dart` (ref.listen bridge: billingGate → router notifier)
+
+**Backend — NEW (migration)**
+- `supabase/migrations/0092_hard_tenant_cutoff.sql` — get_my_leads tenant-status guard + get_my_billing_status relaxed to any tenant member. **Applied+verified LOCAL; prod push pending Rudra.**
 
 **Admin (`apps/admin`) — NEW**
 - `src/components/billing/paused-recharge.tsx`
 - `src/lib/operator-contact.ts`
 
 **Admin — MODIFIED**
-- `src/app/(app)/layout.tsx` (server-side billing gate)
+- `src/app/(app)/layout.tsx` (server-side lockout gate + 3-day warning banner)
 
 ## Change Log
 
-- 2026-07-10 — Implemented story 9.6 (tenant recharge/lockout). Mobile Flutter billing feature (repo/provider/screen) gated at `AppShell`; admin web server-layout billing gate + recharge component. Server-enforced (0056); UI is display-only, fail-open. 10/10 mobile unit tests, analyze clean, admin tsc + next build clean. No migration. Status → review.
+- 2026-07-10 — Implemented story 9.6 (tenant recharge/lockout). Mobile Flutter billing feature + admin web server-gate. Server-enforced (0056), UI display-only + fail-open. Initial: 10/10 tests, admin build clean.
+- 2026-07-10 — **Code review (3-layer) + rework.** Blind/Edge/Auditor found a CRITICAL: `get_my_leads` (0061) bypassed the tenant chokepoint → suspended employees still read leads + employee lockout never fired. Per Rudra's decision (hard cutoff both roles, no bypass; warn 3 days, no grace): added **migration 0092** (guard `get_my_leads`; relax `get_my_billing_status` to any tenant member), reworked detection to one billing-based path for both roles, moved lockout to the **router** (`/paused`, every route) for clean UI, added a 3-day advance-warning banner (mobile + admin), and fixed the tel:+ / dead-launch patches. Verified 0092 on local Docker (authed sim: suspended→denied, employee reads billing, active unaffected). **143/143 mobile tests, analyze 0, admin tsc + next build 0.** Prod push of 0092 pending. Status → review (re-review recommended for 0092).

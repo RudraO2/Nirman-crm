@@ -3,23 +3,27 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 part 'billing_repository.g.dart';
 
-/// Story 9.6 — tenant recharge / lockout.
+/// Story 9.6 — tenant recharge / lockout + advance-expiry warning.
 ///
-/// The access lockout itself is enforced SERVER-SIDE by the `auth_tenant_id()`
-/// chokepoint (migration 0056): a `suspended`/`cancelled` tenant resolves to a
-/// NULL tenant, so every data RPC fail-closes. This layer only READS that state
-/// so the app can show a friendly "recharge" face over an already-locked door —
-/// removing this UI never unlocks any data (see story AC #1).
+/// The lockout is enforced SERVER-SIDE: `auth_tenant_id()` (0056) gates access,
+/// and migration 0092 made `get_my_leads` (the last un-gated read) fail-closed on
+/// tenant status too. So a suspended tenant has NO reachable data on any RPC —
+/// this layer only READS the billing status to show the right screen/banner over
+/// an already-locked door. `get_my_billing_status()` is readable by any tenant
+/// member (0092) and deliberately bypasses the chokepoint so a suspended tenant is
+/// still readable (that is exactly when the recharge screen shows).
 
-/// Billing snapshot returned by `get_my_billing_status()` (0088). Admin-only.
+/// Days-remaining threshold for the friendly "subscription ending soon" banner.
+const billingWarningDays = 3;
+
+/// Billing snapshot from `get_my_billing_status()`.
 class BillingStatus {
-  /// Raw tenant status: active | trial | suspended | cancelled (+ grace if present).
+  /// active | trial | suspended | cancelled.
   final String status;
   final String? planName;
   final DateTime? paidUntil;
 
-  /// ceil((paid_until - now) / 1 day) from the DB. Negative when overdue. Null
-  /// when `paid_until` is NULL (never paid / pure trial).
+  /// ceil((paid_until - now)/1d). Negative when overdue. Null when paid_until is NULL.
   final int? daysRemaining;
 
   const BillingStatus({
@@ -39,57 +43,32 @@ class BillingStatus {
     );
   }
 
-  /// True when this tenant should see the recharge screen (access is cut).
-  /// `active` and `trial` are the only "let them in" states, mirroring the
-  /// server chokepoint `auth_tenant_id()` (status IN ('trial','active')).
+  /// True when access is cut. `active`/`trial` are the only allowed states,
+  /// mirroring the server chokepoint `auth_tenant_id()` (status IN trial,active).
   bool get isLockedOut => status != 'active' && status != 'trial';
 
-  /// True when overdue (past the paid window) — drives "overdue by N days" copy.
+  /// True when past the paid window (drives "overdue by N days").
   bool get isOverdue => daysRemaining != null && daysRemaining! < 0;
-}
 
-/// Postgres error code raised by data RPCs when the tenant is locked out
-/// (`auth_tenant_id()` returned NULL → `RAISE ... USING ERRCODE='P0001'`,
-/// message `missing_tenant_context`). This is the signal that an EMPLOYEE
-/// (who cannot read billing) is inside a suspended tenant. See 0019:147.
-const missingTenantContextCode = 'P0001';
-const missingTenantContextMessage = 'missing_tenant_context';
-
-/// Classifies whether a caught error means "tenant is locked out" vs a generic
-/// error we must NOT misread as paused (story AC #7 — no false positives).
-/// Pure function so it is unit-testable without a live backend.
-bool isTenantLockedOutError(Object error) {
-  if (error is PostgrestException) {
-    if (error.code == missingTenantContextCode) return true;
-    if (error.message.contains(missingTenantContextMessage)) return true;
-  }
-  return false;
+  /// True when still active but within the advance-warning window — show the
+  /// non-blocking "ending soon" banner. Excludes the overdue case (that is a
+  /// separate/soon-to-be-locked state).
+  bool get isExpiringSoon =>
+      !isLockedOut &&
+      daysRemaining != null &&
+      daysRemaining! >= 0 &&
+      daysRemaining! <= billingWarningDays;
 }
 
 class BillingRepository {
   BillingRepository(this._supabase);
   final SupabaseClient _supabase;
 
-  /// Reads the caller's own billing status. Admin-only server-side; calling as
-  /// an employee raises `42501` (permission_denied) — callers must gate on role.
+  /// Own-tenant billing status. Readable by any tenant member (0092). Stays
+  /// readable even when the tenant is suspended (bypasses the chokepoint).
   Future<BillingStatus> getMyBillingStatus() async {
     final result = await _supabase.rpc('get_my_billing_status');
     return BillingStatus.fromJson(Map<String, dynamic>.from(result as Map));
-  }
-
-  /// Cheap probe used to detect lockout for EMPLOYEES (who cannot read billing).
-  /// Loads at most one lead; a `missing_tenant_context` (P0001) failure means
-  /// the tenant is suspended. Returns true = locked out, false = has access.
-  /// Rethrows anything that is NOT a lockout signal so the caller can show a
-  /// normal retry instead of a false "paused" (AC #7).
-  Future<bool> probeLockedOut() async {
-    try {
-      await _supabase.rpc('get_my_leads', params: {'p_limit': 1, 'p_offset': 0});
-      return false;
-    } catch (e) {
-      if (isTenantLockedOutError(e)) return true;
-      rethrow;
-    }
   }
 }
 

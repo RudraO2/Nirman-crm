@@ -29,7 +29,8 @@ export function PausedRecharge({
   const wa = `https://wa.me/${OPERATOR_CONTACT.phoneE164}?text=${encodeURIComponent(
     OPERATOR_CONTACT.whatsappMessage,
   )}`
-  const tel = `tel:${OPERATOR_CONTACT.phoneE164}`
+  // tel: needs the leading '+' so the country code (91) isn't read as a local prefix.
+  const tel = `tel:+${OPERATOR_CONTACT.phoneE164}`
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-amber-50 px-6 py-12">

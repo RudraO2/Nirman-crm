@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'core/theme/app_theme.dart';
 import 'features/alarms/data/models/follow_up_alarm.dart';
 import 'features/alarms/ui/alarm_ring_screen.dart';
+import 'features/billing/providers/billing_providers.dart';
 import 'router/app_router.dart';
 
 class NirmanApp extends ConsumerStatefulWidget {
@@ -51,6 +52,14 @@ class _NirmanAppState extends ConsumerState<NirmanApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Story 9.6 — keep the billing gate alive app-wide and mirror its locked-out
+    // state into the router's notifier, so the redirect covers EVERY route (not
+    // just the tab shell). `listen` keeps the provider subscribed without rebuilding
+    // the whole MaterialApp on each billing change.
+    ref.listen(billingGateProvider, (_, next) {
+      next.whenData((g) => billingLockNotifier.value = g.isLockedOut);
+    });
+
     return MaterialApp.router(
       title: 'Nirman CRM',
       theme: _buildTheme(),

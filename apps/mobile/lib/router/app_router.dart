@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../features/alarms/ui/alarm_ring_screen.dart';
 import '../features/alarms/ui/alarm_settings_screen.dart';
 import '../features/auth/ui/login_screen.dart';
+import '../features/billing/ui/paused_screen.dart';
 import '../features/auth/ui/password_change_screen.dart';
 import '../features/auth/utils/auth_validators.dart';
 import '../features/home/ui/app_shell.dart';
@@ -39,14 +40,21 @@ class _SupabaseAuthNotifier extends ChangeNotifier {
 
 final _authNotifier = _SupabaseAuthNotifier();
 
+/// Story 9.6 — set by the app root (which watches `billingGateProvider`) to true
+/// when the tenant is locked out. The router reads it in `redirect` so EVERY route
+/// (not just the tab shell) bounces to `/paused` — a locked-out user never lands on
+/// a raw error screen. Wired as a `refreshListenable` so flipping it re-runs redirect.
+final billingLockNotifier = ValueNotifier<bool>(false);
+
 final appRouter = GoRouter(
   initialLocation: '/login',
-  refreshListenable: _authNotifier,
+  refreshListenable: Listenable.merge([_authNotifier, billingLockNotifier]),
   redirect: (context, state) async {
     final session = Supabase.instance.client.auth.currentSession;
     final path = state.matchedLocation;
     final isLoginRoute = path == '/login';
     final isPasswordChangeRoute = path == '/password-change';
+    final isPausedRoute = path == '/paused';
     // The full-screen ring screen must show even on cold-start before the
     // persisted session is restored (the alarm fires precisely when the app was
     // killed/locked). It carries its own payload and reads no network, so it is
@@ -71,12 +79,27 @@ final appRouter = GoRouter(
 
       // On any other screen: redirect to password-change if flag still set
       if (mustChange && !isPasswordChangeRoute) return '/password-change';
+
+      // Story 9.6 — tenant locked out (subscription lapsed): send every route to
+      // the recharge screen. Password-change/alarm-ring stay reachable; /paused
+      // itself must not self-redirect. Data is denied server-side regardless.
+      if (billingLockNotifier.value &&
+          !mustChange &&
+          !isPausedRoute &&
+          !isAlarmRingRoute &&
+          !isPasswordChangeRoute) {
+        return '/paused';
+      }
+      // Recovered (renewed) → leave the paused screen.
+      if (!billingLockNotifier.value && isPausedRoute) return '/home';
     }
 
     return null;
   },
   routes: [
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
+    // Story 9.6 — recharge/lockout screen (tenant subscription lapsed).
+    GoRoute(path: '/paused', builder: (_, __) => const PausedRouteScreen()),
     // UI redesign §6.2 — 3-tab bottom shell hosting the existing screens.
     // indexedStack keeps every branch mounted so HomeScreen's alarm-sync
     // listener / resume observer keep firing regardless of the active tab.
