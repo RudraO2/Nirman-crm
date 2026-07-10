@@ -5,6 +5,7 @@
   "workspaces": [
     "apps/admin",
     "apps/marketing",
+    "apps/ops",
     "packages/*"
   ],
   "engines": {

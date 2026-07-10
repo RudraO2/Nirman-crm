@@ -1,0 +1,147 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Nirman Ops Console — dense founder cockpit.
+   Design: ui-ux-pro-max "Dark Mode (OLED)" + Fira Sans / Fira Code.
+   Visual family: Retool / Linear / Postgres-admin. DARK-ONLY, keyboard-first.
+   Deliberately shares NOTHING with the warm tenant lockout style (design §10-B).
+   Theme everything here via CSS variables so the shadcn primitives inherit it.
+   ───────────────────────────────────────────────────────────────────────── */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, monospace;
+  --font-heading: var(--font-sans), system-ui, sans-serif;
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* Legacy aliases some copied shadcn primitives reference. */
+  --color-paper: var(--card);
+  --color-line: var(--border);
+
+  /* Status color system (pills + row accents) — usable as text-st-active etc. */
+  --color-st-active: var(--st-active);       --color-st-active-bg: var(--st-active-bg);
+  --color-st-trial: var(--st-trial);         --color-st-trial-bg: var(--st-trial-bg);
+  --color-st-grace: var(--st-grace);         --color-st-grace-bg: var(--st-grace-bg);
+  --color-st-suspended: var(--st-suspended); --color-st-suspended-bg: var(--st-suspended-bg);
+  --color-st-cancelled: var(--st-cancelled); --color-st-cancelled-bg: var(--st-cancelled-bg);
+
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 11px;
+  --radius-xl: 14px;
+  --radius-2xl: 20px;
+  --radius-3xl: 28px;
+  --radius-4xl: 40px;
+}
+
+:root {
+  /* Cockpit dark palette — near-black slate, cool grays, indigo action. */
+  --background:           #0A0D12;
+  --foreground:           #E4E7EC;
+  --card:                 #10141B;
+  --card-foreground:      #E4E7EC;
+  --popover:              #141922;
+  --popover-foreground:   #E4E7EC;
+  --primary:              #5B8CFF;
+  --primary-foreground:   #0A0D12;
+  --secondary:            #1A202B;
+  --secondary-foreground: #E4E7EC;
+  --muted:                #1A202B;
+  --muted-foreground:     #8A94A6;
+  --accent:               #1E2632;
+  --accent-foreground:    #F2F4F8;
+  --destructive:          #F85149;
+  --border:               #232B38;
+  --input:                #2A3342;
+  --ring:                 #5B8CFF;
+
+  /* Status system */
+  --st-active:    #3FB950; --st-active-bg:    rgba(63,185,80,.13);
+  --st-trial:     #58A6FF; --st-trial-bg:     rgba(88,166,255,.13);
+  --st-grace:     #D8A62B; --st-grace-bg:     rgba(216,166,43,.14);
+  --st-suspended: #F85149; --st-suspended-bg: rgba(248,81,73,.13);
+  --st-cancelled: #8B949E; --st-cancelled-bg: rgba(139,148,158,.13);
+
+  --shadow:    0 1px 2px rgba(0,0,0,.4), 0 2px 8px rgba(0,0,0,.3);
+  --shadow-lg: 0 16px 48px rgba(0,0,0,.55), 0 4px 12px rgba(0,0,0,.4);
+
+  --radius: 0.5rem;
+
+  --sidebar:                    #0C1017;
+  --sidebar-foreground:         #C7CDD8;
+  --sidebar-primary:            #5B8CFF;
+  --sidebar-primary-foreground: #0A0D12;
+  --sidebar-accent:             #161C26;
+  --sidebar-accent-foreground:  #F2F4F8;
+  --sidebar-border:             rgba(199,205,216,.08);
+  --sidebar-ring:               #5B8CFF;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    background-color: var(--background);
+    color-scheme: dark;
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 13.5px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-sans);
+    color: var(--foreground);
+    letter-spacing: -0.01em;
+    font-weight: 600;
+  }
+  /* Tabular numerals for dense data columns — never let numbers jump. */
+  .tabular-nums, [class*="tabular"] {
+    font-variant-numeric: tabular-nums;
+  }
+  ::selection {
+    background: rgba(91,140,255,.28);
+  }
+}
+
+/* Uppercase eyebrow / section label */
+.eyebrow {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
