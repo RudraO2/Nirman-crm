@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../billing/providers/billing_providers.dart';
+import '../../billing/ui/paused_screen.dart';
 import '../../leads/data/models/lead_model.dart';
 import '../../leads/providers/lead_providers.dart';
 
@@ -18,6 +20,19 @@ class AppShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Story 9.6 — single interception point for a locked-out tenant. When the
+    // subscription has lapsed (server-enforced via 0056), replace the entire
+    // tab shell with the recharge screen so no tab/lead surface is reachable.
+    // Fail-open on loading/error (show normal app) — data RPCs still fail-closed
+    // server-side, so this is a display choice only, never the access gate.
+    final paused = ref.watch(pausedStateProvider).maybeWhen(
+          data: (s) => s.isLockedOut ? s : null,
+          orElse: () => null,
+        );
+    if (paused != null) {
+      return PausedScreen(state: paused);
+    }
+
     // Overdue follow-up count → red badge on the Plan tab. Reads the existing
     // myLeadsProvider (same source FollowupsScreen groups under "OVERDUE"); no
     // new query. Falls back to 0 while loading / on error.

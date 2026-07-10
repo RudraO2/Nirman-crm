@@ -163,7 +163,7 @@ class _LeadByIdProviderElement
   String get id => (origin as LeadByIdProvider).id;
 }
 
-String _$myLeadsHash() => r'd36ff7405f6666946e8a5a16836dfcb7585f63c8';
+String _$myLeadsHash() => r'825328a33ecbdfcc602a764d262114d2482403e2';
 
 /// Urgency-sorted active leads for the current user (Story 2.5).
 /// Invalidate this provider after any lead mutation to refresh the list.
