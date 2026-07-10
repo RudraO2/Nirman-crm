@@ -1,0 +1,456 @@
+{
+  "basic-synonyms.xlsx": {
+    "columns": [
+      "Customer Name",
+      "Mobile",
+      "Project",
+      "BHK",
+      "City",
+      "Budget",
+      "Source",
+      "Notes",
+      "Property Type"
+    ],
+    "mappings": {
+      "Customer Name": "Name",
+      "Mobile": "Phone",
+      "Project": "Project",
+      "BHK": "TicketSize",
+      "City": "Location",
+      "Budget": "Budget",
+      "Source": "Source",
+      "Notes": "Remarks",
+      "Property Type": "PropertyType"
+    },
+    "rows": [
+      {
+        "Customer Name": "Alice Rao",
+        "Mobile": "9876543210",
+        "Project": "Skyline",
+        "BHK": "2BHK",
+        "City": "Pune",
+        "Budget": "50L-60L",
+        "Source": "Website",
+        "Notes": "hot lead",
+        "Property Type": "Apartment"
+      },
+      {
+        "Customer Name": "Bob Shah",
+        "Mobile": "9876500001",
+        "Project": "Skyline",
+        "BHK": "3BHK",
+        "City": "Mumbai",
+        "Budget": "1Cr",
+        "Source": "Referral",
+        "Notes": "",
+        "Property Type": "Villa"
+      }
+    ],
+    "preview": [
+      {
+        "Customer Name": "Alice Rao",
+        "Mobile": "9876543210",
+        "Project": "Skyline",
+        "BHK": "2BHK",
+        "City": "Pune",
+        "Budget": "50L-60L",
+        "Source": "Website",
+        "Notes": "hot lead",
+        "Property Type": "Apartment"
+      },
+      {
+        "Customer Name": "Bob Shah",
+        "Mobile": "9876500001",
+        "Project": "Skyline",
+        "BHK": "3BHK",
+        "City": "Mumbai",
+        "Budget": "1Cr",
+        "Source": "Referral",
+        "Notes": "",
+        "Property Type": "Villa"
+      }
+    ],
+    "totalRows": 2,
+    "intraFileDupes": 0,
+    "missingPhoneCount": 0
+  },
+  "empty-header.xlsx": {
+    "columns": [
+      "Name",
+      "Phone"
+    ],
+    "mappings": {
+      "Name": "Name",
+      "Phone": "Phone"
+    },
+    "rows": [
+      {
+        "Name": "Peggy",
+        "Phone": "ignored-mid"
+      },
+      {
+        "Name": "Quinn",
+        "Phone": "ignored-mid2"
+      }
+    ],
+    "preview": [
+      {
+        "Name": "Peggy",
+        "Phone": "ignored-mid"
+      },
+      {
+        "Name": "Quinn",
+        "Phone": "ignored-mid2"
+      }
+    ],
+    "totalRows": 2,
+    "intraFileDupes": 0,
+    "missingPhoneCount": 0
+  },
+  "extra-columns.xlsx": {
+    "columns": [
+      "Name",
+      "Phone",
+      "Foo",
+      "Bar Baz"
+    ],
+    "mappings": {
+      "Name": "Name",
+      "Phone": "Phone",
+      "Foo": null,
+      "Bar Baz": null
+    },
+    "rows": [
+      {
+        "Name": "Nina",
+        "Phone": "9600000001",
+        "Foo": "a",
+        "Bar Baz": "b"
+      },
+      {
+        "Name": "Oscar",
+        "Phone": "9600000002",
+        "Foo": "c",
+        "Bar Baz": "d"
+      }
+    ],
+    "preview": [
+      {
+        "Name": "Nina",
+        "Phone": "9600000001",
+        "Foo": "a",
+        "Bar Baz": "b"
+      },
+      {
+        "Name": "Oscar",
+        "Phone": "9600000002",
+        "Foo": "c",
+        "Bar Baz": "d"
+      }
+    ],
+    "totalRows": 2,
+    "intraFileDupes": 0,
+    "missingPhoneCount": 0
+  },
+  "intra-dupes.xlsx": {
+    "columns": [
+      "Name",
+      "Phone"
+    ],
+    "mappings": {
+      "Name": "Name",
+      "Phone": "Phone"
+    },
+    "rows": [
+      {
+        "Name": "Eve",
+        "Phone": "9800000001"
+      },
+      {
+        "Name": "Eve2",
+        "Phone": "9800000001"
+      },
+      {
+        "Name": "Frank",
+        "Phone": "9800000002"
+      },
+      {
+        "Name": "Frank2",
+        "Phone": "9800000002"
+      },
+      {
+        "Name": "Grace",
+        "Phone": "9800000003"
+      }
+    ],
+    "preview": [
+      {
+        "Name": "Eve",
+        "Phone": "9800000001"
+      },
+      {
+        "Name": "Eve2",
+        "Phone": "9800000001"
+      },
+      {
+        "Name": "Frank",
+        "Phone": "9800000002"
+      },
+      {
+        "Name": "Frank2",
+        "Phone": "9800000002"
+      },
+      {
+        "Name": "Grace",
+        "Phone": "9800000003"
+      }
+    ],
+    "totalRows": 5,
+    "intraFileDupes": 2,
+    "missingPhoneCount": 0
+  },
+  "many-rows.xlsx": {
+    "columns": [
+      "Name",
+      "Phone"
+    ],
+    "mappings": {
+      "Name": "Name",
+      "Phone": "Phone"
+    },
+    "rows": [
+      {
+        "Name": "Person 1",
+        "Phone": "9400000001"
+      },
+      {
+        "Name": "Person 2",
+        "Phone": "9400000002"
+      },
+      {
+        "Name": "Person 3",
+        "Phone": "9400000003"
+      },
+      {
+        "Name": "Person 4",
+        "Phone": "9400000004"
+      },
+      {
+        "Name": "Person 5",
+        "Phone": "9400000005"
+      },
+      {
+        "Name": "Person 6",
+        "Phone": "9400000006"
+      },
+      {
+        "Name": "Person 7",
+        "Phone": "9400000007"
+      },
+      {
+        "Name": "Person 8",
+        "Phone": "9400000008"
+      },
+      {
+        "Name": "Person 9",
+        "Phone": "9400000009"
+      },
+      {
+        "Name": "Person 10",
+        "Phone": "9400000010"
+      },
+      {
+        "Name": "Person 11",
+        "Phone": "9400000011"
+      },
+      {
+        "Name": "Person 12",
+        "Phone": "9400000012"
+      },
+      {
+        "Name": "Person 13",
+        "Phone": "9400000013"
+      },
+      {
+        "Name": "Person 14",
+        "Phone": "9400000014"
+      },
+      {
+        "Name": "Person 15",
+        "Phone": "9400000015"
+      }
+    ],
+    "preview": [
+      {
+        "Name": "Person 1",
+        "Phone": "9400000001"
+      },
+      {
+        "Name": "Person 2",
+        "Phone": "9400000002"
+      },
+      {
+        "Name": "Person 3",
+        "Phone": "9400000003"
+      },
+      {
+        "Name": "Person 4",
+        "Phone": "9400000004"
+      },
+      {
+        "Name": "Person 5",
+        "Phone": "9400000005"
+      },
+      {
+        "Name": "Person 6",
+        "Phone": "9400000006"
+      },
+      {
+        "Name": "Person 7",
+        "Phone": "9400000007"
+      },
+      {
+        "Name": "Person 8",
+        "Phone": "9400000008"
+      },
+      {
+        "Name": "Person 9",
+        "Phone": "9400000009"
+      },
+      {
+        "Name": "Person 10",
+        "Phone": "9400000010"
+      }
+    ],
+    "totalRows": 15,
+    "intraFileDupes": 0,
+    "missingPhoneCount": 0
+  },
+  "missing-phone.xlsx": {
+    "columns": [
+      "Name",
+      "Phone"
+    ],
+    "mappings": {
+      "Name": "Name",
+      "Phone": "Phone"
+    },
+    "rows": [
+      {
+        "Name": "Heidi",
+        "Phone": "9700000001"
+      },
+      {
+        "Name": "Ivan",
+        "Phone": ""
+      },
+      {
+        "Name": "Judy",
+        "Phone": "9700000003"
+      },
+      {
+        "Name": "Ken",
+        "Phone": ""
+      }
+    ],
+    "preview": [
+      {
+        "Name": "Heidi",
+        "Phone": "9700000001"
+      },
+      {
+        "Name": "Ivan",
+        "Phone": ""
+      },
+      {
+        "Name": "Judy",
+        "Phone": "9700000003"
+      },
+      {
+        "Name": "Ken",
+        "Phone": ""
+      }
+    ],
+    "totalRows": 4,
+    "intraFileDupes": 0,
+    "missingPhoneCount": 2
+  },
+  "numeric-phone.xlsx": {
+    "columns": [
+      "Name",
+      "Phone",
+      "Budget"
+    ],
+    "mappings": {
+      "Name": "Name",
+      "Phone": "Phone",
+      "Budget": "Budget"
+    },
+    "rows": [
+      {
+        "Name": "Laura",
+        "Phone": "9876543210",
+        "Budget": "5000000"
+      },
+      {
+        "Name": "Mike",
+        "Phone": "9876543211",
+        "Budget": "7500000.5"
+      }
+    ],
+    "preview": [
+      {
+        "Name": "Laura",
+        "Phone": "9876543210",
+        "Budget": "5000000"
+      },
+      {
+        "Name": "Mike",
+        "Phone": "9876543211",
+        "Budget": "7500000.5"
+      }
+    ],
+    "totalRows": 2,
+    "intraFileDupes": 0,
+    "missingPhoneCount": 0
+  },
+  "unmatched-column.xlsx": {
+    "columns": [
+      "Name",
+      "Phone",
+      "Enquiry Ref"
+    ],
+    "mappings": {
+      "Name": "Name",
+      "Phone": "Phone",
+      "Enquiry Ref": null
+    },
+    "rows": [
+      {
+        "Name": "Carol",
+        "Phone": "9811100011",
+        "Enquiry Ref": "REF-1"
+      },
+      {
+        "Name": "Dave",
+        "Phone": "9811100012",
+        "Enquiry Ref": "REF-2"
+      }
+    ],
+    "preview": [
+      {
+        "Name": "Carol",
+        "Phone": "9811100011",
+        "Enquiry Ref": "REF-1"
+      },
+      {
+        "Name": "Dave",
+        "Phone": "9811100012",
+        "Enquiry Ref": "REF-2"
+      }
+    ],
+    "totalRows": 2,
+    "intraFileDupes": 0,
+    "missingPhoneCount": 0
+  }
+}
