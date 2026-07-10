@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 import { createClient } from '@/lib/supabase/server'
 
 type ExportRow = {
@@ -92,25 +92,24 @@ export async function GET(request: Request) {
   const ts = now.toLocaleString('sv', { timeZone: tz }).replace('T', ' ')
   const watermark = `Exported by ${adminUsername} on ${ts} ${tz}`
 
-  const wsData: unknown[][] = [
-    [watermark, ...Array<string>(COLS.length - 1).fill('')],
-    COLS,
-    ...(rows as ExportRow[]).map((r) => [
-      r.lead_name,        r.phone,            r.status,
-      r.source,           r.property_type,    r.location,
-      r.budget_min,       r.budget_max,       r.ticket_size,
-      r.remarks,          r.interest_type,    r.is_incomplete,
-      r.visit_date,       r.next_followup_at, r.created_at,
-      r.assigned_employee, r.timeline_summary,
-    ]),
-  ]
+  const dataRows: unknown[][] = (rows as ExportRow[]).map((r) => [
+    r.lead_name,        r.phone,            r.status,
+    r.source,           r.property_type,    r.location,
+    r.budget_min,       r.budget_max,       r.ticket_size,
+    r.remarks,          r.interest_type,    r.is_incomplete,
+    r.visit_date,       r.next_followup_at, r.created_at,
+    r.assigned_employee, r.timeline_summary,
+  ])
 
-  const wb = XLSX.utils.book_new()
-  const ws = XLSX.utils.aoa_to_sheet(wsData)
-  ws['!merges'] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: COLS.length - 1 } }]
-  XLSX.utils.book_append_sheet(wb, ws, 'Leads')
-  const rawBytes = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as Uint8Array
-  const blob = new Blob([rawBytes.slice(0)], {
+  const wb = new ExcelJS.Workbook()
+  const ws = wb.addWorksheet('Leads')
+  ws.addRow([watermark])                          // row 1: watermark banner
+  ws.mergeCells(1, 1, 1, COLS.length)             // merge A1:Q1
+  ws.addRow(COLS)                                 // row 2: column headers
+  ws.addRows(dataRows)                            // rows 3+: data
+
+  const arrayBuffer = await wb.xlsx.writeBuffer()
+  const blob = new Blob([new Uint8Array(arrayBuffer as ArrayBuffer)], {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
   })
 

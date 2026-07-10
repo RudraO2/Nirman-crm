@@ -1,39 +1,9 @@
 'use server'
 
-import * as XLSX from 'xlsx'
 import { createClient } from '@/lib/supabase/server'
-import type { CrmField, ParsedRow, ParseResult, ImportResult } from './types'
-
-const SYNONYM_MAP: Record<CrmField, string[]> = {
-  Name: ['name', 'customer name', 'lead name', 'client name', 'full name'],
-  Phone: ['phone', 'mobile', 'number', 'contact', 'mob', 'cell'],
-  Project: ['project', 'project name', 'development'],
-  PropertyType: ['property type', 'type', 'unit type', 'property'],
-  Location: ['location', 'area', 'city', 'address'],
-  Budget: ['budget', 'budget range', 'price', 'price range'],
-  TicketSize: ['ticket size', 'bhk', 'configuration', 'config'],
-  Source: ['source', 'lead source', 'channel'],
-  Remarks: ['remarks', 'notes', 'comments', 'comment'],
-}
-
-function matchColumn(header: string): CrmField | null {
-  const h = header.toLowerCase().trim()
-  let bestField: CrmField | null = null
-  let bestLen = -1
-
-  for (const [field, synonyms] of Object.entries(SYNONYM_MAP) as [CrmField, string[]][]) {
-    for (const syn of synonyms) {
-      if (h.includes(syn) || syn.includes(h)) {
-        if (syn.length > bestLen) {
-          bestLen = syn.length
-          bestField = field
-        }
-      }
-    }
-  }
-
-  return bestField
-}
+import type { ParsedRow, ParseResult, ImportResult } from './types'
+import { buildParseResult } from './parse-core'
+import { readSheetGrid } from './xlsx-read'
 
 export async function parseExcelAction(formData: FormData): Promise<ParseResult> {
   const file = formData.get('file') as File
@@ -41,57 +11,9 @@ export async function parseExcelAction(formData: FormData): Promise<ParseResult>
 
   const arrayBuffer = await file.arrayBuffer()
   const buffer = Buffer.from(arrayBuffer)
-  const workbook = XLSX.read(buffer, { type: 'buffer' })
 
-  const sheetName = workbook.SheetNames[0]
-  if (!sheetName) throw new Error('Excel file has no sheets')
-
-  const sheet = workbook.Sheets[sheetName]
-  const rawRows = (XLSX.utils.sheet_to_json(sheet, {
-    header: 1,
-    defval: '',
-    raw: false,
-  }) as unknown) as unknown[][]
-
-  if (rawRows.length === 0) throw new Error('Excel file is empty')
-
-  const headers = (rawRows[0] as unknown[]).map((h) => String(h ?? '').trim()).filter(Boolean)
-  if (headers.length === 0) throw new Error('Excel file has no column headers')
-
-  const dataRows = rawRows.slice(1)
-
-  const rows: ParsedRow[] = dataRows.map((row) => {
-    const obj: ParsedRow = {}
-    headers.forEach((h, idx) => {
-      obj[h] = String((row as unknown[])[idx] ?? '').trim()
-    })
-    return obj
-  })
-
-  const mappings: Record<string, string | null> = {}
-  for (const h of headers) {
-    mappings[h] = matchColumn(h)
-  }
-
-  const phoneHeader = headers.find((h) => mappings[h] === 'Phone')
-  const phoneValues = phoneHeader ? rows.map((r) => r[phoneHeader] ?? '').filter(Boolean) : []
-
-  const phoneCount: Record<string, number> = {}
-  for (const p of phoneValues) {
-    phoneCount[p] = (phoneCount[p] ?? 0) + 1
-  }
-  const intraFileDupes = Object.values(phoneCount).filter((c) => c > 1).reduce((acc, c) => acc + (c - 1), 0)
-  const missingPhoneCount = rows.filter((r) => !phoneHeader || !r[phoneHeader]).length
-
-  return {
-    columns: headers,
-    mappings,
-    rows,
-    preview: rows.slice(0, 10),
-    totalRows: rows.length,
-    intraFileDupes,
-    missingPhoneCount,
-  }
+  const rawRows = await readSheetGrid(buffer)
+  return buildParseResult(rawRows)
 }
 
 export async function checkPhoneHashesAction(phoneValues: string[]): Promise<string[]> {

@@ -73,7 +73,7 @@ development_status:
   8-4-team-invites-send-accept: backlog               # invitations 0055 + send-invite/accept-invite + /team /invite/[token]
   8-5-transactional-email: backlog                    # SMTP (provider open decision)
   8-6-starter-whatsapp-templates-on-tenant-create: backlog  # migration 0057
-  8-7-replace-vulnerable-excel-parser: backlog        # xlsx -> exceljs (D-6.1-2)
+  8-7-replace-vulnerable-excel-parser: in-review      # xlsx -> exceljs (D-6.1-2). DONE 2026-07-10: drop-in swap; xlsx removed (npm ls empty, 2 high-sev advisories gone); pure parse-core + exceljs adapter; 8-fixture xlsx==exceljs parity frozen to golden; 13/13 tests, tsc+next build clean; UI+Server-Action contract unchanged. 3-lens review clean (F1 .xls capability drop = graceful-error, ACKED by Rudra 2026-07-10: .xlsx-only is fine — Google Sheets exports .xlsx, only legacy Excel-97 .xls affected). App-layer only, no migration.
   # ⚠️ NUMBERING COLLISION: the P0 security fix below was designated "Story 8.3" by
   # Winston's 2026-07-09 security review, but that slot is taken by self-serve-signup
   # above. Tracked under a distinct key here pending re-number. See story file
