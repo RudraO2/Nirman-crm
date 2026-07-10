@@ -149,6 +149,46 @@ Deferred (pre-existing, not caused by this change — tracked, not fixed here):
 5. Redeploy all 7 fns `--no-verify-jwt`.
 6. Verify: `curl -X POST .../process-overdue-followups` (no header) ⇒ 401; a real cron tick still delivers.
 
+## Review-loop verification (Amelia, 2026-07-10 — independent re-review + free/local verify)
+
+Ran the review→fix half of the loop against the already-coded implementation. **Independent
+3-lens adversarial re-review (Blind Hunter / Edge Case / Acceptance Auditor) surfaced NO new
+confirmed findings** — the implementation is sound and the earlier config.toml pin already closed
+the one real gap. No code changes were required this pass.
+
+What each lens checked and cleared:
+- **Blind Hunter** — both guards fail closed on unset secret (`expected.length === 0 ⇒ 401`),
+  `safeEq` is genuinely constant-time (length short-circuit only; value compare XOR-accumulates,
+  no early return), bearer parse is case-insensitive (`/^Bearer\s+/i`, both header casings). No
+  bypass. Service-role vs cron-secret split matches the *actual* callers (verified below).
+- **Edge Case** — absent header ⇒ 401, empty `x-cron-secret` ⇒ 401 (length mismatch), migration
+  0087 is `IF EXISTS pg_cron`-guarded and idempotent (`cron.schedule` upserts by name). The
+  `no-import-prefix` deno-lint warning on the test's inline `https://` import is **repo-wide**
+  (every prod fn + `_shared/auth.ts` trip it; there is no `deno.json`) — established Supabase
+  inline-import convention, not an 8.3 regression.
+- **Acceptance Auditor** — AC-1..AC-7 all satisfied; AC-1 mechanism-split by real caller is correct.
+
+Caller-regression audit (AC-4), verified independently:
+- `send-assignment-notification` / `send-bulk-assignment-notification` — only callers are the
+  browser dialogs (`assign-dialog.tsx:101`, `bulk-assign-dialog.tsx:335`, `.invoke(...)` ⇒ user
+  JWT). Correct for `verifyJwtAndScope()`. No regression.
+- `send-developer-update` / `send-amendment-notification` — grep of `apps/` **and** `supabase/migrations/`
+  finds **no `net.http_post` and no `.invoke`** to either; `post_developer_update` / amendment RPCs
+  only INSERT a `domain_events` row (fan-out producer deferred). So `requireServiceRole` breaks no
+  live caller on deploy. Confirmed.
+
+Free / local verification (Docker Supabase + Deno — **no paid cloud, prod untouched**):
+- `deno test --no-check --allow-env --allow-net _shared/serviceAuth.test.ts` ⇒ **11/11 passed**.
+- `deno check` on `serviceAuth.ts` + all 7 wired fns ⇒ **clean** (0 type errors).
+- Migration 0087 applied against the **local** Docker stack (enabled preloaded `pg_cron` locally):
+  all 3 jobs scheduled at the right cadences (`* * * * *`, `*/5 * * * *`, `0,30 * * * *`), each
+  `cron.job.command` contains `x-cron-secret` and reads vault `cron_secret`; re-applying is
+  idempotent (upsert, exactly 3 rows, no dupes). Local state then restored (jobs unscheduled,
+  `pg_cron` dropped — it was not installed before).
+
+**Verdict: deploy-ready.** Not deployed — the 0087→0088→0089 chain pushes together later (see deploy
+steps above; prod secret-set + `db push` + redeploy remain the only outstanding actions).
+
 ## Out of scope
 
 - Full sweep of all ~60 `SECURITY DEFINER` DB functions for tenant scoping (sampled strong in the 2026-07-09 review; track as a separate audit task).
