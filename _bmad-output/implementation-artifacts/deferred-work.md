@@ -52,7 +52,11 @@
 
 - **D-6.1-1 (ux): No "Back" navigation in import wizard** — `import-wizard.tsx` is forward-only. Once on Preview or Assign, user cannot return to Map without restarting the file upload. Fix: add Back button to each step; restore prior state on back navigation (mappings, preview result).
 
-- **D-6.1-2 (security): xlsx@0.18.5 has known vulnerabilities** — `npm audit` reports 2 moderate + 1 high CVE in `xlsx`. Risk is reduced because xlsx runs server-side only (Server Action, never in client bundle). Fix before production: evaluate migration to `exceljs` (actively maintained, no known high CVEs) and swap `parseExcelAction` implementation. API is compatible enough for a drop-in replace.
+- ~~**D-6.1-2 (security): xlsx@0.18.5 has known vulnerabilities**~~ **ALREADY DONE (Story 8.7) — verified
+  2026-07-11 (Amelia).** `xlsx` is removed from `apps/admin` (not in package.json); the import path uses
+  `exceljs@^4.4.0` via `src/app/(app)/import/xlsx-read.ts` (`readSheetGrid`, byte-for-byte parity with the
+  old `sheet_to_json` behavior, parity tests in `parse.test.ts`). The high-severity `xlsx` CVEs
+  (GHSA-4r6h-8v6p-xvw6 prototype-pollution, ReDoS) are gone. No work needed.
 
 - ~~**D-6.1-3 (ux): No loading skeleton for /import route**~~ **CLOSED 2026-07-11 (Amelia).** Added `apps/admin/src/app/(app)/import/loading.tsx` (header + dropzone + button skeleton, `aria-busy`).
 
