@@ -35,8 +35,12 @@
 
 ## Deferred from: code review of story-5.3 (2026-05-28)
 
-- **F-1 (security): NULL JWT role check in `get_funnel_stats`** — `(auth.jwt() -> 'app_metadata' ->> 'role') <> 'admin'` evaluates to NULL (not FALSE) when `app_metadata.role` is absent, allowing the function to execute without the admin guard. This is a codebase-wide pattern (same form used in all functions in 0049). A systemic fix would change every admin-only function to use `IS DISTINCT FROM 'admin'`. Deferring because (a) Supabase JWTs are platform-signed and `role` is always populated for authenticated users, (b) changing only 5.3 creates inconsistency, (c) a migration changing all existing functions would need its own story.
-  **What's needed:** A global search-and-replace across all SECURITY DEFINER admin functions to use `COALESCE(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin'` or `IS DISTINCT FROM 'admin'`.
+- ~~**F-1 (security): NULL JWT role check in `get_funnel_stats`**~~ **ALREADY RESOLVED — verified 2026-07-11
+  (Amelia).** Migration `0054` (harden_admin_role_guards, 2026-05-29 — the day after this note) already
+  migrated the codebase to the safe `IS DISTINCT FROM 'admin'` form. Confirmed on PROD: a catalog sweep for
+  `<> 'admin'` / `!= 'admin'` across all SECURITY DEFINER functions returns **zero**, and `get_funnel_stats`
+  now reads `IF (auth.jwt() -> 'app_metadata' ->> 'role') IS DISTINCT FROM 'admin' THEN RAISE`. No migration
+  needed.
 
 - **F-2 (semantics): `p_days=1` ("Today") includes yesterday** — `(created_at AT TIME ZONE v_tz)::date >= v_today - 1` returns leads from the last 2 days (yesterday + today), not just today. This is consistent with the same pattern used in `get_employee_performance_stats` (0049) and matches the spec `p_days = N → created_at >= v_today - N`. A proper "Today only" filter would use `= v_today`. Deferring to avoid diverging from codebase convention; fix in a dedicated date-filter cleanup story that also adjusts 0049.
 
