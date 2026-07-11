@@ -8,6 +8,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../amendments/ui/log_amendment_sheet.dart';
 import '../data/inventory_repository.dart';
 import '../data/models/unit_hold_model.dart';
 import '../data/models/unit_model.dart';
@@ -92,6 +93,29 @@ class _UnitDetailSheetState extends ConsumerState<UnitDetailSheet> {
       setState(() => _confirming = false);
       messenger.showSnackBar(
         const SnackBar(content: Text('Could not confirm the booking. Try again.')),
+      );
+    }
+  }
+
+  // Story 16.2-mobile (rep entry): a held unit's detail sheet lets the holder log an
+  // amendment for the held lead — the holding rep has no other entry point (the
+  // booking dashboard is head/leader-only). log_amendment is authoritative (0081/0084
+  // enforce who may log + the lead↔unit link), so this only opens the sheet; a caller
+  // without authority gets the sheet's calm guard message.
+  Future<void> _logAmendment(UnitHold hold) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final leadId = hold.leadId;
+    if (leadId == null) return;
+    final logged = await showLogAmendmentSheet(
+      context,
+      unitId: unit.unitId,
+      leadId: leadId,
+      unitNo: unit.unitNo,
+      leadLabel: 'Held lead',
+    );
+    if (logged == true && mounted) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('Amendment logged for unit ${unit.unitNo}.')),
       );
     }
   }
@@ -241,9 +265,32 @@ class _UnitDetailSheetState extends ConsumerState<UnitDetailSheet> {
         return _HoldButton(available: true, busy: _holding, onHold: _startHold);
       case UnitStatus.hold:
         // Confirm-booking (manager-gated by the RPC). Enabled once we have the hold_id.
-        return _ConfirmButton(
-          busy: _confirming,
-          onConfirm: hold == null ? null : () => _startConfirm(hold.holdId),
+        // Below it: Log amendment for the held lead (rep entry — RPC-authoritative).
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ConfirmButton(
+              busy: _confirming,
+              onConfirm: hold == null ? null : () => _startConfirm(hold.holdId),
+            ),
+            if (hold?.leadId != null) ...[
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _confirming ? null : () => _logAmendment(hold!),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.inkSecondary,
+                  side: BorderSide(color: AppColors.borderStrong),
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.build_circle_outlined, size: 18),
+                label: const Text('Log amendment',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ],
         );
       case UnitStatus.sold:
       case UnitStatus.blocked:

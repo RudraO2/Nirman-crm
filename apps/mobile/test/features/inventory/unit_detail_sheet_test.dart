@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:nirman_crm/features/inventory/data/models/unit_hold_model.dart';
 import 'package:nirman_crm/features/inventory/data/models/unit_model.dart';
+import 'package:nirman_crm/features/inventory/providers/inventory_providers.dart';
 import 'package:nirman_crm/features/inventory/ui/unit_detail_sheet.dart';
 
 ProjectUnit unit({int? costPaise, UnitStatus status = UnitStatus.available}) =>
@@ -54,5 +56,28 @@ void main() {
     final button = tester.widget<FilledButton>(find.byType(FilledButton));
     expect(button.onPressed, isNull);
     expect(find.text('Unavailable'), findsOneWidget);
+  });
+
+  testWidgets('held unit with a lead shows Confirm + Log amendment', (tester) async {
+    final u = unit(status: UnitStatus.hold);
+    final hold = UnitHold(
+      holdId: 'h1',
+      unitId: 'u1',
+      expiresAt: DateTime.now().add(const Duration(hours: 2)),
+      leadId: 'l1',
+      holdingAgentId: 'a1',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [activeHoldProvider('u1').overrideWith((ref) async => hold)],
+        child: MaterialApp(
+          home: Scaffold(body: UnitDetailSheet(unit: u, projectId: 'p1')),
+        ),
+      ),
+    );
+    await tester.pump(); // resolve the hold future
+    await tester.pump();
+    expect(find.text('Confirm booking'), findsOneWidget);
+    expect(find.text('Log amendment'), findsOneWidget);
   });
 }

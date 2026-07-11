@@ -181,6 +181,26 @@ class AmendmentsRepository {
       throw ExecutionException.fromPostgrest(e);
     }
   }
+
+  /// Whether the caller is on the tenant's execution team. A cheap tenant-scoped
+  /// read of tenant_execution_team (its SELECT policy = any tenant member) so the
+  /// You-tab can surface the Amendments entry to a NON-head member — membership is a
+  /// table row, not a JWT claim, so the cosmetic role gate alone would hide it.
+  /// Fail-soft: any error → false (the entry stays hidden; the screen re-guards).
+  Future<bool> isExecutionMember() async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) return false;
+    try {
+      final rows = await _supabase
+          .from('tenant_execution_team')
+          .select('user_id')
+          .eq('user_id', uid)
+          .limit(1);
+      return (rows as List).isNotEmpty;
+    } catch (_) {
+      return false;
+    }
+  }
 }
 
 @riverpod

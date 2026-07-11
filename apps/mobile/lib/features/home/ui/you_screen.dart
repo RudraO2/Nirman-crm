@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../amendments/providers/amendments_providers.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../motivation/ui/personal_stats_card.dart';
 import '../../motivation/ui/monthly_best.dart';
@@ -29,6 +30,11 @@ class YouScreen extends ConsumerWidget {
     final showTeamLeads = role == 'admin' ||
         roleTier == 'team_leader' ||
         roleTier == 'partner_agency';
+    // Story 16.2-mobile: membership is a table row, not a JWT claim — a non-head
+    // execution member would otherwise never see the Amendments entry. Fail-soft
+    // to false; the screen + RPCs re-guard server-side.
+    final isExecMember =
+        ref.watch(isExecutionMemberProvider).valueOrNull ?? false;
     final displayName = email.contains('@') ? email.split('@').first : email;
     final roleLabel = _roleLabel(role);
     final initials = _initials(displayName);
@@ -151,10 +157,10 @@ class YouScreen extends ConsumerWidget {
               subtitle: 'Active holds · countdown · conversion',
               onTap: () => context.push('/booking'),
             ),
-          // Story 16.2-mobile — execution-team amendment surface. Membership is a
-          // table (not a JWT claim), so gate cosmetically to head; the screen shows a
-          // calm state + self-join for a non-member head. RPCs re-check server-side.
-          if (role == 'admin')
+          // Story 16.2-mobile — execution-team amendment surface. Shown to a head
+          // (who can self-join) OR to anyone already on the execution team (membership
+          // read, since it's a table row not a JWT claim). RPCs re-check server-side.
+          if (role == 'admin' || isExecMember)
             _RowItem(
               icon: Icons.build_circle_outlined,
               title: 'Amendments',

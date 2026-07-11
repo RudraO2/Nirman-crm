@@ -21,3 +21,10 @@ Future<List<ExecutionAmendment>> amendmentsForExecution(
       .watch(amendmentsRepositoryProvider)
       .getAmendmentsForExecution(status: status);
 }
+
+/// Whether the caller is on the execution team — drives the You-tab Amendments
+/// entry for a non-head member. Fail-soft to false.
+@riverpod
+Future<bool> isExecutionMember(IsExecutionMemberRef ref) {
+  return ref.watch(amendmentsRepositoryProvider).isExecutionMember();
+}

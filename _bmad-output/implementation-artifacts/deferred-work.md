@@ -114,14 +114,16 @@ switching project resets the agent filter. Verified per-agent via sim-JWT (head 
 pushed to prod 2026-07-11 (head now 0096, signature confirmed).**
 
 ## 16.2-mobile — rep-facing amendment log entry + 16.4 push (deferred 2026-07-11)
-- **Rep log entry:** the mobile "Log amendment" action lives only on the head/leader booking dashboard
-  (which carries unit_id + lead_id). A `front_line_rep` who holds a unit has no entry, because the
-  inventory unit read (`get_project_units`) does not return the holding lead. Add a lead link to that read
-  (backend) or a hold-lookup, then surface "Log amendment" on the inventory unit-detail sheet.
-- **16.4 FCM push/deep-link:** the amendment notify edge fn (`send-amendment-notification`, 0083) is
-  dormant/undeployed; in-app destinations (execution surface + lead Timeline `amendment_logged`) exist but
-  push delivery + deep-link routing into a specific amendment are not wired. Follow-up when the edge fn is
-  deployed + a caller drains `domain_events`.
-- **Non-head execution-member entry:** the "Amendments" You-tab row is head-gated because membership isn't
-  a JWT claim. A non-head execution member reaches the surface only via a leaked route (then it works).
-  Broaden by stamping membership into the JWT or a cheap client membership read on the You tab.
+- ~~**Rep log entry:**~~ **CLOSED 2026-07-11 (Amelia).** No backend change needed — the held-unit detail
+  sheet already reads the active hold (`activeHoldProvider` → `hold.leadId`), so `unit_detail_sheet.dart`
+  now shows a "Log amendment" action below Confirm on a held unit, opening the existing `showLogAmendmentSheet`
+  with the held lead. `log_amendment` (0081/0084) stays authoritative (who may log + lead↔unit link); the
+  UI shows calm guard errors. Widget test added (held unit → Confirm + Log amendment).
+- **16.4 FCM push/deep-link (STILL DEFERRED):** the amendment notify edge fn (`send-amendment-notification`,
+  0083) is dormant/undeployed; in-app destinations exist but push delivery + deep-link routing are not
+  wired. Follow-up when the edge fn is deployed + a caller drains `domain_events` (needs Rudra to deploy the fn).
+- ~~**Non-head execution-member entry:**~~ **CLOSED 2026-07-11 (Amelia).** The `tenant_execution_team`
+  SELECT policy already lets any tenant member read it, so a cheap client membership read
+  (`AmendmentsRepository.isExecutionMember` → `isExecutionMemberProvider`, fail-soft to false) now widens
+  the You-tab "Amendments" gate to `role == 'admin' || isExecMember`. No JWT-claim change, no backend change;
+  the screen + RPCs still re-guard server-side.
