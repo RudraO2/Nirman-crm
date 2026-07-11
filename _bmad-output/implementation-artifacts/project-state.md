@@ -237,7 +237,12 @@ Ask by story key so a fresh chat has context:
   needs NO change. Recommended: **verify once** before ops redeploy (Dashboard → Authentication → MFA/Sign-In
   settings → confirm TOTP/App-Authenticator is on; free-tier). The ONLY lockout scenario is if TOTP were
   explicitly disabled on prod — then the aal2 gate bounces forever because `enroll()` fails. If verified on
-  (default), just deploy; the code drives enrollment on first login (never a dead-end). **STILL TODO (deferred):** step-up (fresh TOTP
-  challenge) before suspend/provision; optional IP allowlist. SECURITY DEFINER sweep already done separately (0094).
+  (default), just deploy; the code drives enrollment on first login (never a dead-end).
+  ✅ **Step-up DONE 2026-07-11 (Amelia, same held ops bundle):** `verifyStepUp()` (`lib/step-up.ts`) runs a
+  fresh challenge+verify before the two most destructive actions — **Suspend** (`ConfirmModal requireMfa` →
+  a TOTP field on top of the typed-name confirm) and **Provision** (a required authenticator code on the
+  final wizard step, verified before `provision_tenant`). `next build` green. **STILL TODO (deferred):**
+  optional IP allowlist; step-up on renew/record-payment (lower sensitivity, skipped). SECURITY DEFINER
+  sweep already done separately (0094).
 - **Razorpay** — bolts onto `renew_tenant()` (zero rework by design); the mobile "recharge" screen.
 - **Landing polish** — real testimonials, real pricing numbers, confirm marketing deploy + point domain at it. See §Money Path #4–7.

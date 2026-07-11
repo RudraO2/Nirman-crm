@@ -18,16 +18,14 @@
   button + date picker popover that computes p_days from (today - selected_start) and
   navigates to `/performance?range=<p_days>` (or a custom param like `from`/`to`).
 
-- **D1 (ux): No loading skeleton on range-filter navigation** — clicking Today/Last 7/Last 30
-  triggers a full server component re-fetch. During that window the page briefly blanks.
-  Add `apps/admin/src/app/(app)/performance/loading.tsx` with a card skeleton to keep
-  the layout stable during navigation.
+- ~~**D1 (ux): No loading skeleton on range-filter navigation**~~ **CLOSED 2026-07-11 (Amelia).**
+  Added `apps/admin/src/app/(app)/performance/loading.tsx` (header + range chips + stat cards + table
+  rows skeleton, `aria-busy`). Next 16 wraps `page.tsx` in Suspense automatically.
 
-- **D2 (accessibility): Toggle buttons + row clicks lack ARIA hints** — the "Show All",
-  "Show Dead/Sold/Future", and table-row click targets have no `aria-label`, `role`, or
-  keyboard-event handlers. Wire up `onKeyDown` + `role="button"` / `tabIndex={0}` on
-  table rows and ensure toggle buttons have descriptive `aria-pressed` state before
-  any accessibility audit.
+- ~~**D2 (accessibility): Toggle buttons + row clicks lack ARIA hints**~~ **CLOSED 2026-07-11 (Amelia).**
+  Range buttons + both Show-All/More-columns toggles now carry `aria-pressed` (+ `aria-label`); the
+  sortable "Active" header and every clickable employee row are now `role="button"` + `tabIndex={0}` +
+  Enter/Space `onKeyDown` + `aria-label`/`aria-sort`.
 
 - **D3 (minor): conversion_rate numeric coercion** — `get_employee_performance_stats`
   returns `conversion_rate numeric`. For employees with `total_assigned = 0`, the SQL
@@ -42,9 +40,9 @@
 
 - **F-2 (semantics): `p_days=1` ("Today") includes yesterday** — `(created_at AT TIME ZONE v_tz)::date >= v_today - 1` returns leads from the last 2 days (yesterday + today), not just today. This is consistent with the same pattern used in `get_employee_performance_stats` (0049) and matches the spec `p_days = N → created_at >= v_today - N`. A proper "Today only" filter would use `= v_today`. Deferring to avoid diverging from codebase convention; fix in a dedicated date-filter cleanup story that also adjusts 0049.
 
-- **F-3 (ux): No loading skeleton on filter navigation for Funnel page** — filter changes trigger a full server component re-fetch, causing a brief blank. Add `apps/admin/src/app/(app)/funnel/loading.tsx` with a card skeleton (same pattern as deferred for Performance page above).
+- ~~**F-3 (ux): No loading skeleton on filter navigation for Funnel page**~~ **CLOSED 2026-07-11 (Amelia).** Added `apps/admin/src/app/(app)/funnel/loading.tsx` (header + filter chips + tapered funnel-bar skeleton, `aria-busy`).
 
-- **F-4 (accessibility): Filter selects and range buttons lack ARIA labels** — `<select>` elements have no `aria-label`, range toggle buttons have no `aria-pressed` state. Add `aria-label` and `aria-pressed` before any accessibility audit.
+- ~~**F-4 (accessibility): Filter selects and range buttons lack ARIA labels**~~ **CLOSED 2026-07-11 (Amelia).** The employee + project `<select>`s now have `aria-label`; the range toggle buttons now carry `aria-pressed` + `aria-label`.
 
 ## Deferred from: Story 6.1 — Excel Bulk Import (2026-05-28)
 
@@ -52,7 +50,7 @@
 
 - **D-6.1-2 (security): xlsx@0.18.5 has known vulnerabilities** — `npm audit` reports 2 moderate + 1 high CVE in `xlsx`. Risk is reduced because xlsx runs server-side only (Server Action, never in client bundle). Fix before production: evaluate migration to `exceljs` (actively maintained, no known high CVEs) and swap `parseExcelAction` implementation. API is compatible enough for a drop-in replace.
 
-- **D-6.1-3 (ux): No loading skeleton for /import route** — navigating to `/import` causes a brief blank while the server component fetches `list_employees_for_assignment`. Add `apps/admin/src/app/(app)/import/loading.tsx` with a card skeleton (same pattern as deferred for Performance + Funnel pages).
+- ~~**D-6.1-3 (ux): No loading skeleton for /import route**~~ **CLOSED 2026-07-11 (Amelia).** Added `apps/admin/src/app/(app)/import/loading.tsx` (header + dropzone + button skeleton, `aria-busy`).
 
 ## Deferred from: code review of 8-1-harden-admin-role-guards (2026-05-29)
 

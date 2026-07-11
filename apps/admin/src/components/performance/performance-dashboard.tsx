@@ -128,6 +128,8 @@ export function PerformanceDashboard({
             <button
               key={r}
               onClick={() => router.push(`/performance?range=${r}`)}
+              aria-pressed={initialRange === r}
+              aria-label={`Show ${RANGE_LABELS[r]}`}
               className={
                 initialRange === r
                   ? 'rounded-[8px] bg-paper px-3.5 py-[5px] text-[12.5px] font-semibold text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]'
@@ -201,6 +203,7 @@ export function PerformanceDashboard({
             </div>
             <button
               onClick={() => setShowDonutExtra((v) => !v)}
+              aria-pressed={showDonutExtra}
               className="rounded-[8px] border border-line-2 px-2.5 py-1 text-xs font-medium text-ink-2 transition hover:bg-mist hover:text-ink"
             >
               {showDonutExtra ? 'Hide Dead/Sold/Future' : 'Show All'}
@@ -270,6 +273,7 @@ export function PerformanceDashboard({
           </p>
           <button
             onClick={() => setShowExtra((v) => !v)}
+            aria-pressed={showExtra}
             className="rounded-[8px] border border-line-2 px-2.5 py-1 text-xs font-medium text-ink-2 transition hover:bg-mist hover:text-ink"
           >
             {showExtra ? 'Hide Dead/Sold/Future' : 'More columns'}
@@ -284,8 +288,18 @@ export function PerformanceDashboard({
                   Name
                 </th>
                 <th
+                  role="button"
+                  tabIndex={0}
+                  aria-sort={sortDesc ? 'descending' : 'ascending'}
+                  aria-label="Sort by active leads"
                   className="cursor-pointer select-none px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3 hover:text-ink"
                   onClick={() => setSortDesc((v) => !v)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      setSortDesc((v) => !v)
+                    }
+                  }}
                 >
                   Active {sortDesc ? '↓' : '↑'}
                 </th>
@@ -334,10 +348,19 @@ export function PerformanceDashboard({
                 sortedStats.map((emp) => (
                   <tr
                     key={emp.employee_id}
-                    className="border-b last:border-0 cursor-pointer hover:bg-muted/50 transition"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`View ${emp.employee_name}'s leads`}
+                    className="border-b last:border-0 cursor-pointer hover:bg-muted/50 transition focus:bg-muted/50 focus:outline-none"
                     onClick={() =>
                       router.push(`/leads?employee=${emp.employee_id}`)
                     }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        router.push(`/leads?employee=${emp.employee_id}`)
+                      }
+                    }}
                   >
                     <td className="px-4 py-3 font-medium max-w-[160px] truncate">
                       {emp.employee_name}

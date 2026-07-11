@@ -112,6 +112,7 @@ export function FunnelView({
           <select
             value={activeEmployee}
             onChange={(e) => navigate(e.target.value, activeProject, activeRange)}
+            aria-label="Filter by employee"
             className="rounded-[9px] border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brass"
           >
             <option value="">All Employees</option>
@@ -124,6 +125,7 @@ export function FunnelView({
           <select
             value={activeProject}
             onChange={(e) => navigate(activeEmployee, e.target.value, activeRange)}
+            aria-label="Filter by project"
             className="rounded-[9px] border border-line-2 bg-paper px-3 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-brass"
           >
             <option value="">All Projects</option>
@@ -138,6 +140,8 @@ export function FunnelView({
               <button
                 key={r}
                 onClick={() => navigate(activeEmployee, activeProject, r)}
+                aria-pressed={activeRange === r}
+                aria-label={`Show ${RANGE_LABELS[r]}`}
                 className={
                   activeRange === r
                     ? 'rounded-[8px] bg-paper px-3.5 py-[5px] text-[12.5px] font-semibold text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]'
