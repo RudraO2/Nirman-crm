@@ -70,6 +70,14 @@
 
 ## Deferred from: code review of 14-3-mobile-availability-grid (2026-07-10)
 
+- ~~**Partner project-picker over-lists (AC3 scope nuance).**~~ **CLOSED 2026-07-11 (Amelia).**
+  Fixed by migration **`0095` `get_my_projects()`** (per-tier scoped: partner_agency → agency-shared
+  projects only; every other tier → all active tenant projects, identical to the old read) +
+  `lead_repository.fetchProjects()` swapped from the direct `.from('projects')` read to the RPC. Scopes
+  the picker across leads/inventory/booking in one place. Verified per-tier via sim-JWT on local Docker
+  (head/super_admin=2 projects, partner=1). ✅ `0095` PUSHED TO PROD 2026-07-11 (with 0093/0094, head=0095).
+  Original note kept below for context.
+
 - **Partner project-picker over-lists (AC3 scope nuance).** The mobile Availability picker
   (`apps/mobile/lib/features/inventory/ui/inventory_projects_screen.dart`) lists ALL active tenant
   projects to every user via `availableProjectsProvider` (projects RLS is tenant-scoped). A
@@ -81,16 +89,29 @@
 
 ## Deferred from: code review of 15-2-mobile-hold-unit (2026-07-10)
 
+- ~~**Hold lead-picker is caller-own-leads only.**~~ **CLOSED 2026-07-11 (Amelia).** NO new backend
+  needed — the team-scoped read `get_team_leads` already exists on prod (migration `0060`, scoped by
+  `visible_user_ids()`). `hold_lead_picker_sheet.dart` now watches `teamLeadsProvider` (+ `ownerNamesProvider`
+  for per-row owner labels) instead of `myLeadsProvider`, so head=all / leader=subtree / rep=self —
+  exactly `hold_unit`'s allow-set. (A rep's owned set is unchanged; only peer-SHARED leads drop, and
+  `hold_unit` rejects those anyway, so nothing holdable is lost.) 2 widget tests added; suite 265/265,
+  analyze 0 errors. Original note kept below.
+
 - **Hold lead-picker is caller-own-leads only.** `hold_lead_picker_sheet.dart` reuses `myLeadsProvider`.
   The `hold_unit` RPC also allows builder_head (any tenant lead) and team_leader (visible subtree), so a
   head/leader can only hold via UI for a lead they personally own. Acceptable (holding is a rep action);
   widening needs a team-scoped lead read (Story 12.5-mobile / get_team_leads).
 
-## 15.5-mobile — agent-level filter on booking dashboard (deferred 2026-07-11)
-`get_active_holds`/`get_booking_stats` accept an optional `p_agent_id`, but the mobile dashboard only
-wires the project filter. Agent-level filtering needs a roster picker of the caller's `visible_user_ids()`
-— the roster lives in `features/team`; cross-feature wiring was out of Slice 3 scope. Project filter
-satisfies AC3. Add an agent dropdown (reuse a scoped roster read) when needed.
+## 15.5-mobile — agent-level filter on booking dashboard (~~deferred 2026-07-11~~ CLOSED 2026-07-11, Amelia)
+**CLOSED.** Correction to the original note: only `get_active_holds` took `p_agent_id` (0079);
+`get_booking_stats` did NOT — so migration **`0096`** adds `p_agent_id` to `get_booking_stats` (DROP+CREATE
+to avoid an overload; `visible_user_ids()` scope gate preserved, so an out-of-scope agent id → empty, no
+leak). No separate roster picker was needed: the agent roster is derived from the active holds themselves
+(distinct `holding_agent_id` + `agent_name`, already returned + visibility-scoped), shown only when >1
+agent has holds. Dashboard: agent chips + client-side list filter + server-side stats via the new param;
+switching project resets the agent filter. Verified per-agent via sim-JWT (head all=3/2/1/33.3%, agent-e1
+2/1/1/50%, agent-self 1/1/0/0%) + 2 new widget tests. Suite **267/267**, analyze 0 errors. ✅ **`0096`
+pushed to prod 2026-07-11 (head now 0096, signature confirmed).**
 
 ## 16.2-mobile — rep-facing amendment log entry + 16.4 push (deferred 2026-07-11)
 - **Rep log entry:** the mobile "Log amendment" action lives only on the head/leader booking dashboard

@@ -95,7 +95,7 @@ class LeadRepository {
   // Parses FunctionException.details → throws typed error or Exception.
   // supabase_flutter 2.x throws FunctionException on 4xx/5xx; details is decoded JSON.
   static Never _throwFromEdgeError(dynamic details, String fallback) {
-    final body = details is Map ? Map<String, dynamic>.from(details as Map) : null;
+    final body = details is Map ? Map<String, dynamic>.from(details) : null;
     final err  = body?['error'] as Map<String, dynamic>?;
     final code = err?['code'] as String? ?? 'internal_error';
     final msg  = err?['message'] as String? ?? fallback;
@@ -332,16 +332,20 @@ class LeadRepository {
         .toList();
   }
 
-  /// Fetches the active project list for the lead form project picker.
+  /// Fetches the active project list for the project pickers (lead form,
+  /// inventory availability, booking dashboard).
+  ///
+  /// Uses the get_my_projects RPC (migration 0095) rather than a direct
+  /// `.from('projects')` read so the list is scoped server-side per role tier:
+  /// a `partner_agency` user sees only projects shared to their agency, every
+  /// other tier sees all active tenant projects (identical to the prior read).
+  /// This cannot be done client-side because `role_tier` may be absent from the
+  /// JWT. Return shape (id, name) is unchanged → ProjectRef.fromJson still parses.
   Future<List<ProjectRef>> fetchProjects() async {
-    final result = await _supabase
-        .from('projects')
-        .select('id, name')
-        .eq('is_active', true)
-        .order('name');
+    final result = await _supabase.rpc('get_my_projects');
 
     return (result as List)
-        .map((row) => ProjectRef.fromJson(row as Map<String, dynamic>))
+        .map((row) => ProjectRef.fromJson(Map<String, dynamic>.from(row as Map)))
         .toList();
   }
 

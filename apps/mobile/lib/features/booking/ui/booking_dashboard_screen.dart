@@ -31,12 +31,14 @@ class _BookingDashboardScreenState
     extends ConsumerState<BookingDashboardScreen> {
   // '' = all projects. Family key for both providers.
   String _projectFilter = '';
+  // '' = all agents. Applied server-side for stats, client-side for the holds list.
+  String _agentFilter = '';
 
   Future<void> _refresh() async {
     try {
       await Future.wait([
         ref.refresh(activeHoldsProvider(_projectFilter).future),
-        ref.refresh(bookingStatsProvider(_projectFilter).future),
+        ref.refresh(bookingStatsProvider(_projectFilter, _agentFilter).future),
       ]);
     } catch (_) {
       // A refetch error surfaces via the providers' error state — never let it
@@ -91,10 +93,27 @@ class _BookingDashboardScreenState
     return "Couldn't confirm the booking. Try again.";
   }
 
+  /// Distinct holding agents present in [holds], sorted by label. Drives the agent
+  /// filter — bounded to agents that actually appear (and thus are in the caller's
+  /// visible scope), never the whole roster.
+  static List<({String id, String label})> _agentRoster(List<ActiveHold> holds) {
+    final seen = <String, String>{};
+    for (final h in holds) {
+      seen.putIfAbsent(h.holdingAgentId, () => h.agentLabel);
+    }
+    final list =
+        seen.entries.map((e) => (id: e.key, label: e.value)).toList();
+    list.sort((a, b) => a.label.toLowerCase().compareTo(b.label.toLowerCase()));
+    return list;
+  }
+
   @override
   Widget build(BuildContext context) {
     final holdsAsync = ref.watch(activeHoldsProvider(_projectFilter));
-    final statsAsync = ref.watch(bookingStatsProvider(_projectFilter));
+    final statsAsync = ref.watch(bookingStatsProvider(_projectFilter, _agentFilter));
+    // Roster for the agent filter is derived from the (agent-unfiltered) holds, so it
+    // only ever offers agents the caller can actually see, and only when >1 exist.
+    final roster = _agentRoster(holdsAsync.valueOrNull ?? const []);
 
     return Scaffold(
       backgroundColor: AppColors.surfaceBase,
@@ -123,8 +142,21 @@ class _BookingDashboardScreenState
             const SizedBox(height: 16),
             _ProjectFilter(
               selected: _projectFilter,
-              onChanged: (id) => setState(() => _projectFilter = id),
+              // Switching project resets the agent filter — the previously-selected
+              // agent may have no holds in the new project.
+              onChanged: (id) => setState(() {
+                _projectFilter = id;
+                _agentFilter = '';
+              }),
             ),
+            if (roster.length > 1) ...[
+              const SizedBox(height: 10),
+              _AgentFilter(
+                roster: roster,
+                selected: _agentFilter,
+                onChanged: (id) => setState(() => _agentFilter = id),
+              ),
+            ],
             const SizedBox(height: 16),
             Text(
               'ACTIVE HOLDS',
@@ -149,10 +181,15 @@ class _BookingDashboardScreenState
                     : "Couldn't load holds. Pull to refresh.",
               ),
               data: (holds) {
-                if (holds.isEmpty) return const _EmptyState();
+                final visible = _agentFilter.isEmpty
+                    ? holds
+                    : holds
+                        .where((h) => h.holdingAgentId == _agentFilter)
+                        .toList();
+                if (visible.isEmpty) return const _EmptyState();
                 return Column(
                   children: [
-                    for (final h in holds)
+                    for (final h in visible)
                       Padding(
                         padding: const EdgeInsets.only(bottom: 10),
                         child: _HoldCard(
@@ -287,6 +324,40 @@ class _ProjectFilter extends ConsumerWidget {
         );
       },
       orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+// ── Agent filter chips (roster derived from the active holds) ────────────────
+
+class _AgentFilter extends StatelessWidget {
+  final List<({String id, String label})> roster;
+  final String selected;
+  final void Function(String id) onChanged;
+  const _AgentFilter({
+    required this.roster,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _FilterChip(
+          label: 'All agents',
+          active: selected.isEmpty,
+          onTap: () => onChanged(''),
+        ),
+        for (final a in roster)
+          _FilterChip(
+            label: a.label,
+            active: selected == a.id,
+            onTap: () => onChanged(a.id),
+          ),
+      ],
     );
   }
 }

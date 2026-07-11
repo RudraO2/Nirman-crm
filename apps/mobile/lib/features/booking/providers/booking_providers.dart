@@ -18,9 +18,17 @@ Future<List<ActiveHold>> activeHolds(ActiveHoldsRef ref, String projectId) {
   return ref.watch(bookingRepositoryProvider).getActiveHolds(projectId: id);
 }
 
-/// Booking stats for the caller's scope, optionally filtered to [projectId].
+/// Booking stats for the caller's scope, optionally filtered to [projectId] and
+/// [agentId] (empty string = no filter). Family key is (projectId, agentId).
 @riverpod
-Future<BookingStats> bookingStats(BookingStatsRef ref, String projectId) {
-  final id = projectId.isEmpty ? null : projectId;
-  return ref.watch(bookingRepositoryProvider).getBookingStats(projectId: id);
+Future<BookingStats> bookingStats(
+  BookingStatsRef ref,
+  String projectId,
+  String agentId,
+) {
+  final pid = projectId.isEmpty ? null : projectId;
+  final aid = agentId.isEmpty ? null : agentId;
+  return ref
+      .watch(bookingRepositoryProvider)
+      .getBookingStats(projectId: pid, agentId: aid);
 }

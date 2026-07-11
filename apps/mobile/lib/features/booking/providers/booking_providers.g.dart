@@ -165,35 +165,39 @@ class _ActiveHoldsProviderElement
   String get projectId => (origin as ActiveHoldsProvider).projectId;
 }
 
-String _$bookingStatsHash() => r'09d18fbc32d4a99fc70614130eb6fb976861c61d';
+String _$bookingStatsHash() => r'ce8df0cbb82cd4aa2505f43ae55dda176782c5ae';
 
-/// Booking stats for the caller's scope, optionally filtered to [projectId].
+/// Booking stats for the caller's scope, optionally filtered to [projectId] and
+/// [agentId] (empty string = no filter). Family key is (projectId, agentId).
 ///
 /// Copied from [bookingStats].
 @ProviderFor(bookingStats)
 const bookingStatsProvider = BookingStatsFamily();
 
-/// Booking stats for the caller's scope, optionally filtered to [projectId].
+/// Booking stats for the caller's scope, optionally filtered to [projectId] and
+/// [agentId] (empty string = no filter). Family key is (projectId, agentId).
 ///
 /// Copied from [bookingStats].
 class BookingStatsFamily extends Family<AsyncValue<BookingStats>> {
-  /// Booking stats for the caller's scope, optionally filtered to [projectId].
+  /// Booking stats for the caller's scope, optionally filtered to [projectId] and
+  /// [agentId] (empty string = no filter). Family key is (projectId, agentId).
   ///
   /// Copied from [bookingStats].
   const BookingStatsFamily();
 
-  /// Booking stats for the caller's scope, optionally filtered to [projectId].
+  /// Booking stats for the caller's scope, optionally filtered to [projectId] and
+  /// [agentId] (empty string = no filter). Family key is (projectId, agentId).
   ///
   /// Copied from [bookingStats].
-  BookingStatsProvider call(String projectId) {
-    return BookingStatsProvider(projectId);
+  BookingStatsProvider call(String projectId, String agentId) {
+    return BookingStatsProvider(projectId, agentId);
   }
 
   @override
   BookingStatsProvider getProviderOverride(
     covariant BookingStatsProvider provider,
   ) {
-    return call(provider.projectId);
+    return call(provider.projectId, provider.agentId);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -211,16 +215,18 @@ class BookingStatsFamily extends Family<AsyncValue<BookingStats>> {
   String? get name => r'bookingStatsProvider';
 }
 
-/// Booking stats for the caller's scope, optionally filtered to [projectId].
+/// Booking stats for the caller's scope, optionally filtered to [projectId] and
+/// [agentId] (empty string = no filter). Family key is (projectId, agentId).
 ///
 /// Copied from [bookingStats].
 class BookingStatsProvider extends AutoDisposeFutureProvider<BookingStats> {
-  /// Booking stats for the caller's scope, optionally filtered to [projectId].
+  /// Booking stats for the caller's scope, optionally filtered to [projectId] and
+  /// [agentId] (empty string = no filter). Family key is (projectId, agentId).
   ///
   /// Copied from [bookingStats].
-  BookingStatsProvider(String projectId)
+  BookingStatsProvider(String projectId, String agentId)
     : this._internal(
-        (ref) => bookingStats(ref as BookingStatsRef, projectId),
+        (ref) => bookingStats(ref as BookingStatsRef, projectId, agentId),
         from: bookingStatsProvider,
         name: r'bookingStatsProvider',
         debugGetCreateSourceHash:
@@ -231,6 +237,7 @@ class BookingStatsProvider extends AutoDisposeFutureProvider<BookingStats> {
         allTransitiveDependencies:
             BookingStatsFamily._allTransitiveDependencies,
         projectId: projectId,
+        agentId: agentId,
       );
 
   BookingStatsProvider._internal(
@@ -241,9 +248,11 @@ class BookingStatsProvider extends AutoDisposeFutureProvider<BookingStats> {
     required super.debugGetCreateSourceHash,
     required super.from,
     required this.projectId,
+    required this.agentId,
   }) : super.internal();
 
   final String projectId;
+  final String agentId;
 
   @override
   Override overrideWith(
@@ -259,6 +268,7 @@ class BookingStatsProvider extends AutoDisposeFutureProvider<BookingStats> {
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
         projectId: projectId,
+        agentId: agentId,
       ),
     );
   }
@@ -270,13 +280,16 @@ class BookingStatsProvider extends AutoDisposeFutureProvider<BookingStats> {
 
   @override
   bool operator ==(Object other) {
-    return other is BookingStatsProvider && other.projectId == projectId;
+    return other is BookingStatsProvider &&
+        other.projectId == projectId &&
+        other.agentId == agentId;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
     hash = _SystemHash.combine(hash, projectId.hashCode);
+    hash = _SystemHash.combine(hash, agentId.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -287,6 +300,9 @@ class BookingStatsProvider extends AutoDisposeFutureProvider<BookingStats> {
 mixin BookingStatsRef on AutoDisposeFutureProviderRef<BookingStats> {
   /// The parameter `projectId` of this provider.
   String get projectId;
+
+  /// The parameter `agentId` of this provider.
+  String get agentId;
 }
 
 class _BookingStatsProviderElement
@@ -296,6 +312,8 @@ class _BookingStatsProviderElement
 
   @override
   String get projectId => (origin as BookingStatsProvider).projectId;
+  @override
+  String get agentId => (origin as BookingStatsProvider).agentId;
 }
 
 // ignore_for_file: type=lint

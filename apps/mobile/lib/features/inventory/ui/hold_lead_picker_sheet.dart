@@ -1,14 +1,24 @@
-// Story 15.2-mobile — pick one of the caller's own leads to hold a unit for.
+// Story 15.2-mobile — pick a lead to hold a unit for.
 //
-// Reuses myLeadsProvider (the caller's active leads) — no new query. Returns the
-// chosen LeadListItem via the sheet result, or null if dismissed. The RPC enforces
-// ownership; this list is already scoped to the caller's leads.
+// Uses teamLeadsProvider (get_team_leads, migration 0060) rather than
+// myLeadsProvider so the candidate set matches EXACTLY what the hold_unit RPC
+// will accept, scoped by visible_user_ids():
+//   builder_head / super_admin → every internal lead
+//   team_leader                → own + reporting subtree
+//   front_line_rep             → self only
+// (A rep's own owned leads are identical to before; only peer-SHARED leads drop
+// out — and hold_unit rejects those anyway, so nothing holdable is lost.)
+// Because multiple owners' leads can now appear, each row shows the owner label
+// (ownerNamesProvider — bounded to the owners actually returned). Returns the
+// chosen LeadListItem via the sheet result, or null if dismissed. The RPC still
+// enforces authority; this list only narrows the picker to plausible candidates.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../leads/data/models/lead_model.dart';
-import '../../leads/providers/lead_providers.dart';
+import '../../team/data/models/team_lead.dart';
+import '../../team/providers/team_providers.dart';
 
 Future<LeadListItem?> showHoldLeadPicker(BuildContext context) {
   return showModalBottomSheet<LeadListItem>(
@@ -37,7 +47,8 @@ class _HoldLeadPickerState extends ConsumerState<_HoldLeadPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final leadsAsync = ref.watch(myLeadsProvider);
+    final leadsAsync = ref.watch(teamLeadsProvider);
+    final ownerNames = ref.watch(ownerNamesProvider).valueOrNull ?? const {};
 
     return SafeArea(
       child: Padding(
@@ -85,7 +96,7 @@ class _HoldLeadPickerState extends ConsumerState<_HoldLeadPicker> {
                 loading: () =>
                     const Center(child: CircularProgressIndicator()),
                 error: (_, __) => const Center(
-                  child: Text("Couldn't load your leads.",
+                  child: Text("Couldn't load leads.",
                       style: TextStyle(color: AppColors.inkSecondary)),
                 ),
                 data: (leads) {
@@ -101,7 +112,13 @@ class _HoldLeadPickerState extends ConsumerState<_HoldLeadPicker> {
                     separatorBuilder: (_, __) =>
                         const Divider(height: 1, color: AppColors.line),
                     itemBuilder: (_, i) {
-                      final l = filtered[i];
+                      final t = filtered[i];
+                      final l = t.lead;
+                      final owner = ownerLabel(t.ownerId, ownerNames);
+                      final phone = l.phone;
+                      final subtitle = phone != null && phone.isNotEmpty
+                          ? '$phone · $owner'
+                          : owner;
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(
@@ -111,11 +128,9 @@ class _HoldLeadPickerState extends ConsumerState<_HoldLeadPicker> {
                             color: AppColors.inkPrimary,
                           ),
                         ),
-                        subtitle: l.phone != null
-                            ? Text(l.phone!,
-                                style: const TextStyle(
-                                    color: AppColors.inkSecondary, fontSize: 12))
-                            : null,
+                        subtitle: Text(subtitle,
+                            style: const TextStyle(
+                                color: AppColors.inkSecondary, fontSize: 12)),
                         trailing: const Icon(Icons.chevron_right_rounded,
                             color: AppColors.inkDisabled),
                         onTap: () => Navigator.of(context).pop(l),
@@ -131,11 +146,11 @@ class _HoldLeadPickerState extends ConsumerState<_HoldLeadPicker> {
     );
   }
 
-  static List<LeadListItem> _filter(List<LeadListItem> leads, String q) {
+  static List<TeamLead> _filter(List<TeamLead> leads, String q) {
     if (q.isEmpty) return leads;
-    return leads.where((l) {
-      final name = (l.name ?? '').toLowerCase();
-      final phone = (l.phone ?? '').toLowerCase();
+    return leads.where((t) {
+      final name = (t.lead.name ?? '').toLowerCase();
+      final phone = (t.lead.phone ?? '').toLowerCase();
       return name.contains(q) || phone.contains(q);
     }).toList();
   }

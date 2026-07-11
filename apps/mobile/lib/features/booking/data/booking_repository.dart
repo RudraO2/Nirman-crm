@@ -58,16 +58,20 @@ class BookingRepository {
   }
 
   /// Confirmed bookings + active holds + hold→sold conversion % over [periodDays],
-  /// same scope, optional [projectId]. Returns [BookingStats.empty] if the RPC yields
-  /// no row (defensive — the aggregate always returns exactly one row).
+  /// same scope, optional [projectId] and [agentId] filters. [agentId] narrows to a
+  /// single holding agent WITHIN the caller's visibility (server-enforced by
+  /// visible_user_ids() — an out-of-scope id yields empty, never a leak). Returns
+  /// [BookingStats.empty] if the RPC yields no row (defensive).
   Future<BookingStats> getBookingStats({
     int periodDays = 30,
     String? projectId,
+    String? agentId,
   }) async {
     try {
       final rows = await _supabase.rpc('get_booking_stats', params: {
         'p_period_days': periodDays,
         'p_project_id': projectId,
+        'p_agent_id': agentId,
       });
       final list = rows as List;
       if (list.isEmpty) return BookingStats.empty;
