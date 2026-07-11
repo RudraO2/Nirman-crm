@@ -5,6 +5,7 @@
 // non-blocking warning banner when the OS denies a required permission (AC5).
 // Pure Material + AppColors to match existing screens — no freestyle styling.
 
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -14,7 +15,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../data/alarm_permissions.dart';
+import '../data/alarm_settings_repository.dart';
 import '../data/models/alarm_settings.dart';
+import '../data/oem_autostart.dart';
 import '../providers/alarm_settings_controller.dart';
 
 class AlarmSettingsScreen extends ConsumerStatefulWidget {
@@ -100,7 +103,7 @@ class _Body extends ConsumerWidget {
           ),
           child: SwitchListTile(
             value: settings.enabled,
-            onChanged: controller.setEnabled,
+            onChanged: (v) => _enableAndOnboard(ref, controller, v),
             activeThumbColor: AppColors.accent,
             title: const Text('Enable alarms',
                 style: TextStyle(
@@ -303,9 +306,173 @@ class _PermissionSection extends ConsumerWidget {
             ],
           ),
         ),
+        // Story 10.4 — OEM auto-start guidance (self-hides on non-aggressive OEMs
+        // and iOS). Auto-start state is not queryable, so this is guidance only.
+        const SizedBox(height: 12),
+        const _AutoStartCard(),
       ],
     );
   }
+}
+
+/// Story 10.4 — "Allow auto-start" guided step. Shown only on OEMs known to gate
+/// background alarms behind an Autostart/Auto-launch toggle (Xiaomi/Oppo/Vivo/
+/// etc.). Tapping deep-links to the OEM page (native falls back to app settings)
+/// and records the visit locally so a future proactive nudge doesn't repeat.
+class _AutoStartCard extends ConsumerStatefulWidget {
+  const _AutoStartCard();
+
+  @override
+  ConsumerState<_AutoStartCard> createState() => _AutoStartCardState();
+}
+
+class _AutoStartCardState extends ConsumerState<_AutoStartCard> {
+  AutoStartInfo? _info;
+  bool _visited = false;
+  bool _loaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final info = await ref.read(alarmPermissionsProvider).autoStartInfo();
+    final visited =
+        await ref.read(alarmSettingsRepositoryProvider).loadAutoStartVisited();
+    if (!mounted) return;
+    setState(() {
+      _info = info;
+      _visited = visited;
+      _loaded = true;
+    });
+  }
+
+  bool get _relevant {
+    final info = _info;
+    if (info == null) return false;
+    // Some skins report the aggressive brand in BRAND, not MANUFACTURER.
+    return isKnownAutoStartOem(info.manufacturer) ||
+        isKnownAutoStartOem(info.brand) ||
+        info.componentResolved;
+  }
+
+  Future<void> _open() async {
+    // Read providers BEFORE the await so a disposal during openAutoStartSettings()
+    // never leaves us using `ref` after the element is gone.
+    final perms = ref.read(alarmPermissionsProvider);
+    final repo = ref.read(alarmSettingsRepositoryProvider);
+    await perms.openAutoStartSettings();
+    await repo.saveAutoStartVisited(true);
+    if (!mounted) return;
+    setState(() => _visited = true);
+    ref.invalidate(alarmPermissionStatusProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_loaded || !_relevant) return const SizedBox.shrink();
+    final brand = autoStartBrandLabel(_info!.manufacturer) ??
+        autoStartBrandLabel(_info!.brand) ??
+        'your phone';
+    // AC3 — after the first visit the prominent nudge downgrades to a quiet
+    // "re-open" affordance so it doesn't keep pushing the user every time.
+    final button = _visited
+        ? OutlinedButton.icon(
+            icon: const Icon(Icons.check, size: 18),
+            label: const Text('Re-open auto-start settings'),
+            onPressed: _open,
+          )
+        : ElevatedButton.icon(
+            icon: const Icon(Icons.rocket_launch_outlined, size: 18),
+            label: const Text('Allow auto-start'),
+            onPressed: _open,
+          );
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceRaised,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.borderHairline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            // Vendor-neutral copy: the lever is "Auto-start"/"Auto-launch" on
+            // Xiaomi/Oppo/Vivo/Huawei but "battery"/"app power" on Samsung/OnePlus,
+            // so we point the user at both rather than naming one that may not exist.
+            '$brand can stop alarms in the background. Let Nirman CRM keep running '
+            '— look for "Auto-start", "Auto-launch", or the battery / app-power '
+            'settings on the page that opens — so follow-up alarms still ring after '
+            'you close the app or restart the phone.',
+            style: const TextStyle(
+                fontSize: 13, color: AppColors.inkSecondary, height: 1.35),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(width: double.infinity, child: button),
+        ],
+      ),
+    );
+  }
+}
+
+/// Story 10.4 — turn alarms on/off, and on enable run the guided permission
+/// sequence (AC7) so the user isn't left to hunt through system settings.
+Future<void> _enableAndOnboard(
+    WidgetRef ref, AlarmSettingsController controller, bool enabled) async {
+  try {
+    await controller.setEnabled(enabled);
+    if (!enabled) return;
+    await _runGuidedOnboarding(ref);
+  } catch (e) {
+    // Onboarding is best-effort and non-blocking: a permission-plugin error
+    // (e.g. permission_handler's "a request is already running" if a card button
+    // is tapped mid-flow), a disposed `ref` if the user leaves the screen during
+    // a system dialog, or a reconcile failure must NOT crash the toggle or leak an
+    // unhandled async error. The banner/card re-sync on the next lifecycle-resume.
+    developer.log("{'event':'alarm_error','op':'onboarding','error':'$e'}",
+        name: 'alarms');
+  }
+}
+
+/// Non-blocking, ordered permission walkthrough driven by the pure
+/// [plannedOnboardingSteps] planner: notification → exact-alarm → overlay →
+/// battery-opt → auto-start. Runtime dialogs fire automatically; the auto-start
+/// step is surfaced by the persistent [_AutoStartCard] rather than force-opening
+/// an OEM page the user didn't ask for (it is also unverifiable afterwards).
+Future<void> _runGuidedOnboarding(WidgetRef ref) async {
+  final perms = ref.read(alarmPermissionsProvider);
+  final status = await perms.status();
+  final info = await perms.autoStartInfo();
+  final autoStartRelevant = info != null &&
+      (isKnownAutoStartOem(info.manufacturer) ||
+          isKnownAutoStartOem(info.brand) ||
+          info.componentResolved);
+
+  final steps = plannedOnboardingSteps(
+    notificationGranted: status.notificationGranted,
+    exactAlarmGranted: status.exactAlarmGranted,
+    overlayGranted: status.systemAlertWindowGranted,
+    batteryOptimizationIgnored: status.batteryOptimizationIgnored,
+    autoStartRelevant: autoStartRelevant,
+  );
+
+  // Runtime permission dialogs (notification + exact alarm are requested together).
+  if (steps.contains(AlarmOnboardingStep.notification) ||
+      steps.contains(AlarmOnboardingStep.exactAlarm)) {
+    await perms.request();
+  }
+  // AC7 order — overlay (the background-display lever) BEFORE battery-opt.
+  if (steps.contains(AlarmOnboardingStep.overlay)) {
+    await perms.requestOverlay();
+  }
+  if (steps.contains(AlarmOnboardingStep.batteryOptimization)) {
+    await perms.requestIgnoreBatteryOptimizations();
+  }
+  // AlarmOnboardingStep.autoStart → handled by the persistent _AutoStartCard.
+  ref.invalidate(alarmPermissionStatusProvider);
 }
 
 class _WarningAndButton extends ConsumerWidget {
@@ -358,7 +525,7 @@ class _WarningAndButton extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Opens "Display over other apps" — turn it on for Nirman CRM. On some '
             'phones also disable battery optimization for reliable alarms.',
             style: TextStyle(fontSize: 11.5, color: AppColors.inkSecondary),
@@ -390,17 +557,31 @@ class _WarningAndButton extends ConsumerWidget {
 
   Future<void> _onGrant(WidgetRef ref) async {
     final perms = ref.read(alarmPermissionsProvider);
-    if (status.needsSystemSettings) {
-      await perms.openSystemSettings();
-    } else {
-      final after = await perms.request();
-      // Runtime grants don't cover background full-screen display — route to the
-      // overlay page (reliable lever) if it's the remaining blocker.
-      if (after.notificationGranted &&
-          after.exactAlarmGranted &&
-          !after.backgroundDisplayGranted) {
-        await perms.requestOverlay();
+    try {
+      if (status.needsSystemSettings) {
+        await perms.openSystemSettings();
+      } else {
+        final after = await perms.request();
+        // Story 10.4 (AC8) — always request the battery-optimization exemption when
+        // not already granted, decoupled from the overlay branch below (previously
+        // it only fired when overlay was the remaining blocker, so overlay-granted
+        // devices stayed Doze/OEM-killable).
+        if (!after.batteryOptimizationIgnored) {
+          await perms.requestIgnoreBatteryOptimizations();
+        }
+        // Runtime grants don't cover background full-screen display — route to the
+        // overlay page (reliable lever) if it's the remaining blocker.
+        if (after.notificationGranted &&
+            after.exactAlarmGranted &&
+            !after.backgroundDisplayGranted) {
+          await perms.requestOverlay();
+        }
       }
+    } catch (e) {
+      // Guard against permission_handler's "a request is already running" if this
+      // button is tapped while the enable-onboarding flow is mid-request.
+      developer.log("{'event':'alarm_error','op':'grant','error':'$e'}",
+          name: 'alarms');
     }
     ref.invalidate(alarmPermissionStatusProvider);
   }
@@ -409,8 +590,13 @@ class _WarningAndButton extends ConsumerWidget {
     final perms = ref.read(alarmPermissionsProvider);
     // Overlay is the reliable cross-OEM lever; also nudge battery-opt + try the
     // stock full-screen-intent page as best-effort.
-    await perms.requestOverlay();
-    await perms.requestIgnoreBatteryOptimizations();
+    try {
+      await perms.requestOverlay();
+      await perms.requestIgnoreBatteryOptimizations();
+    } catch (e) {
+      developer.log("{'event':'alarm_error','op':'bg_display','error':'$e'}",
+          name: 'alarms');
+    }
     ref.invalidate(alarmPermissionStatusProvider);
   }
 }

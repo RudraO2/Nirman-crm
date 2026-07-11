@@ -64,6 +64,32 @@ void _log(Map<String, Object?> fields) {
 String _enc(Object? v) =>
     v is num || v is bool ? '$v' : "'${v.toString().replaceAll("'", r"\'")}'";
 
+/// Story 10.4 — register on-brand copy for the app-killed warning notification
+/// (Android NotificationOnKillService), once. The `alarm` package default is the
+/// generic "Your alarms may not ring"; this makes it specific to follow-ups.
+/// Idempotent + fail-safe: a transient failure leaves it unset so a later
+/// schedule retries. Only the strings are set here — the service is armed by any
+/// scheduled alarm carrying `warningNotificationOnKill: true`.
+bool _warningTextConfigured = false;
+
+Future<void> _ensureWarningText() async {
+  if (_warningTextConfigured) return;
+  try {
+    await alarm.Alarm.setWarningNotificationOnKill(
+      'Follow-up alarms may not ring',
+      'Nirman CRM was closed from recents. Reopen it so your follow-up alarms '
+          'keep ringing on time.',
+    );
+    // Only mark done AFTER the call succeeds. A concurrent first-time schedule
+    // may set the (identical) text twice — harmless and idempotent — but the
+    // custom copy is never skipped while still in flight, and a transient
+    // failure simply retries on the next schedule.
+    _warningTextConfigured = true;
+  } catch (e) {
+    _log({'event': 'alarm_error', 'op': 'set_kill_warning_text', 'error': '$e'});
+  }
+}
+
 /// Default until 10.2 wiring / on iOS: logs intent without touching the OS.
 class NoopAlarmScheduler implements AlarmScheduler {
   const NoopAlarmScheduler();
@@ -182,6 +208,10 @@ class AlarmPackageScheduler implements AlarmScheduler {
       return 0;
     }
 
+    // Story 10.4 — ensure the app-killed warning carries follow-up-specific copy
+    // before the first alarm arms the NotificationOnKillService.
+    await _ensureWarningText();
+
     final planned = planFollowUpAlarms(
       leadId: leadId,
       leadName: leadName,
@@ -283,8 +313,13 @@ class AlarmPackageScheduler implements AlarmScheduler {
       assetAudioPath: null,
       loopAudio: true,
       vibrate: true,
-      // Android-only story; harmless guard if ever run on iOS.
-      warningNotificationOnKill: Platform.isIOS,
+      // Story 10.4 — on Android, `alarm` 5.4.0 DOES honour this flag (contrary to
+      // the pkg docs): AlarmApiImpl.updateWarningNotificationState() starts the
+      // manifest-declared NotificationOnKillService when any saved alarm has it
+      // set, so the user is warned that swiping the app away (which cancels
+      // alarms on aggressive OEMs) may stop their follow-up alarm. Custom text is
+      // set via Alarm.setWarningNotificationOnKill in _ensureWarningText().
+      warningNotificationOnKill: true,
       androidFullScreenIntent: true,
       androidStopAlarmOnTermination: false,
       volumeSettings: alarm.VolumeSettings.fade(

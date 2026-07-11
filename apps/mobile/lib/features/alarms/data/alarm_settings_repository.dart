@@ -16,6 +16,9 @@ part 'alarm_settings_repository.g.dart';
 
 const _kEnabledKey = 'alarms.enabled';
 const _kOffsetsKey = 'alarms.offsets_minutes';
+// Story 10.4 — whether the user has visited the OEM auto-start page at least once
+// (auto-start state itself is not queryable, so we track the nudge locally).
+const _kAutoStartVisitedKey = 'alarms.autostart_visited';
 
 class AlarmSettingsRepository {
   AlarmSettingsRepository(this._prefs);
@@ -40,6 +43,13 @@ class AlarmSettingsRepository {
       name: 'alarms',
     );
   }
+
+  /// Story 10.4 — has the user opened the OEM auto-start page at least once?
+  Future<bool> loadAutoStartVisited() async =>
+      await _prefs.getBool(_kAutoStartVisitedKey) ?? false;
+
+  Future<void> saveAutoStartVisited(bool visited) async =>
+      _prefs.setBool(_kAutoStartVisitedKey, visited);
 }
 
 @riverpod

@@ -38,6 +38,12 @@ class AlarmPermissionStatus {
   /// Reported granted on iOS so it never raises a spurious warning.
   final bool systemAlertWindowGranted;
 
+  /// Story 10.4 — battery-optimization exemption. When false the OS/Doze (and OEM
+  /// power managers) can defer or kill the alarm. Requested unconditionally on the
+  /// grant path (AC8). Guidance-only: NOT part of [hasBlocker] so it never
+  /// over-warns. Reported granted on iOS (not applicable).
+  final bool batteryOptimizationIgnored;
+
   /// True when the user must visit system settings (a permission is
   /// permanently denied), so the UI offers an "Open settings" action.
   final bool needsSystemSettings;
@@ -47,6 +53,7 @@ class AlarmPermissionStatus {
     required this.exactAlarmGranted,
     required this.fullScreenIntentGranted,
     required this.systemAlertWindowGranted,
+    required this.batteryOptimizationIgnored,
     required this.needsSystemSettings,
   });
 
@@ -58,6 +65,22 @@ class AlarmPermissionStatus {
   /// AC5: any missing permission → show the non-blocking warning.
   bool get hasBlocker =>
       !notificationGranted || !exactAlarmGranted || !backgroundDisplayGranted;
+}
+
+/// Story 10.4 — native probe result for the OEM auto-start step. [manufacturer]
+/// comes from `Build.MANUFACTURER`; [componentResolved] is a best-effort check
+/// that a known Autostart component is visible (may be false under Android 11+
+/// package visibility even when the OEM has one — the UI also consults
+/// `isKnownAutoStartOem(manufacturer)`).
+class AutoStartInfo {
+  final String manufacturer;
+  final String brand;
+  final bool componentResolved;
+  const AutoStartInfo({
+    required this.manufacturer,
+    required this.brand,
+    required this.componentResolved,
+  });
 }
 
 class AlarmPermissions {
@@ -76,14 +99,45 @@ class AlarmPermissions {
     }
   }
 
+  /// Story 10.4 — native probe of the OEM auto-start manager. Returns null on iOS
+  /// or on any channel error (fail-closed: the UI then simply hides the step).
+  Future<AutoStartInfo?> autoStartInfo() async {
+    if (!_isAndroid) return null;
+    try {
+      final res = await _channel
+          .invokeMapMethod<String, dynamic>('getAutoStartInfo');
+      if (res == null) return null;
+      return AutoStartInfo(
+        manufacturer: (res['manufacturer'] as String?) ?? '',
+        brand: (res['brand'] as String?) ?? '',
+        componentResolved: (res['componentResolved'] as bool?) ?? false,
+      );
+    } on PlatformException {
+      return null;
+    }
+  }
+
+  /// Story 10.4 — opens the OEM Autostart/Auto-launch page (native falls back to
+  /// this app's settings page if no OEM component launches).
+  Future<void> openAutoStartSettings() async {
+    if (!_isAndroid) return;
+    try {
+      await _channel.invokeMethod<void>('openAutoStartSettings');
+    } on PlatformException {
+      await openAppSettings();
+    }
+  }
+
   Future<AlarmPermissionStatus> status() async {
     final notif = await Permission.notification.status;
     final exact =
         _isAndroid ? await Permission.scheduleExactAlarm.status : null;
     final overlay =
         _isAndroid ? await Permission.systemAlertWindow.status : null;
+    final battery =
+        _isAndroid ? await Permission.ignoreBatteryOptimizations.status : null;
     final fsi = await _canUseFullScreenIntent();
-    return _toStatus(notif, exact, overlay, fsi);
+    return _toStatus(notif, exact, overlay, battery, fsi);
   }
 
   /// Requests the required permissions and returns the resulting status.
@@ -96,8 +150,10 @@ class AlarmPermissions {
         _isAndroid ? await Permission.scheduleExactAlarm.request() : null;
     final overlay =
         _isAndroid ? await Permission.systemAlertWindow.status : null;
+    final battery =
+        _isAndroid ? await Permission.ignoreBatteryOptimizations.status : null;
     final fsi = await _canUseFullScreenIntent();
-    return _toStatus(notif, exact, overlay, fsi);
+    return _toStatus(notif, exact, overlay, battery, fsi);
   }
 
   /// Opens the "Display over other apps" page for this app (reliable across OEM
@@ -126,12 +182,17 @@ class AlarmPermissions {
     }
   }
 
-  AlarmPermissionStatus _toStatus(PermissionStatus notif,
-      PermissionStatus? exact, PermissionStatus? overlay, bool fsiGranted) {
+  AlarmPermissionStatus _toStatus(
+      PermissionStatus notif,
+      PermissionStatus? exact,
+      PermissionStatus? overlay,
+      PermissionStatus? battery,
+      bool fsiGranted) {
     final notifOk = notif.isGranted;
     // null → iOS (not applicable) → treat as satisfied.
     final exactOk = exact == null || exact.isGranted;
     final overlayOk = overlay == null || overlay.isGranted;
+    final batteryOk = battery == null || battery.isGranted;
     final needsSettings =
         notif.isPermanentlyDenied || (exact?.isPermanentlyDenied ?? false);
     return AlarmPermissionStatus(
@@ -139,6 +200,7 @@ class AlarmPermissions {
       exactAlarmGranted: exactOk,
       fullScreenIntentGranted: fsiGranted,
       systemAlertWindowGranted: overlayOk,
+      batteryOptimizationIgnored: batteryOk,
       needsSystemSettings: needsSettings,
     );
   }
