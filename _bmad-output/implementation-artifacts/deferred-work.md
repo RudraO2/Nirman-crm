@@ -63,3 +63,44 @@
 
 - **`auth_tenant_id()` reads `public.tenants` on every RLS evaluation** — Story 8.2 redefined the chokepoint to gate on `tenants.status`. It is `STABLE` (planner folds per-query in most plans) and the read is a single PK lookup on a 1-row-per-tenant table, so absolute cost is tiny today. At large tenant scale / hot query paths, revisit: options include caching `status` in the JWT `app_metadata` (requires re-issuing JWTs on status change) or a per-statement memoization. No action needed now.
 - **8.3 `signup-create-tenant` ordering** — the new lifecycle gate means `auth_tenant_id()` returns NULL until the tenant row exists AND is `trial`/`active`. The 8.3 atomic-provisioning fn must (a) create the `tenants` row with `status='trial'` (an allowed status) and (b) not depend on `auth_tenant_id()` resolving mid-transaction before that row is committed. Use the service-role client (RLS-bypassing) for provisioning, as `bootstrap-admin` already does. Carry into the 8.3 story spec.
+
+## Deferred from: code review of story 9-1-prepaid-access-gating-seam (2026-07-10)
+
+- **Migration 0088 numeric ordering vs 0087:** 0088 (prepaid billing) was authored before 0087 (reserved by Story 8.3 harden-edge-function-auth, in-review). When 8.3 lands 0087 and `supabase db push --linked` runs, supabase will apply 0087 after 0088 is already in history (out of numeric order). Independent migrations so no dependency break, but coordinate the two deploys. Not a code defect.
+
+## Deferred from: code review of 14-3-mobile-availability-grid (2026-07-10)
+
+- **Partner project-picker over-lists (AC3 scope nuance).** The mobile Availability picker
+  (`apps/mobile/lib/features/inventory/ui/inventory_projects_screen.dart`) lists ALL active tenant
+  projects to every user via `availableProjectsProvider` (projects RLS is tenant-scoped). A
+  `partner_agency` user therefore sees project *names* they can't open (grid RPC denies non-shared
+  projects with a friendly empty state; units + margin stay fully scoped). Not fixable purely
+  client-side because `role_tier` may be absent from the JWT (12.3 backfill not run) → cannot detect
+  partner tier reliably. **Correct fix:** a backend `get_my_projects()` RPC scoping the project list
+  per role tier the way `get_project_units` scopes units. Out of the internal-only demo path (§13.7).
+
+## Deferred from: code review of 15-2-mobile-hold-unit (2026-07-10)
+
+- **Hold lead-picker is caller-own-leads only.** `hold_lead_picker_sheet.dart` reuses `myLeadsProvider`.
+  The `hold_unit` RPC also allows builder_head (any tenant lead) and team_leader (visible subtree), so a
+  head/leader can only hold via UI for a lead they personally own. Acceptable (holding is a rep action);
+  widening needs a team-scoped lead read (Story 12.5-mobile / get_team_leads).
+
+## 15.5-mobile — agent-level filter on booking dashboard (deferred 2026-07-11)
+`get_active_holds`/`get_booking_stats` accept an optional `p_agent_id`, but the mobile dashboard only
+wires the project filter. Agent-level filtering needs a roster picker of the caller's `visible_user_ids()`
+— the roster lives in `features/team`; cross-feature wiring was out of Slice 3 scope. Project filter
+satisfies AC3. Add an agent dropdown (reuse a scoped roster read) when needed.
+
+## 16.2-mobile — rep-facing amendment log entry + 16.4 push (deferred 2026-07-11)
+- **Rep log entry:** the mobile "Log amendment" action lives only on the head/leader booking dashboard
+  (which carries unit_id + lead_id). A `front_line_rep` who holds a unit has no entry, because the
+  inventory unit read (`get_project_units`) does not return the holding lead. Add a lead link to that read
+  (backend) or a hold-lookup, then surface "Log amendment" on the inventory unit-detail sheet.
+- **16.4 FCM push/deep-link:** the amendment notify edge fn (`send-amendment-notification`, 0083) is
+  dormant/undeployed; in-app destinations (execution surface + lead Timeline `amendment_logged`) exist but
+  push delivery + deep-link routing into a specific amendment are not wired. Follow-up when the edge fn is
+  deployed + a caller drains `domain_events`.
+- **Non-head execution-member entry:** the "Amendments" You-tab row is head-gated because membership isn't
+  a JWT claim. A non-head execution member reaches the surface only via a leaked route (then it works).
+  Broaden by stamping membership into the JWT or a cheap client membership read on the You tab.
