@@ -1,5 +1,24 @@
 // Story 2.3 / 2.5 — Lead models for creation and list display.
 
+/// English ordinal for a visit count: 1→"1st", 2→"2nd", 3→"3rd", 11/12/13→"th",
+/// else by last digit. Shared by the lead card + lead-detail visit labels
+/// (Story 13.8-mobile) so the ordinal logic lives in exactly one place.
+String visitOrdinal(int n) {
+  if (n <= 0) return '$n';
+  final mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return '${n}th';
+  switch (n % 10) {
+    case 1:
+      return '${n}st';
+    case 2:
+      return '${n}nd';
+    case 3:
+      return '${n}rd';
+    default:
+      return '${n}th';
+  }
+}
+
 class TimelineEntry {
   final String id;
   final String eventType;
@@ -78,6 +97,11 @@ class LeadListItem {
   final DateTime? archivedAt;
   /// Story 4.4 — true when this lead was shared with the caller (not owned).
   final bool isShared;
+  /// Story 13.8-mobile — system-generated visit code (e.g. "NIR-44D77"), for the
+  /// agent to read out. Null until a code has been generated (13.3).
+  final String? customerCode;
+  /// Story 13.8-mobile — number of verified walk-in visits (0 by default).
+  final int visitCount;
 
   const LeadListItem({
     required this.id,
@@ -100,6 +124,8 @@ class LeadListItem {
     this.interestType,
     this.archivedAt,
     this.isShared = false,
+    this.customerCode,
+    this.visitCount = 0,
   });
 
   factory LeadListItem.fromJson(Map<String, dynamic> j) {
@@ -125,6 +151,8 @@ class LeadListItem {
       interestType:      j['interest_type'] as String?,
       archivedAt:        _dt(j['archived_at'] as String?),
       isShared:          j['is_shared'] as bool? ?? false,
+      customerCode:      j['customer_code'] as String?,
+      visitCount:        (j['visit_count'] as int?) ?? 0,
     );
   }
 
@@ -180,6 +208,8 @@ class LeadDetail extends LeadListItem {
     required super.urgencyScore,
     super.interestType,
     super.isShared,
+    super.customerCode,
+    super.visitCount,
     required this.projectIds,
     this.remarks,
   });
@@ -199,6 +229,7 @@ class LeadDetail extends LeadListItem {
       lastActionAt: base.lastActionAt, createdAt: base.createdAt,
       urgencyScore: base.urgencyScore, interestType: base.interestType,
       isShared: base.isShared,
+      customerCode: base.customerCode, visitCount: base.visitCount,
       projectIds: pids,
       remarks: j['remarks'] as String?,
     );

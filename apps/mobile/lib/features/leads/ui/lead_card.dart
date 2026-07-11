@@ -125,6 +125,38 @@ class _CardBody extends StatelessWidget {
           ],
         ),
 
+        // ── Visit code · ordinal (Story 13.8-mobile) ───────────────────────
+        // The read-out code + walk-in count, straight off get_my_leads (0093).
+        if (lead.customerCode != null || lead.visitCount > 0) ...[
+          const SizedBox(height: 3),
+          Row(
+            children: [
+              if (lead.customerCode != null)
+                Flexible(
+                  child: Text(
+                    lead.customerCode!,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: metaColor,
+                      letterSpacing: 0.3,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              if (lead.customerCode != null && lead.visitCount > 0)
+                Text(' · ',
+                    style: TextStyle(
+                        fontSize: 11.5, color: AppColors.inkDisabled)),
+              if (lead.visitCount > 0)
+                Text(
+                  '${visitOrdinal(lead.visitCount)} visit',
+                  style: TextStyle(fontSize: 11.5, color: metaColor),
+                ),
+            ],
+          ),
+        ],
+
         // ── Single flag line: state span (· date span) ─────────────────────
         if (state != null || date != null) ...[
           const SizedBox(height: 5),

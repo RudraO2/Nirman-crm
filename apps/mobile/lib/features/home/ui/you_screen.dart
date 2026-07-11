@@ -22,6 +22,13 @@ class YouScreen extends ConsumerWidget {
     final session = ref.read(authRepositoryProvider).currentSession;
     final email = session?.user.email ?? '';
     final role = session?.user.appMetadata['role'] as String?;
+    // Best-effort only — role_tier may be ABSENT from the JWT (12.3 backfill not
+    // run in prod). Used solely to decide whether to surface the Team-leads entry;
+    // get_team_leads scopes correctly server-side regardless. [Story 12.6-mobile]
+    final roleTier = session?.user.appMetadata['role_tier'] as String?;
+    final showTeamLeads = role == 'admin' ||
+        roleTier == 'team_leader' ||
+        roleTier == 'partner_agency';
     final displayName = email.contains('@') ? email.split('@').first : email;
     final roleLabel = _roleLabel(role);
     final initials = _initials(displayName);
@@ -106,6 +113,72 @@ class YouScreen extends ConsumerWidget {
           // Existing motivation widgets (unchanged, same providers)
           const PersonalStatsCard(),
           const MonthlyBestSection(),
+
+          // Workspace rows (builder-ops)
+          const Padding(
+            padding: EdgeInsets.fromLTRB(0, 20, 0, 8),
+            child: Text(
+              'WORKSPACE',
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.26,
+                color: AppColors.inkSecondary,
+              ),
+            ),
+          ),
+          _RowItem(
+            icon: Icons.grid_view_rounded,
+            title: 'Availability',
+            subtitle: 'Live unit grid · hold status',
+            onTap: () => context.push('/inventory'),
+          ),
+          // Story 12.6-mobile — team-scoped lead visibility (leader/head/partner).
+          // Best-effort entry gate; get_team_leads scopes per tier server-side.
+          if (showTeamLeads)
+            _RowItem(
+              icon: Icons.groups_rounded,
+              title: 'Team leads',
+              subtitle: 'Leads across your team · agency',
+              onTap: () => context.push('/team-leads'),
+            ),
+          // Story 15.5-mobile — booking dashboard (head/leader management view).
+          // get_active_holds/get_booking_stats scope by visible_user_ids() server-side.
+          if (role == 'admin' || roleTier == 'team_leader')
+            _RowItem(
+              icon: Icons.event_available_rounded,
+              title: 'Booking dashboard',
+              subtitle: 'Active holds · countdown · conversion',
+              onTap: () => context.push('/booking'),
+            ),
+          // Story 16.2-mobile — execution-team amendment surface. Membership is a
+          // table (not a JWT claim), so gate cosmetically to head; the screen shows a
+          // calm state + self-join for a non-member head. RPCs re-check server-side.
+          if (role == 'admin')
+            _RowItem(
+              icon: Icons.build_circle_outlined,
+              title: 'Amendments',
+              subtitle: 'Execution team · change requests',
+              onTap: () => context.push('/amendments'),
+            ),
+          // Story 13.4-mobile — reception check-in (receptionist, or head).
+          // Best-effort cosmetic gate; verify_visit re-checks the tier server-side.
+          if (roleTier == 'receptionist' || role == 'admin')
+            _RowItem(
+              icon: Icons.how_to_reg_rounded,
+              title: 'Reception check-in',
+              subtitle: 'Verify a walk-in by visit code',
+              onTap: () => context.push('/reception/verify'),
+            ),
+          // Story 12.4-mobile — builder-head only. `role == 'admin'` ≡ builder-head;
+          // best-effort cosmetic gate (set_user_hierarchy re-checks server-side).
+          if (role == 'admin')
+            _RowItem(
+              icon: Icons.account_tree_rounded,
+              title: 'Organization',
+              subtitle: 'Roles, reporting lines & agencies',
+              onTap: () => context.push('/organization'),
+            ),
 
           // Settings rows
           const Padding(

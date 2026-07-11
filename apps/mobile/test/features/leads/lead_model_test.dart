@@ -75,6 +75,23 @@ void main() {
       expect(item.nextFollowupAt, isNotNull);
       expect(item.createdAt.year, 2026);
     });
+
+    // Story 13.8-mobile — customer_code + visit_count from get_my_leads.
+    test('parses customer_code and visit_count', () {
+      final item = LeadListItem.fromJson({
+        ...base,
+        'customer_code': 'NIR-44D77',
+        'visit_count': 3,
+      });
+      expect(item.customerCode, 'NIR-44D77');
+      expect(item.visitCount, 3);
+    });
+
+    test('defaults customer_code to null and visit_count to 0 when absent', () {
+      final item = LeadListItem.fromJson(base);
+      expect(item.customerCode, isNull);
+      expect(item.visitCount, 0);
+    });
   });
 
   // ── LeadListItem computed properties ────────────────────────────────────
@@ -194,6 +211,50 @@ void main() {
       };
       final detail = LeadDetail.fromJson(json);
       expect(detail.projectIds, isEmpty);
+    });
+
+    // Story 13.8-mobile — get_lead_by_id also carries the two columns now.
+    test('carries customer_code and visit_count through base parse', () {
+      final json = {
+        'id': 'abc', 'status': 'warm', 'name': 'Test', 'phone': '9876543210',
+        'source': null, 'property_type': null, 'location': null,
+        'budget_min': null, 'budget_max': null, 'ticket_size': null,
+        'visit_date': null, 'next_followup_at': null, 'is_incomplete': false,
+        'pending_outcome_at': null, 'last_action_at': null,
+        'created_at': '2026-05-20T00:00:00.000Z', 'urgency_score': 100,
+        'project_ids': <String>[],
+        'customer_code': 'NIR-6CD66', 'visit_count': 2,
+      };
+      final detail = LeadDetail.fromJson(json);
+      expect(detail.customerCode, 'NIR-6CD66');
+      expect(detail.visitCount, 2);
+    });
+  });
+
+  // ── visitOrdinal helper (Story 13.8-mobile) ──────────────────────────────
+
+  group('visitOrdinal', () {
+    test('formats 1st/2nd/3rd/4th', () {
+      expect(visitOrdinal(1), '1st');
+      expect(visitOrdinal(2), '2nd');
+      expect(visitOrdinal(3), '3rd');
+      expect(visitOrdinal(4), '4th');
+    });
+
+    test('formats the 11/12/13 teens as th', () {
+      expect(visitOrdinal(11), '11th');
+      expect(visitOrdinal(12), '12th');
+      expect(visitOrdinal(13), '13th');
+    });
+
+    test('formats 21st/22nd/23rd by last digit', () {
+      expect(visitOrdinal(21), '21st');
+      expect(visitOrdinal(22), '22nd');
+      expect(visitOrdinal(23), '23rd');
+    });
+
+    test('non-positive returns the number', () {
+      expect(visitOrdinal(0), '0');
     });
   });
 

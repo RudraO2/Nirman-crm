@@ -17,6 +17,8 @@ LeadListItem _lead({
   DateTime? pendingOutcomeAt,
   DateTime? nextFollowupAt,
   DateTime? lastActionAt,
+  String? customerCode,
+  int visitCount = 0,
 }) =>
     LeadListItem(
       id: id,
@@ -30,6 +32,8 @@ LeadListItem _lead({
       lastActionAt: lastActionAt,
       createdAt: DateTime(2026, 5, 20),
       urgencyScore: 100,
+      customerCode: customerCode,
+      visitCount: visitCount,
     );
 
 Widget _wrap(Widget child) =>
@@ -126,6 +130,35 @@ void main() {
         expect(find.text(statusLabel.$2), findsOneWidget);
       });
     }
+  });
+
+  group('LeadCard — visit code + ordinal (Story 13.8-mobile)', () {
+    testWidgets('shows customer code when present', (tester) async {
+      await tester.pumpWidget(_wrap(
+        LeadCard(lead: _lead(customerCode: 'NIR-44D77')),
+      ));
+      expect(find.text('NIR-44D77'), findsOneWidget);
+    });
+
+    testWidgets('shows visit ordinal when visit_count > 0', (tester) async {
+      await tester.pumpWidget(_wrap(
+        LeadCard(lead: _lead(customerCode: 'NIR-44D77', visitCount: 2)),
+      ));
+      expect(find.text('2nd visit'), findsOneWidget);
+    });
+
+    testWidgets('no ordinal when visit_count is 0', (tester) async {
+      await tester.pumpWidget(_wrap(
+        LeadCard(lead: _lead(customerCode: 'NIR-44D77', visitCount: 0)),
+      ));
+      expect(find.textContaining('visit'), findsNothing);
+    });
+
+    testWidgets('no code line when neither code nor visits present', (tester) async {
+      await tester.pumpWidget(_wrap(LeadCard(lead: _lead())));
+      expect(find.textContaining('NIR-'), findsNothing);
+      expect(find.textContaining('visit'), findsNothing);
+    });
   });
 
   group('LeadCard — tap callback', () {

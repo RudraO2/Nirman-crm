@@ -359,6 +359,15 @@ class _LeadDetailView extends ConsumerWidget {
             if (lead.interestType != null)
               _DetailEntry('Interest', lead.interestType!),
           ];
+          // Story 13.8-mobile — surface customer_code + visit ordinal straight off
+          // the get_lead_by_id RPC row (0093 added the columns; the old direct-read
+          // shim is retired). Appended after the core rows.
+          if (lead.customerCode != null) {
+            rows.add(_DetailEntry('Visit code', lead.customerCode!));
+          }
+          if (lead.visitCount > 0) {
+            rows.add(_DetailEntry('Visits', _visitLabel(lead.visitCount)));
+          }
           final hasRemarks = lead.remarks != null && lead.remarks!.isNotEmpty;
           return Container(
             width: double.infinity,
@@ -472,6 +481,13 @@ class _LeadDetailView extends ConsumerWidget {
   static String _sourceLabel(String s) {
     const m = {'walk_in': 'Walk-in', 'referral': 'Referral', 'associate': 'Associate', 'ad': 'Ad'};
     return m[s] ?? s;
+  }
+
+  // Story 13.4-mobile — "3 visits (3rd)" style label for the detail row.
+  // Ordinal via the shared `visitOrdinal` helper (lead_model.dart).
+  static String _visitLabel(int count) {
+    final noun = count == 1 ? 'visit' : 'visits';
+    return '$count $noun (${visitOrdinal(count)})';
   }
 
   static String _budgetLabel(int? min, int? max) {
@@ -605,6 +621,12 @@ class _TimelineRow extends StatelessWidget {
       case 'duplicate_override':   return ('Duplicate override',    Icons.warning_amber_rounded,    AppColors.error);
       case 'remark_added':         return ('Remark added',          Icons.sticky_note_2_rounded,    AppColors.accentStrong);
       case 'imported':             return ('Imported',              Icons.file_upload_rounded,      AppColors.inkSecondary);
+      // Epic 13 (lead reg v2) + Epic 16 (amendments) timeline events.
+      case 'code_generated':       return ('Visit code generated',  Icons.qr_code_2_rounded,        AppColors.accentStrong);
+      case 'visit_verified':       return ('Visit verified',        Icons.how_to_reg_rounded,       const Color(0xFF1B7E3F));
+      case 'visit_logged':         return ('Visit logged',          Icons.location_on_rounded,      AppColors.accentStrong);
+      case 'lead_reclaimed':       return ('Lead reclaimed',        Icons.assignment_ind_rounded,   AppColors.accentStrong);
+      case 'amendment_logged':     return ('Amendment logged',      Icons.build_circle_rounded,     AppColors.accentStrong);
       default:                     return (type,                    Icons.history_rounded,          AppColors.inkSecondary);
     }
   }
@@ -640,6 +662,13 @@ class _TimelineRow extends StatelessWidget {
         } catch (_) { return null; }
       case 'whatsapp_sent':
         return p['template_name'] as String?;
+      case 'visit_verified':
+      case 'visit_logged':
+        final ord = p['visit_ordinal'];
+        if (ord is int) return '${visitOrdinal(ord)} visit';
+        return null;
+      case 'amendment_logged':
+        return p['description'] as String?;
       default:
         return null;
     }

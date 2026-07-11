@@ -61,3 +61,6 @@ coverage/
 *.bak
 # Local-only per-app MCP config
 apps/*/.mcp.json
+
+# Local-only throwaway seeds (never commit — may contain seeded auth users)
+*.local.sql

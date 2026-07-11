@@ -12,6 +12,13 @@ import '../features/auth/utils/auth_validators.dart';
 import '../features/home/ui/app_shell.dart';
 import '../features/home/ui/home_screen.dart';
 import '../features/home/ui/you_screen.dart';
+import '../features/hierarchy/ui/organization_screen.dart';
+import '../features/inventory/ui/availability_grid_screen.dart';
+import '../features/inventory/ui/inventory_projects_screen.dart';
+import '../features/team/ui/team_leads_screen.dart';
+import '../features/reception/ui/verify_visit_screen.dart';
+import '../features/booking/ui/booking_dashboard_screen.dart';
+import '../features/amendments/ui/amendments_execution_screen.dart';
 import '../features/leads/ui/archived_screen.dart';
 import '../features/leads/ui/filtered_leads_screen.dart';
 import '../features/leads/ui/followups_screen.dart';
@@ -150,6 +157,49 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(path: '/archived', builder: (_, __) => const ArchivedScreen()),
+    // Story 12.4-mobile — builder-head hierarchy management (Organization).
+    // Head-only entry (gated in you_screen); set_user_hierarchy re-checks role='admin'.
+    GoRoute(
+      path: '/organization',
+      builder: (_, __) => const OrganizationScreen(),
+    ),
+    // Story 12.6-mobile — team-scoped lead visibility (get_team_leads).
+    // Best-effort entry gate in you_screen; RPC scopes correctly for every tier.
+    GoRoute(
+      path: '/team-leads',
+      builder: (_, __) => const TeamLeadsScreen(),
+    ),
+    // Story 13.4-mobile — reception check-in (verify_visit by customer code).
+    // Best-effort entry gate in you_screen; verify_visit re-checks tier server-side.
+    GoRoute(
+      path: '/reception/verify',
+      builder: (_, __) => const VerifyVisitScreen(),
+    ),
+    // Story 16.2-mobile — execution-team amendment surface (member-gated server-side).
+    // Best-effort entry gate (head) in you_screen; the RPCs re-check membership/tier.
+    GoRoute(
+      path: '/amendments',
+      builder: (_, __) => const AmendmentsExecutionScreen(),
+    ),
+    // Story 15.5-mobile — booking dashboard (active holds + countdown + hold→sold).
+    // Best-effort entry gate in you_screen; get_active_holds/get_booking_stats scope
+    // by visible_user_ids() server-side; confirm_booking re-checks the tier.
+    GoRoute(
+      path: '/booking',
+      builder: (_, __) => const BookingDashboardScreen(),
+    ),
+    // Story 14.3-mobile — builder-ops availability grid (project picker → live grid).
+    GoRoute(
+      path: '/inventory',
+      builder: (_, __) => const InventoryProjectsScreen(),
+    ),
+    GoRoute(
+      path: '/inventory/:projectId',
+      builder: (_, state) => AvailabilityGridScreen(
+        projectId: state.pathParameters['projectId']!,
+        projectName: state.uri.queryParameters['name'],
+      ),
+    ),
     GoRoute(
       path: '/leads/filtered',
       builder: (_, state) => FilteredLeadsScreen(
