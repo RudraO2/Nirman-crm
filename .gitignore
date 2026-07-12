@@ -67,3 +67,6 @@ apps/*/.mcp.json
 
 # Claude Code worktrees (demo-showroom etc.)
 .claude/
+
+# local prod DB dumps (scripts/backup-db.ps1)
+backups/
