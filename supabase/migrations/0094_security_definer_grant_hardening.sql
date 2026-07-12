@@ -1,7 +1,12 @@
 -- 0094_security_definer_grant_hardening.sql
 -- SECURITY DEFINER sweep (Money Path #10) — least-privilege EXECUTE cleanup.
 --
--- AUDIT RESULT (read-only prod catalog sweep, 2026-07-11): NO live vulnerability.
+-- AUDIT RESULT (read-only prod catalog sweep, 2026-07-11): NO live vulnerability
+-- *within this sweep's scope* — SECURITY DEFINER function grants + search_path ONLY.
+-- ⚠️ SCOPE NOTE (robustness-audit medium, added 2026-07-12): this sweep did NOT
+-- cover table-level GRANT/RLS. The tenant-wide table grants on leads/units/
+-- unit_holds/amendments (audit C2/C3/H2/H3) lived exactly there and were fixed
+-- separately in 0098/0099. Do not read this header as "the whole DB was clean".
 --   * search_path is pinned on EVERY public SECURITY DEFINER function
 --     (either `public, extensions` or `''`) — no search-path-hijack vector.
 --   * The 5 cron batch fns that intentionally process cross-tenant
