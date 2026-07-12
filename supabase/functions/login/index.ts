@@ -16,8 +16,6 @@ import bcrypt from "npm:bcryptjs";
 import { z } from "npm:zod";
 import { CORS_HEADERS, errorResponse, successResponse } from "./_shared/errors.ts";
 
-const SEED_TENANT_ID = "00000000-0000-0000-0000-000000000001";
-
 const LoginInput = z.object({
   username: z.string().min(1).max(200),
   password: z.string().min(1).max(200),
@@ -69,11 +67,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     auth: { autoRefreshToken: false, persistSession: false },
   });
 
+  // Global lookup — usernames are globally unique across tenants (enforced by
+  // auth.users email uniqueness on both creation paths + the 0097 unique index).
+  // Exact match: 0097 lowercase-normalized stored values, input is lowercased
+  // above, and eq() is immune to the ilike/PostgREST wildcard translation.
   const { data: userProfile, error: profileErr } = await adminClient
     .from("users")
-    .select("id, role, is_active, bcrypt_password_hash, must_change_password")
-    .eq("tenant_id", SEED_TENANT_ID)
-    .ilike("email_or_username", normalizedUsername)
+    .select("id, tenant_id, role, is_active, bcrypt_password_hash, must_change_password")
+    .eq("email_or_username", normalizedUsername)
     .maybeSingle();
 
   if (profileErr) {
@@ -115,7 +116,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         ts: new Date().toISOString(),
         level: "info",
         event: "login_platform_rejected",
-        tenant_id: SEED_TENANT_ID,
+        tenant_id: userProfile.tenant_id,
         user_id: userProfile.id,
         platform,
         // Do NOT log username or password
@@ -156,7 +157,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       ts: new Date().toISOString(),
       level: "info",
       event: "login_success",
-      tenant_id: SEED_TENANT_ID,
+      tenant_id: userProfile.tenant_id,
       user_id: userProfile.id,
       role: userProfile.role,
       platform,
