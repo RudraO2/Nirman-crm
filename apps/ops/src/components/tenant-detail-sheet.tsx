@@ -40,7 +40,13 @@ export function TenantDetailSheet({
   const [reactivateOpen, setReactivateOpen] = useState(false)
 
   const tenantId = active?.tenant_id ?? null
-  const planIntervals = useMemo(() => new Set(plans.map((p) => p.interval_months)), [plans])
+  // Quick chips only for UNAMBIGUOUS intervals (audit low): with two plans of the
+  // same length the chip silently picked the first — force the full dialog instead.
+  const planIntervals = useMemo(() => {
+    const counts = new Map<number, number>()
+    for (const p of plans) counts.set(p.interval_months, (counts.get(p.interval_months) ?? 0) + 1)
+    return new Set([...counts.entries()].filter(([, n]) => n === 1).map(([i]) => i))
+  }, [plans])
 
   const loadLedger = useCallback(async (id: string) => {
     setLedger(null)
@@ -188,9 +194,15 @@ export function TenantDetailSheet({
                   </div>
                 </section>
 
-                {/* Lifecycle actions */}
+                {/* Lifecycle actions. Cancelled tenants get NO bare Reactivate —
+                    0106 rejects it server-side; revival goes through Record
+                    payment (renew flips cancelled -> active with a real window). */}
                 <section className="mt-4 flex flex-wrap gap-2">
-                  {isSuspended || isCancelled ? (
+                  {isCancelled ? (
+                    <p className="text-xs text-muted-foreground">
+                      Cancelled. To revive, record a payment — that reactivates with a real paid window.
+                    </p>
+                  ) : isSuspended ? (
                     <Button size="sm" variant="outline" onClick={() => setReactivateOpen(true)}>
                       <RotateCcw /> Reactivate
                     </Button>
@@ -275,6 +287,7 @@ export function TenantDetailSheet({
             tenantName={t.name}
             noteLabel="Note"
             confirmLabel="Reactivate tenant"
+            requireMfa
             busy={busy}
             onConfirm={doReactivate}
           />

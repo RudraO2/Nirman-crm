@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { inr } from '@/lib/format'
+import { verifyStepUp } from '@/lib/step-up'
 import { PAYMENT_METHODS, type Plan, type PaymentMethod } from '@/lib/types'
 
 const selectCls =
@@ -22,8 +23,10 @@ const selectCls =
 /**
  * Record-payment / renew dialog. Collects plan + amount + method + note, then
  * enforces the typed-confirmation safety rail (design §10): the operator must
- * retype BOTH the exact tenant name AND the exact amount before Record fires.
- * Calls ops_renew_tenant (delegates to the 9.1 seam) via the parent.
+ * retype BOTH the exact tenant name AND the exact amount (paste disabled), plus
+ * a fresh authenticator code (9.7 step-up — audit parity with Suspend/Provision)
+ * before Record fires. Calls ops_renew_tenant (delegates to the 9.1 seam) via
+ * the parent.
  *
  * `initialInterval` lets a "+1 mo" / "+3 mo" quick chip preselect the plan whose
  * interval_months matches (renew_tenant extends by the plan's interval).
@@ -59,6 +62,11 @@ export function RenewDialog({
   const [note, setNote] = useState('')
   const [typedName, setTypedName] = useState('')
   const [typedAmount, setTypedAmount] = useState('')
+  // Audit medium: Record Payment moves money/extends access but demanded no fresh
+  // TOTP, unlike Suspend/Provision. Same step-up rail as ConfirmModal.
+  const [code, setCode] = useState('')
+  const [mfaError, setMfaError] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
 
   // Re-seed when the dialog (re)opens with a different quick-chip interval.
   useEffect(() => {
@@ -69,6 +77,9 @@ export function RenewDialog({
       setNote('')
       setTypedName('')
       setTypedAmount('')
+      setCode('')
+      setMfaError(null)
+      setVerifying(false)
     }
   }, [open, defaultPlan])
 
@@ -77,7 +88,20 @@ export function RenewDialog({
   const amountValid = Number.isInteger(amountNum) && amountNum >= 0 && amount.trim() !== ''
   const nameMatches = typedName.trim() === tenantName.trim()
   const amountMatches = amountValid && typedAmount.trim() === String(amountNum)
-  const canSubmit = !!planId && amountValid && nameMatches && amountMatches && !busy
+  const canSubmit =
+    !!planId && amountValid && nameMatches && amountMatches && code.length === 6 && !busy && !verifying
+
+  async function handleConfirm() {
+    setVerifying(true)
+    setMfaError(null)
+    const r = await verifyStepUp(code)
+    setVerifying(false)
+    if (!r.ok) {
+      setMfaError(r.error ?? 'Verification failed.')
+      return
+    }
+    onConfirm({ planId, amountInr: amountNum, method, note })
+  }
 
   const noPlans = plans.length === 0
 
@@ -167,6 +191,8 @@ export function RenewDialog({
                   value={typedName}
                   autoComplete="off"
                   onChange={(e) => setTypedName(e.target.value)}
+                  onPaste={(e) => e.preventDefault()}
+                  onDrop={(e) => e.preventDefault()}
                   aria-invalid={typedName.length > 0 && !nameMatches}
                 />
               </div>
@@ -180,24 +206,41 @@ export function RenewDialog({
                   value={typedAmount}
                   autoComplete="off"
                   onChange={(e) => setTypedAmount(e.target.value.replace(/[^0-9]/g, ''))}
+                  onPaste={(e) => e.preventDefault()}
+                  onDrop={(e) => e.preventDefault()}
                   aria-invalid={typedAmount.length > 0 && !amountMatches}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="c-mfa" className="text-xs text-muted-foreground">
+                  Authenticator code <span className="opacity-60">(required)</span>
+                </Label>
+                <Input
+                  id="c-mfa"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={6}
+                  placeholder="••••••"
+                  value={code}
+                  onChange={(e) => {
+                    setCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                    setMfaError(null)
+                  }}
+                  className="text-center font-mono tracking-[0.4em]"
+                  aria-invalid={!!mfaError}
+                />
+                {mfaError && <p className="text-xs text-destructive">{mfaError}</p>}
               </div>
             </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy || verifying}>
             Cancel
           </Button>
-          <Button
-            disabled={noPlans || !canSubmit}
-            onClick={() =>
-              onConfirm({ planId, amountInr: amountNum, method, note })
-            }
-          >
-            {busy ? 'Recording…' : `Record ${amountValid ? inr(amountNum) : 'payment'}`}
+          <Button disabled={noPlans || !canSubmit} onClick={handleConfirm}>
+            {verifying ? 'Verifying…' : busy ? 'Recording…' : `Record ${amountValid ? inr(amountNum) : 'payment'}`}
           </Button>
         </DialogFooter>
       </DialogContent>
