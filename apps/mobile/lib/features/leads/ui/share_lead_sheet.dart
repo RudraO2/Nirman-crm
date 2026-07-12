@@ -33,6 +33,9 @@ class _ShareLeadSheetState extends ConsumerState<_ShareLeadSheet> {
   String? _loadingId;
 
   Future<void> _onTap(String recipientId) async {
+    // In-flight guard (audit low): parallel taps fired parallel shares —
+    // idempotent server-side, but one tap should mean one RPC.
+    if (_loadingId != null) return;
     setState(() => _loadingId = recipientId);
     try {
       await ref.read(leadRepositoryProvider).shareLead(widget.leadId, recipientId);
