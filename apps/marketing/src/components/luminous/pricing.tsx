@@ -60,7 +60,7 @@ export function Pricing() {
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
             <a
-              href="#footer"
+              href="#book-demo"
               className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-200 via-amber-400 to-amber-500 px-6 py-3 text-sm font-semibold text-black shadow-lg shadow-amber-500/40 transition-transform hover:scale-[1.03]"
             >
               Book a live demo
