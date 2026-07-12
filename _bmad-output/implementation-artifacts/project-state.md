@@ -6,6 +6,71 @@ Repo: `nirman-crm/` (github.com/RudraO2/Nirman-crm, branch `main`). Supabase pro
 
 ---
 
+## ⚡ STATE DELTA — 2026-07-12 (read BEFORE the frozen snapshot below)
+
+The snapshot below was frozen 2026-07-11, BEFORE three same-day waves of work. Corrections:
+
+1. **The 🚨 audit banner below is OBSOLETE.** Every robustness-audit finding (4 C + 13 H + 25 M +
+   9 L) is FIXED and ON PROD — login is global (0097), leads/units/unit_holds/amendments direct
+   access locked (0098/0099), ops MFA server-enforced (0100), plus 0101–0107. Money-path row #10
+   is now ✅ (0098/0099 + pgTAP suite pins it). See `robustness-audit-2026-07-11.md` header banner.
+2. **Prod migration head = 0111.** Hygiene wave: CI (`.github/workflows/ci.yml`), mobile
+   Crashlytics, `scripts/backup-db.ps1` (+ first dump), pgTAP `audit_remediation_invariants`.
+   Feature wave: `/demo` merged to main; 8.4 link-based invites (0109 + accept-invite fn +
+   `/invite/[token]`); 8.5 email scaffold (`_shared/email.ts`, dormant until `RESEND_API_KEY`) +
+   founder demo-request alert (0111); 8.6 starter WhatsApp templates (0108 trigger); 16.4 FCM
+   dispatch LIVE (0110 + dispatch-notifications fn, cron verified 200 on prod).
+3. Money-path table deltas: #9 operator number is now `--dart-define`-injectable (build-apk.ps1
+   reads `.env.local`; placeholder build hides the dead dial buttons) — the REAL number is still
+   Rudra's. #5 testimonials still fake. #1/#2/#6/#7/#8 still Rudra/Vercel-side.
+
+## 🎯 PRACTICALITY BACKLOG — 2026-07-12 review (what to build next, in THIS order)
+
+Full-flow practicality review after everything above shipped. The app IS usable end-to-end
+(provision → import → invite team → work leads → visit → hold → confirm → sold → recharge).
+These are the gaps that will hurt real users, ranked. Nothing here blocks builder #1.
+
+**P0 — before the app is in many reps' hands**
+- **Play Store release** (Rudra CONFIRMED 2026-07-12 he'll pay the one-time Play Console fee).
+  Checklist: ① 🚨 **generate a real release keystore** — `apps/mobile/android/app/build.gradle.kts`
+  line ~31 signs release builds with the DEBUG key (`signingConfigs.getByName("debug")`); Play
+  Store will reject it and the signing key is forever — generate + back up a keystore FIRST;
+  ② Play Console account + app listing; ③ privacy-policy URL (marketing `/privacy` exists —
+  needs Rudra-approved copy); ④ `versionCode` bump discipline per release (pubspec `1.0.0+1`).
+- **Offline resilience — Phase 0 (read cache).** Field reps hit dead zones; today the app is
+  100% online. Cache the last `get_my_leads` result locally (drift + sqlite are ALREADY app deps)
+  and render it with an "offline — last synced X min ago" banner; phone numbers stay tappable
+  (voice calls often work when data doesn't). Days of work, biggest practical win per effort.
+- **Push-noise guard (16.4 follow-up).** dispatch-notifications pings the whole internal team on
+  EVERY `inventory_changed` — including each cron-expired hold's `release`. Busy project ⇒ reps
+  disable notifications ⇒ the valuable follow-up alarms die too. Fix: skip `kind='release'`
+  events that originate from the expiry sweep (or digest releases to ≤1 push/hour/project);
+  keep `new_stock` + manual force-release pings.
+
+**P1 — before builder #5**
+- **Offline Phase 1 (write queue).** Queue the 3 hot writes (status change, set follow-up, call
+  outcome) locally when offline; replay in order on reconnect. Server guards (LeadReassignedError,
+  status transitions) already arbitrate conflicts — client just needs calm "synced/failed" states.
+- **Second-admin path.** Invites create employees only; a builder wanting 2 admins needs founder
+  SQL today. Either an ops-console "add admin" action or role choice on invites (with guard).
+- **Admin password self-recovery.** Employee reset exists (admin-driven); if the ADMIN forgets
+  theirs, it's founder-level surgery. Ops-console "reset builder-admin password" button (the
+  reset-employee-password fn logic already exists — needs an ops-side caller).
+- **Server-side error visibility ritual.** Crashlytics covers mobile; edge-fn/db failures only
+  live in Supabase dashboard logs. Free fix: weekly log check ritual + the CI badge; later a
+  log-drain. Write the ritual into the ops checklist.
+
+**P2 — quality of life, after real usage data**
+- Leader/head read-only web view (platform segregation currently blocks employees from web).
+- Per-user notification preferences (mute inventory pings, keep follow-ups).
+- Global-username squatting (usernames unique ACROSS tenants since 0097 — fine now, annoying at
+  scale; would need per-tenant login namespacing to undo, big change, only if it actually bites).
+- WhatsApp Business API (paid) to replace wa.me deep links; Razorpay (parked, per Rudra).
+- Brainstorm doc scope: `_bmad-output/brainstorming/brainstorming-session-2026-07-09-2247.md`
+  (explicitly parked by Rudra 2026-07-12 — do not action without him).
+
+---
+
 ## 💰 MONEY PATH — what blocks first paying builder (read this first)
 
 Definition of done (from §Ops): "demo → `/provision` → hand builder login → collect UPI/cash → record payment in console." Ordered by blocking severity:
