@@ -10,6 +10,9 @@ export interface InventoryProjectRow {
 
 export default async function InventoryPage() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  // tenant_id has no column default — inserts must carry it (RLS re-checks it).
+  const tenantId = (user?.app_metadata?.tenant_id as string | undefined) ?? ''
   const { data: projects, error } = await supabase
     .from('projects')
     .select('id, name, hold_timer_hours, is_active')
@@ -22,6 +25,7 @@ export default async function InventoryPage() {
   return (
     <InventoryClient
       projects={(projects ?? []) as InventoryProjectRow[]}
+      tenantId={tenantId}
     />
   )
 }

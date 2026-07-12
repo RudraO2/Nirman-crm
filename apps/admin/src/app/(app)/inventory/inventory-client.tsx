@@ -250,7 +250,7 @@ function GenerateGridDialog({
 }
 
 // ── Add Tower dialog ─────────────────────────────────────────────────────────
-function AddTowerDialog({ projectId, onDone }: { projectId: string; onDone: () => void }) {
+function AddTowerDialog({ projectId, tenantId, onDone }: { projectId: string; tenantId: string; onDone: () => void }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -261,7 +261,8 @@ function AddTowerDialog({ projectId, onDone }: { projectId: string; onDone: () =
     if (!name.trim()) { setError('Tower name required.'); return }
     startTransition(async () => {
       const supabase = createClient()
-      const { error: insErr } = await supabase.from('towers').insert({ project_id: projectId, name: name.trim() })
+      // towers.tenant_id is NOT NULL with no default — RLS WITH CHECK re-verifies it
+      const { error: insErr } = await supabase.from('towers').insert({ tenant_id: tenantId, project_id: projectId, name: name.trim() })
       if (insErr) { setError(insErr.message); return }
       toast.success(`Tower "${name.trim()}" added`)
       setOpen(false); setName(''); onDone()
@@ -604,7 +605,7 @@ function UnitTile({ unit, onClick }: { unit: Unit; onClick: () => void }) {
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
-export function InventoryClient({ projects }: { projects: InventoryProjectRow[] }) {
+export function InventoryClient({ projects, tenantId }: { projects: InventoryProjectRow[]; tenantId: string }) {
   const [projectId, setProjectId] = useState<string>(projects[0]?.id ?? '')
   const [units, setUnits] = useState<Unit[]>([])
   const [towers, setTowers] = useState<Tower[]>([])
@@ -675,7 +676,7 @@ export function InventoryClient({ projects }: { projects: InventoryProjectRow[] 
               </SelectContent>
             </Select>
           </div>
-          {projectId && <AddTowerDialog projectId={projectId} onDone={load} />}
+          {projectId && <AddTowerDialog projectId={projectId} tenantId={tenantId} onDone={load} />}
           {projectId && <AddUnitDialog projectId={projectId} towers={towers} onDone={load} />}
           {projectId && (
             <GenerateGridDialog
