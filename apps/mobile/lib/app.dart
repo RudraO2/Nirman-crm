@@ -97,13 +97,46 @@ ThemeData _buildTheme() {
     // surfaceBase without also overriding iconTheme (Team leads, Availability,
     // …). Every real screen uses this palette, so it IS the default now; no
     // screen can forget the icon color again.
-    appBarTheme: const AppBarTheme(
+    appBarTheme: AppBarTheme(
       backgroundColor: AppColors.surfaceBase,
       foregroundColor: AppColors.inkPrimary,
-      iconTheme: IconThemeData(color: AppColors.inkPrimary),
+      iconTheme: const IconThemeData(color: AppColors.inkPrimary),
+      // ui-modern-refresh: one family — titles are Inter w800 tight, not a
+      // display serif. Screens that pass their own style get the same look
+      // via AppType.display.
+      titleTextStyle: AppType.display(fontSize: 21),
       elevation: 0,
       scrolledUnderElevation: 0,
       surfaceTintColor: Colors.transparent,
+    ),
+    // ui-modern-refresh: one button vocabulary app-wide (DESIGN.md §Components).
+    // Primary = evergreen block, brass-bright label, h52, radius 13, no shadow.
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.evergreen,
+        foregroundColor: AppColors.brassBright,
+        disabledBackgroundColor: AppColors.surfaceMist,
+        disabledForegroundColor: AppColors.inkDisabled,
+        elevation: 0,
+        minimumSize: const Size(64, 52),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(13)),
+        textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.inkPrimary,
+        side: const BorderSide(color: AppColors.borderStrong, width: 1.2),
+        minimumSize: const Size(64, 44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w600),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.accentStrong,
+        textStyle: GoogleFonts.inter(fontSize: 14.5, fontWeight: FontWeight.w600),
+      ),
     ),
     // Eyeball feedback A3 — the mark-dead snackbar was WHITE (surfaceRaised)
     // with Material's default light content text: white-on-white, and its

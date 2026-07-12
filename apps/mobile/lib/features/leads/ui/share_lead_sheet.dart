@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/lead_repository.dart';
@@ -101,7 +100,7 @@ class _ShareLeadSheetState extends ConsumerState<_ShareLeadSheet> {
             padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
             child: Text(
               'Share with',
-              style: GoogleFonts.fraunces(
+              style: AppType.display(
                 fontSize: 20,
                 fontWeight: FontWeight.w500,
                 color: AppColors.inkPrimary,

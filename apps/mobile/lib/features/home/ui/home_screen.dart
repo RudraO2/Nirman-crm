@@ -551,7 +551,7 @@ class _HeaderTile extends StatelessWidget {
             children: [
               Text(
                 '$count',
-                style: GoogleFonts.fraunces(
+                style: AppType.display(
                   fontSize: 22,
                   fontWeight: FontWeight.w500,
                   color: numberColor,

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../utils/auth_validators.dart';
@@ -109,10 +108,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     alignment: Alignment.center,
                     child: Text(
                       'N',
-                      style: GoogleFonts.fraunces(
+                      // Wordmark "N": upright + heavy now — the italic serif
+                      // went with Fraunces (ui-modern-refresh).
+                      style: AppType.display(
                         fontSize: 27,
-                        fontStyle: FontStyle.italic,
-                        fontWeight: FontWeight.w600,
                         color: AppColors.evergreenDeep,
                       ),
                     ),
@@ -120,7 +119,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   const SizedBox(height: 20),
                   Text(
                     'Nirman CRM',
-                    style: GoogleFonts.fraunces(
+                    style: AppType.display(
                       fontSize: 30,
                       fontWeight: FontWeight.w500,
                       height: 1.15,

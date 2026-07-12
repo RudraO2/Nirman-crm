@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
@@ -181,7 +180,7 @@ class _PickerView extends StatelessWidget {
       children: [
         Center(child: Container(width: 42, height: 4.5, decoration: BoxDecoration(color: AppColors.borderStrong, borderRadius: BorderRadius.circular(99)))),
         const SizedBox(height: 16),
-        Text('Send WhatsApp', style: GoogleFonts.fraunces(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
+        Text('Send WhatsApp', style: AppType.display(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
         const SizedBox(height: 4),
         Text('Pick a template', style: TextStyle(fontSize: 13, color: AppColors.inkSecondary)),
         const SizedBox(height: 16),
@@ -261,7 +260,7 @@ class _ConfirmView extends StatelessWidget {
         Row(children: [
           GestureDetector(onTap: onBack, child: Icon(Icons.arrow_back_rounded, color: AppColors.inkSecondary, size: 20)),
           const SizedBox(width: 8),
-          Text('Confirm send', style: GoogleFonts.fraunces(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
+          Text('Confirm send', style: AppType.display(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
         ]),
         const SizedBox(height: 20),
         // Phone = largest element per Story 3.4 AC

@@ -11,7 +11,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/lead_repository.dart';
-import '../data/models/lead_model.dart';
 import '../providers/lead_providers.dart';
 
 // ---------------------------------------------------------------------------
@@ -180,7 +179,7 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
                 children: [
                   Text(
                     'New lead',
-                    style: GoogleFonts.fraunces(
+                    style: AppType.display(
                       fontSize: 21,
                       fontWeight: FontWeight.w500,
                       color: AppColors.inkPrimary,
@@ -781,7 +780,7 @@ class _CustomerCodeDialog extends StatelessWidget {
           children: [
             Text(
               'Lead saved',
-              style: GoogleFonts.fraunces(
+              style: AppType.display(
                 fontSize: 22, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
               ),
             ),
@@ -801,8 +800,10 @@ class _CustomerCodeDialog extends StatelessWidget {
               child: Center(
                 child: Text(
                   code,
-                  style: GoogleFonts.fraunces(
-                    fontSize: 30, fontWeight: FontWeight.w600,
+                  // Visit code = data, not display type — monospace like the
+                  // reception verify screen (ui-modern-refresh).
+                  style: GoogleFonts.firaCode(
+                    fontSize: 26, fontWeight: FontWeight.w600,
                     color: AppColors.accentStrong, letterSpacing: 2,
                   ),
                 ),

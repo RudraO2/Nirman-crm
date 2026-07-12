@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/lead_repository.dart';
 import '../providers/lead_providers.dart';
@@ -130,7 +129,7 @@ class _ScheduleFollowupSheetState extends ConsumerState<_ScheduleFollowupSheet> 
         children: [
           Center(child: Container(width: 42, height: 4.5, decoration: BoxDecoration(color: AppColors.borderStrong, borderRadius: BorderRadius.circular(99)))),
           const SizedBox(height: 16),
-          Text('Schedule follow-up', style: GoogleFonts.fraunces(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
+          Text('Schedule follow-up', style: AppType.display(fontSize: 20, fontWeight: FontWeight.w500, color: AppColors.inkPrimary)),
           const SizedBox(height: 3),
           Text('Alarm rings on your phone at this time', style: TextStyle(fontSize: 13, color: AppColors.inkSecondary)),
 

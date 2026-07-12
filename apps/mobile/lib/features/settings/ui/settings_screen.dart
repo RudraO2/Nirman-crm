@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -18,7 +17,7 @@ class SettingsScreen extends StatelessWidget {
         iconTheme: const IconThemeData(color: AppColors.inkPrimary),
         title: Text(
           'Settings',
-          style: GoogleFonts.fraunces(
+          style: AppType.display(
             fontSize: 21, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
           ),
         ),
