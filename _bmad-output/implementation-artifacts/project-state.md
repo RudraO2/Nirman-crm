@@ -60,11 +60,10 @@ additionally get the web dashboard. Founder touches ONLY provisioning + money.
   100% online. Cache the last `get_my_leads` result locally (drift + sqlite are ALREADY app deps)
   and render it with an "offline — last synced X min ago" banner; phone numbers stay tappable
   (voice calls often work when data doesn't). Days of work, biggest practical win per effort.
-- **Push-noise guard (16.4 follow-up).** dispatch-notifications pings the whole internal team on
-  EVERY `inventory_changed` — including each cron-expired hold's `release`. Busy project ⇒ reps
-  disable notifications ⇒ the valuable follow-up alarms die too. Fix: skip `kind='release'`
-  events that originate from the expiry sweep (or digest releases to ≤1 push/hour/project);
-  keep `new_stock` + manual force-release pings.
+- ~~**Push-noise guard (16.4 follow-up).**~~ **✅ ALREADY SHIPPED (0112, on prod)** — verified
+  2026-07-12: `release_expired_holds()` emits `kind='release_expired'` and the dispatcher
+  claims-but-mutes it (`dispatch-notifications/index.ts` line ~121); human `release` +
+  `new_stock` still push. This P0 line was stale — the delta note above already recorded it.
 
 **P1 — before builder #5**
 - ~~**Offline Phase 1 (write queue).**~~ **✅ SHIPPED 2026-07-12** with Phase 0 — see
