@@ -128,7 +128,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     .markLeadDead(lead.id);
                 ref.invalidate(myLeadsProvider);
                 ref.invalidate(myMotivationStatsProvider);
-                if (!context.mounted) return;
+                if (!context.mounted) return true;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: const Text('Marked Dead.'),
@@ -147,11 +147,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
+                return true;
               } catch (_) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Could not mark lead as dead.')),
-                );
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Could not mark lead as dead.')),
+                  );
+                }
+                return false;
               }
             },
           ),
@@ -178,7 +181,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
 class _LeadsView extends StatelessWidget {
   final List<LeadListItem> leads;
-  final Future<void> Function(LeadListItem)? onMarkDead;
+  /// Returns true iff the lead was actually marked dead server-side —
+  /// Dismissible only removes the card on success (audit H8).
+  final Future<bool> Function(LeadListItem)? onMarkDead;
   const _LeadsView({required this.leads, this.onMarkDead});
 
   @override
@@ -285,10 +290,9 @@ class _LeadsView extends StatelessWidget {
               return Dismissible(
                 key: ValueKey(lead.id),
                 direction: DismissDirection.endToStart,
-                confirmDismiss: (_) async {
-                  await onMarkDead!(lead);
-                  return true;
-                },
+                // Only dismiss when the RPC actually succeeded — a failed
+                // mark-dead must NOT silently vanish a live lead (audit H8).
+                confirmDismiss: (_) => onMarkDead!(lead),
                 background: const SizedBox.shrink(),
                 secondaryBackground: Container(
                   margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
