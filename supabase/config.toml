@@ -407,6 +407,9 @@ verify_jwt = false
 # in-function credential (sha256-matched, atomically claimed).
 [functions.accept-invite]
 verify_jwt = false
+# Story 16.4 — pg_cron drain of domain_events → FCM; x-cron-secret in-fn auth.
+[functions.dispatch-notifications]
+verify_jwt = false
 
 [analytics]
 enabled = true

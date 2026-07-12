@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
   // amendment supplies tenant + status + logged_by; unit_no (not PII) for the title.
   const { data: amd, error: amdErr } = await supabase
     .from('amendments')
-    .select('id, tenant_id, status, logged_by, unit_id, units(unit_no)')
+    .select('id, tenant_id, status, logged_by, unit_id, lead_id, units(unit_no)')
     .eq('id', amendment_id)
     .single();
   if (amdErr || !amd) return jsonResponse({ error: 'amendment_not_found', detail: amdErr?.message }, 404);
@@ -80,9 +80,14 @@ Deno.serve(async (req) => {
 
   let sent = 0;
   for (const { token, user_id } of tokens) {
+    // Deep-link (16.4): exec team lands on the amendments surface; the logging
+    // agent lands on their lead (their in-app amendment context). No PII.
+    const route = kind === 'logged'
+      ? '/amendments'
+      : (amd.lead_id ? `/lead/${amd.lead_id}` : '/amendments');
     const ok = await sendFcmNotification({
       token, title, body,
-      data: { amendment_id, type: 'amendment', kind },   // deep-link target; no PII
+      data: { amendment_id, type: 'amendment', kind, route },
     });
     if (ok) sent++;
     else await supabase.from('device_tokens').delete().eq('user_id', user_id).eq('token', token);
