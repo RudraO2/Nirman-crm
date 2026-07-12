@@ -114,6 +114,11 @@ Deno.serve(async (req) => {
           const unitId = ev.payload?.unit_id as string | undefined;
           const projectId = ev.payload?.project_id as string | undefined;
           const kind = ev.payload?.kind as string | undefined;
+          // 0112 noise guard: routine cron-expiry churn is claimed but NEVER
+          // pushed — only human-initiated changes (new_stock, force-release
+          // 'release') ping the team. Reps who get spammed disable
+          // notifications, which kills the valuable follow-up alarms.
+          if (kind === 'release_expired') break;
           if (!unitId) break;
           const { data: aud } = await supabase.rpc('get_inventory_event_audience', { p_unit_id: unitId });
           const userIds = (aud ?? []).map((r: { user_id: string }) => r.user_id);
