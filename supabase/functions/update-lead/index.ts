@@ -186,23 +186,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // Duplicate check only if phone hash changed
+  // 0098: via definer RPC — authenticated has no phone_hash SELECT.
   if (newHash !== currentLead["phone_hash"]) {
-    const { data: existing } = await supabase
-      .from("leads")
-      .select("id, assigned_to_user_id")
-      .eq("phone_hash", newHash)
-      .neq("id", input.lead_id)
-      .maybeSingle();
+    const { data: dupe } = await supabase.rpc("check_phone_duplicate", {
+      p_phone_hash: newHash,
+      p_exclude_lead_id: input.lead_id,
+    });
+    const existing = dupe as { found?: boolean; lead_id?: string; owner_name?: string } | null;
 
-    if (existing) {
-      const { data: ownerData } = await supabase
-        .from("users")
-        .select("email_or_username")
-        .eq("id", existing.assigned_to_user_id)
-        .maybeSingle();
-      const ownerName = ownerData?.email_or_username ?? "another employee";
+    if (existing?.found) {
+      const ownerName = existing.owner_name ?? "another employee";
       return errorResponse("duplicate_lead", `This phone number is already linked to a lead under ${ownerName}`, {
-        existing_lead_id: existing.id,
+        existing_lead_id: existing.lead_id,
         owner: ownerName,
       });
     }

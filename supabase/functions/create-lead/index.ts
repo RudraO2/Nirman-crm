@@ -163,9 +163,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // duplicate is reclaimed in place (same row reassigned + lead_reclaimed logged); otherwise a
   // new lead is inserted. We only gate a non-admin override attempt here with a clear message.
   if (input.override_duplicate && role !== "admin") {
-    const { data: lockedExisting } = await supabase
-      .from("leads").select("id").eq("phone_hash", hash).maybeSingle();
-    if (lockedExisting) {
+    // 0098: dupe probe via definer RPC — authenticated has no phone_hash SELECT.
+    const { data: dupe } = await supabase.rpc("check_phone_duplicate", { p_phone_hash: hash });
+    if ((dupe as { found?: boolean } | null)?.found) {
       return errorResponse("forbidden_role", "Only admins can override a locked duplicate lead");
     }
   }
@@ -203,14 +203,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const msg = insertErr?.message ?? "";
     if (msg.includes("duplicate_lead")) {
       // Story 13.5 — locked phone. Look up the owner for a friendly message.
-      const { data: lockRow } = await supabase
-        .from("leads").select("assigned_to_user_id").eq("phone_hash", hash).maybeSingle();
-      let ownerName = "another employee";
-      if (lockRow?.assigned_to_user_id) {
-        const { data: u } = await supabase
-          .from("users").select("email_or_username").eq("id", lockRow.assigned_to_user_id).maybeSingle();
-        ownerName = u?.email_or_username ?? ownerName;
-      }
+      // 0098: via definer RPC — authenticated has no phone_hash SELECT.
+      const { data: dupe } = await supabase.rpc("check_phone_duplicate", { p_phone_hash: hash });
+      const ownerName =
+        (dupe as { owner_name?: string } | null)?.owner_name ?? "another employee";
       return errorResponse(
         "duplicate_lead",
         `This lead is locked under ${ownerName}. It can be re-claimed after the 90-day lock or 30 days of owner inactivity.`,
