@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../../core/offline/offline_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../leads/data/lead_repository.dart';
 import '../../leads/data/models/lead_model.dart';
@@ -108,7 +109,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      body: RefreshIndicator(
+      body: Column(
+        children: [
+          const _OfflineBanner(),
+          Expanded(
+            child: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(myLeadsProvider);
           ref.invalidate(myMotivationStatsProvider);
@@ -148,6 +153,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 );
                 return true;
+              } on OfflineQueued {
+                // Queued for replay; the cached list already dropped the lead,
+                // so dismissing the card is safe. No undo offline (previous
+                // status is only known server-side).
+                ref.invalidate(myLeadsProvider);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Marked Dead — will sync when back online.')),
+                  );
+                }
+                return true;
               } catch (_) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -159,6 +176,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             },
           ),
         ),
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -173,6 +193,59 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         tooltip: 'New Lead',
         child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
+    );
+  }
+}
+
+// ── Offline banner ────────────────────────────────────────────────────────
+// Amber strip shown while the list is served from the local cache and/or
+// offline writes are waiting to replay (Phase 0/1). Hidden when live + drained.
+
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner();
+
+  static String _ago(DateTime t) {
+    final d = DateTime.now().difference(t);
+    if (d.inMinutes < 1) return 'just now';
+    if (d.inMinutes < 60) return '${d.inMinutes}m ago';
+    if (d.inHours < 24) return '${d.inHours}h ago';
+    return '${d.inDays}d ago';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<OfflineBannerState?>(
+      valueListenable: OfflineStore.instance.banner,
+      builder: (_, state, __) {
+        if (state == null) return const SizedBox.shrink();
+        final pending = state.pendingActions;
+        return Material(
+          color: const Color(0xFF7A5A00),
+          child: SafeArea(
+            bottom: false,
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+              child: Row(
+                children: [
+                  const Icon(Icons.cloud_off_rounded, size: 15, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      pending > 0
+                          ? 'Offline — leads from ${_ago(state.syncedAt)} · $pending change${pending == 1 ? '' : 's'} will sync'
+                          : 'Offline — showing leads from ${_ago(state.syncedAt)}',
+                      style: const TextStyle(fontSize: 12.5, color: Colors.white),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

@@ -79,6 +79,16 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
         await showSoldCelebration(context, ref, leadId: widget.lead.id, leadName: widget.lead.name);
       }
       if (mounted) Navigator.of(context).pop();
+    } on OfflineQueued {
+      // Saved to the offline queue — treated as success (replays when online).
+      ref.invalidate(myLeadsProvider);
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Outcome saved offline — will sync when back online.')),
+        );
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);

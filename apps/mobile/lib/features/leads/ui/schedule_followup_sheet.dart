@@ -93,6 +93,16 @@ class _ScheduleFollowupSheetState extends ConsumerState<_ScheduleFollowupSheet> 
       ref.invalidate(myLeadsProvider);
       ref.invalidate(leadByIdProvider(widget.leadId));
       if (mounted) Navigator.of(context).pop(true);
+    } on OfflineQueued {
+      // Saved to the offline queue — treated as success (replays when online).
+      ref.invalidate(myLeadsProvider);
+      if (mounted) {
+        Navigator.of(context).pop(true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Follow-up saved offline — will sync when back online.')),
+        );
+      }
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);

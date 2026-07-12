@@ -1,6 +1,12 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../core/offline/offline_store.dart';
 import 'models/lead_model.dart';
+
+// OfflineQueued is part of this repository's thrown API surface (mark dead /
+// call outcome / follow-up when offline) — re-export so call sites need no
+// separate core import.
+export '../../../core/offline/offline_store.dart' show OfflineQueued;
 
 part 'lead_repository.g.dart';
 
@@ -184,12 +190,17 @@ class LeadRepository {
   /// Returns urgency-sorted active leads for the current user.
   /// Calls the get_my_leads() SECURITY DEFINER RPC which decrypts PII server-side.
   Future<List<LeadListItem>> getMyLeads({int limit = 100, int offset = 0}) async {
+    final rows = await _getMyLeadsRaw(limit, offset);
+    return rows.map(LeadListItem.fromJson).toList();
+  }
+
+  Future<List<Map<String, dynamic>>> _getMyLeadsRaw(int limit, int offset) async {
     final result = await _supabase.rpc(
       'get_my_leads',
       params: {'p_limit': limit, 'p_offset': offset},
     );
     return (result as List)
-        .map((row) => LeadListItem.fromJson(row as Map<String, dynamic>))
+        .map((row) => Map<String, dynamic>.from(row as Map))
         .toList();
   }
 
@@ -198,11 +209,30 @@ class LeadRepository {
   /// — Today's-Actions counts and alarm reconcile fold over the whole list, so a
   /// partial (single-page) load undercounts and misses alarms. [pageSize] is the
   /// per-request limit; loop stops when a page returns fewer rows than [pageSize].
-  Future<List<LeadListItem>> getAllMyLeads({int pageSize = 200}) =>
-      collectPages(
-        (limit, offset) => getMyLeads(limit: limit, offset: offset),
-        pageSize: pageSize,
-      );
+  ///
+  /// Offline (Phase 0/1): a successful fetch first replays any queued offline
+  /// writes (so the list reflects them), then refreshes the local cache. A
+  /// NETWORK failure falls back to the cached list and flips the offline
+  /// banner; server errors still surface normally.
+  Future<List<LeadListItem>> getAllMyLeads({int pageSize = 200}) async {
+    try {
+      // Opportunistic queue replay — cheap no-op when the queue is empty.
+      await OfflineStore.instance.flush(_supabase.rpc);
+      final raw = await collectPages(_getMyLeadsRaw, pageSize: pageSize);
+      await OfflineStore.instance.cacheLeads(raw);
+      await OfflineStore.instance.markLive();
+      return raw.map(LeadListItem.fromJson).toList();
+    } catch (e) {
+      if (OfflineStore.isNetworkError(e)) {
+        final cached = await OfflineStore.instance.readCachedLeads();
+        if (cached != null) {
+          await OfflineStore.instance.markServingCache(cached.syncedAt);
+          return cached.rows.map(LeadListItem.fromJson).toList();
+        }
+      }
+      rethrow;
+    }
+  }
 
   /// Pages a `(limit, offset) -> rows` fetcher until a page returns fewer than
   /// [pageSize] rows (the last page), accumulating all rows. Pure paging loop,
@@ -243,12 +273,24 @@ class LeadRepository {
   }
 
   /// Quick Mark Dead — sets status='dead', returns previous status for undo (Story 2.7).
+  /// Offline: queues the action and throws [OfflineQueued] (no undo — the
+  /// previous status is only known server-side).
   Future<MarkDeadResult> markLeadDead(String leadId) async {
-    final result = await _supabase.rpc(
-      'mark_lead_dead',
-      params: {'p_lead_id': leadId},
-    );
-    return MarkDeadResult.fromJson(result as Map<String, dynamic>);
+    try {
+      final result = await _supabase.rpc(
+        'mark_lead_dead',
+        params: {'p_lead_id': leadId},
+      );
+      return MarkDeadResult.fromJson(result as Map<String, dynamic>);
+    } catch (e) {
+      if (OfflineStore.isNetworkError(e)) {
+        await OfflineStore.instance.enqueue('mark_lead_dead', {'p_lead_id': leadId});
+        // get_my_leads excludes dead leads — drop it from the cached list too.
+        await OfflineStore.instance.removeCachedLead(leadId);
+        throw const OfflineQueued();
+      }
+      rethrow;
+    }
   }
 
   /// Restores a lead to its previous status after undo (Story 2.7).
@@ -278,18 +320,40 @@ class LeadRepository {
   }
 
   /// Submits call outcome: updates status, appends remarks, optionally sets follow-up (Story 3.2).
+  /// Offline: queues the exact call and throws [OfflineQueued].
   Future<void> submitCallOutcome({
     required String leadId,
     required String newStatus,
     String? remarks,
     DateTime? followupAt,
   }) async {
-    await _supabase.rpc('submit_call_outcome', params: {
+    final params = {
       'p_lead_id':     leadId,
       'p_new_status':  newStatus,
       if (remarks != null)    'p_remarks':     remarks,
       if (followupAt != null) 'p_followup_at': followupAt.toUtc().toIso8601String(),
-    });
+    };
+    try {
+      await _supabase.rpc('submit_call_outcome', params: params);
+    } catch (e) {
+      if (OfflineStore.isNetworkError(e)) {
+        await OfflineStore.instance.enqueue('submit_call_outcome', params);
+        // Reflect the outcome in the cached list (and stop the pending-outcome
+        // prompt re-firing from stale cache). Archived statuses drop out.
+        if (newStatus == 'dead' || newStatus == 'sold' || newStatus == 'future') {
+          await OfflineStore.instance.removeCachedLead(leadId);
+        } else {
+          await OfflineStore.instance.patchCachedLead(leadId, {
+            'status': newStatus,
+            'pending_outcome_at': null,
+            if (followupAt != null)
+              'next_followup_at': followupAt.toUtc().toIso8601String(),
+          });
+        }
+        throw const OfflineQueued();
+      }
+      rethrow;
+    }
   }
 
   /// Clears pending_outcome_at with no status change (Story 3.2 "Didn't actually call").
@@ -298,11 +362,24 @@ class LeadRepository {
   }
 
   /// Sets follow-up date; logs followup_set or followup_rescheduled (Story 3.5).
+  /// Offline: queues the exact call and throws [OfflineQueued].
   Future<void> setFollowup(String leadId, DateTime at) async {
-    await _supabase.rpc('set_followup', params: {
+    final params = {
       'p_lead_id': leadId,
       'p_at':      at.toUtc().toIso8601String(),
-    });
+    };
+    try {
+      await _supabase.rpc('set_followup', params: params);
+    } catch (e) {
+      if (OfflineStore.isNetworkError(e)) {
+        await OfflineStore.instance.enqueue('set_followup', params);
+        await OfflineStore.instance.patchCachedLead(leadId, {
+          'next_followup_at': at.toUtc().toIso8601String(),
+        });
+        throw const OfflineQueued();
+      }
+      rethrow;
+    }
   }
 
   /// Fetches active WhatsApp templates for this tenant (Story 3.4).
