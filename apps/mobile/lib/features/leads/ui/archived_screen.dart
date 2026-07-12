@@ -95,10 +95,11 @@ class _ArchivedScreenState extends ConsumerState<ArchivedScreen> {
         _hasMore = page.length == _pageSize;
         _loading = false;
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted || token != _fetchToken) return;
       setState(() {
-        _error = e.toString().replaceFirst('Exception: ', '');
+        // Calm mapping (audit low): read path is retry-safe — no raw dump.
+        _error = "Couldn't load archived leads. Pull to retry.";
         _loading = false;
       });
     }

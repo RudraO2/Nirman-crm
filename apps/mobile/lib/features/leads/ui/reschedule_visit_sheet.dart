@@ -47,8 +47,14 @@ class _RescheduleVisitSheetState extends ConsumerState<_RescheduleVisitSheet> {
     try {
       await ref.read(leadRepositoryProvider).rescheduleVisit(widget.leadId, newDate);
       if (mounted) Navigator.of(context).pop(true);
-    } catch (e) {
-      if (mounted) setState(() { _loading = false; _error = e.toString(); });
+    } catch (_) {
+      // Calm mapping (audit medium): never surface a raw exception dump here.
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = "Couldn't reschedule the visit. Check your connection and try again.";
+        });
+      }
     }
   }
 

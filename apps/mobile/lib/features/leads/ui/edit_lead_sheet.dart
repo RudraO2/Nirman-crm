@@ -134,8 +134,14 @@ class _EditLeadSheetState extends ConsumerState<EditLeadSheet> {
       ref.invalidate(myLeadsProvider);
     } on DuplicateLeadError catch (e) {
       setState(() { _errorMsg = e.message; _duplicateOwner = e.ownerName; _saving = false; });
-    } catch (e) {
-      setState(() { _errorMsg = e.toString().replaceFirst('Exception: ', ''); _saving = false; });
+    } on LeadSubmitException catch (e) {
+      // Server-written validation text — safe to show verbatim.
+      setState(() { _errorMsg = e.message; _saving = false; });
+    } catch (_) {
+      setState(() {
+        _errorMsg = "Couldn't save the changes. Check your connection and try again.";
+        _saving = false;
+      });
     }
   }
 

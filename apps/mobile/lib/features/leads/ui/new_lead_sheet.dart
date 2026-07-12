@@ -136,9 +136,15 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
         _duplicateLeadId = e.existingLeadId;
         _saving = false;
       });
-    } catch (e) {
+    } on LeadSubmitException catch (e) {
+      // Server-written validation text — safe to show verbatim.
       setState(() {
-        _errorMsg = e.toString().replaceFirst('Exception: ', '');
+        _errorMsg = e.message;
+        _saving = false;
+      });
+    } catch (_) {
+      setState(() {
+        _errorMsg = "Couldn't save the lead. Check your connection and try again.";
         _saving = false;
       });
     }

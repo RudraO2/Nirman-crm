@@ -71,6 +71,19 @@ class LeadReassignedError implements Exception {
   String toString() => 'This lead was just reassigned. Refreshing.';
 }
 
+/// A create/update rejection with a server-written, human-readable message
+/// (validation text from the create-lead/update-lead edge fns). UIs may show
+/// [message] verbatim; anything NOT of this type must map to a calm generic
+/// line instead of `toString()` (audit medium — raw dumps on write paths).
+class LeadSubmitException implements Exception {
+  final String message;
+
+  const LeadSubmitException(this.message);
+
+  @override
+  String toString() => message;
+}
+
 /// Duplicate error detail returned by create-lead when phone already exists.
 class DuplicateLeadError implements Exception {
   final String message;
@@ -107,7 +120,7 @@ class LeadRepository {
         ownerName: d?['owner'] as String? ?? 'another employee',
       );
     }
-    throw Exception(msg);
+    throw LeadSubmitException(msg);
   }
 
   /// Creates a new lead via the create-lead Edge Function.
