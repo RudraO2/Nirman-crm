@@ -1,17 +1,17 @@
-// The head's home — numbers first (eyeball feedback 2026-07-12).
+// The head's home — numbers first (eyeball feedback 2026-07-12, redesigned
+// 2026-07-13 after Rudra's "green bar looks weird" review).
 //
-// Rendered by HomeScreen when role == 'admin' instead of the rep lead list.
-// Three blocks: today's pulse (evergreen card), sold month tiles, and the
-// team activity list — the same truths the web dashboard shows, sized for a
-// phone glance. The head's own leads (if any) render below via the parent.
+// One calm surface: a single 2×2 pulse grid on paper, hairline-divided, that
+// answers the boss's four morning questions — leads coming in? follow-ups
+// slipping? sales closing? team working? Typography carries the hierarchy
+// (big ink numbers, small labels); color appears ONLY as signal (amber when
+// follow-ups are slipping / someone's idle, green when growing). Below it,
+// the team activity list is the only other element on the screen.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/admin_home_repository.dart';
-
-const _ivory = Color(0xFFF2EEE2);
-const _ivoryFaint = Color(0xFFE9E4D6);
 
 class AdminHomeView extends ConsumerWidget {
   const AdminHomeView({super.key});
@@ -21,21 +21,29 @@ class AdminHomeView extends ConsumerWidget {
     final metricsAsync = ref.watch(adminHomeMetricsProvider);
     final activityAsync = ref.watch(teamActivityProvider);
 
+    final team = activityAsync.valueOrNull;
+    final activeToday = team == null
+        ? null
+        : team
+            .where((r) =>
+                r.leadsUpdatedToday > 0 || r.followupsCompletedToday > 0)
+            .length;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         metricsAsync.when(
-          loading: () => const _MetricsSkeleton(),
-          error: (_, __) => const _QuietError('Numbers unavailable — pull to refresh.'),
-          data: (m) => _TodayCard(m: m),
-        ),
-        const SizedBox(height: 12),
-        metricsAsync.maybeWhen(
-          data: (m) => _SoldRow(m: m),
-          orElse: () => const SizedBox.shrink(),
+          loading: () => const _PulseSkeleton(),
+          error: (_, __) =>
+              const _QuietNote('Numbers unavailable — pull to refresh.'),
+          data: (m) => _PulseGrid(
+            m: m,
+            activeToday: activeToday,
+            teamSize: team?.length,
+          ),
         ),
         const Padding(
-          padding: EdgeInsets.fromLTRB(0, 22, 0, 8),
+          padding: EdgeInsets.fromLTRB(4, 24, 0, 10),
           child: Text(
             'TEAM ACTIVITY',
             style: TextStyle(
@@ -47,10 +55,11 @@ class AdminHomeView extends ConsumerWidget {
           ),
         ),
         activityAsync.when(
-          loading: () => const _QuietError('Loading team…'),
-          error: (_, __) => const _QuietError('Team activity unavailable — pull to refresh.'),
+          loading: () => const _QuietNote('Loading team…'),
+          error: (_, __) =>
+              const _QuietNote('Team activity unavailable — pull to refresh.'),
           data: (rows) => rows.isEmpty
-              ? const _QuietError(
+              ? const _QuietNote(
                   'No employees yet. Invite your team from the web dashboard.')
               : Column(
                   children: [for (final r in rows) _ActivityRow(row: r)],
@@ -61,83 +70,80 @@ class AdminHomeView extends ConsumerWidget {
   }
 }
 
-class _TodayCard extends StatelessWidget {
+/// 2×2 pulse: new today · missed follow-ups / sold this month · team active.
+class _PulseGrid extends StatelessWidget {
   final AdminHomeMetrics m;
-  const _TodayCard({required this.m});
+  final int? activeToday;
+  final int? teamSize;
+  const _PulseGrid({required this.m, this.activeToday, this.teamSize});
 
   @override
   Widget build(BuildContext context) {
     final delta = m.leadsToday - m.leadsYesterday;
+    final soldDelta = m.soldThisMonth - m.soldLastMonth;
+
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.evergreen,
+        color: AppColors.paper,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.line),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          IntrinsicHeight(
+            child: Row(
               children: [
-                Text(
-                  'New leads today',
-                  style: TextStyle(
-                      fontSize: 12, color: _ivoryFaint.withValues(alpha: 0.6)),
+                _Cell(
+                  value: '${m.leadsToday}',
+                  label: 'New leads today',
+                  caption: delta == 0
+                      ? 'same as yesterday'
+                      : '${delta > 0 ? '+' : ''}$delta vs yesterday',
+                  captionColor:
+                      delta > 0 ? AppColors.statusSold : AppColors.inkDisabled,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '${m.leadsToday}',
-                      style: AppType.display(fontSize: 34, color: _ivory),
-                    ),
-                    const SizedBox(width: 8),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: Text(
-                        delta == 0
-                            ? 'same as yesterday'
-                            : delta > 0
-                                ? '+$delta vs yesterday'
-                                : '$delta vs yesterday',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: delta >= 0
-                              ? AppColors.brassBright
-                              : _ivoryFaint.withValues(alpha: 0.6),
-                        ),
-                      ),
-                    ),
-                  ],
+                const _VDivider(),
+                _Cell(
+                  value: '${m.followupsMissedToday}',
+                  label: 'Missed follow-ups',
+                  caption: m.followupsMissedToday > 0
+                      ? 'needs a nudge'
+                      : 'all on time',
+                  valueColor: m.followupsMissedToday > 0
+                      ? AppColors.statusWarm
+                      : AppColors.inkPrimary,
+                  captionColor: m.followupsMissedToday > 0
+                      ? AppColors.statusWarm
+                      : AppColors.inkDisabled,
                 ),
               ],
             ),
           ),
-          Container(width: 1, height: 44, color: _ivoryFaint.withValues(alpha: 0.15)),
-          const SizedBox(width: 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Missed follow-ups',
-                style: TextStyle(
-                    fontSize: 12, color: _ivoryFaint.withValues(alpha: 0.6)),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${m.followupsMissedToday}',
-                style: AppType.display(
-                  fontSize: 34,
-                  color: m.followupsMissedToday > 0
-                      ? const Color(0xFFE8A196)
-                      : _ivory,
+          const Divider(height: 1, thickness: 1, color: AppColors.line),
+          IntrinsicHeight(
+            child: Row(
+              children: [
+                _Cell(
+                  value: '${m.soldThisMonth}',
+                  label: 'Sold this month',
+                  caption: soldDelta == 0
+                      ? 'last month ${m.soldLastMonth}'
+                      : '${soldDelta > 0 ? '+' : ''}$soldDelta vs last month',
+                  captionColor: soldDelta > 0
+                      ? AppColors.statusSold
+                      : AppColors.inkDisabled,
                 ),
-              ),
-            ],
+                const _VDivider(),
+                _Cell(
+                  value: activeToday == null ? '—' : '$activeToday',
+                  label: 'Active today',
+                  caption: teamSize == null
+                      ? '' // still loading — keep quiet
+                      : 'of $teamSize on the team',
+                  captionColor: AppColors.inkDisabled,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -145,41 +151,62 @@ class _TodayCard extends StatelessWidget {
   }
 }
 
-class _SoldRow extends StatelessWidget {
-  final AdminHomeMetrics m;
-  const _SoldRow({required this.m});
+class _Cell extends StatelessWidget {
+  final String value;
+  final String label;
+  final String caption;
+  final Color valueColor;
+  final Color captionColor;
+
+  const _Cell({
+    required this.value,
+    required this.label,
+    required this.caption,
+    this.valueColor = AppColors.inkPrimary,
+    this.captionColor = AppColors.inkDisabled,
+  });
 
   @override
   Widget build(BuildContext context) {
-    Widget tile(String label, int value) => Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: AppColors.paper,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.line),
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 16, 12, 14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(value, style: AppType.display(fontSize: 30, color: valueColor)),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: AppColors.inkSecondary,
+              ),
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(label,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.inkSecondary)),
-                const SizedBox(height: 2),
-                Text('$value', style: AppType.display(fontSize: 24)),
-              ],
-            ),
-          ),
-        );
-
-    return Row(
-      children: [
-        tile('Sold this month', m.soldThisMonth),
-        const SizedBox(width: 10),
-        tile('Sold last month', m.soldLastMonth),
-      ],
+            if (caption.isNotEmpty) ...[
+              const SizedBox(height: 1),
+              Text(
+                caption,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: captionColor,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
+}
+
+class _VDivider extends StatelessWidget {
+  const _VDivider();
+  @override
+  Widget build(BuildContext context) =>
+      const VerticalDivider(width: 1, thickness: 1, color: AppColors.line);
 }
 
 class _ActivityRow extends StatelessWidget {
@@ -261,9 +288,7 @@ class _ActivityRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11.5,
                 fontWeight: FontWeight.w600,
-                color: idleLong
-                    ? AppColors.statusWarm
-                    : AppColors.inkSecondary,
+                color: idleLong ? AppColors.statusWarm : AppColors.inkSecondary,
               ),
             ),
           ],
@@ -273,11 +298,11 @@ class _ActivityRow extends StatelessWidget {
   }
 }
 
-class _MetricsSkeleton extends StatelessWidget {
-  const _MetricsSkeleton();
+class _PulseSkeleton extends StatelessWidget {
+  const _PulseSkeleton();
   @override
   Widget build(BuildContext context) => Container(
-        height: 96,
+        height: 176,
         decoration: BoxDecoration(
           color: AppColors.mist,
           borderRadius: BorderRadius.circular(18),
@@ -285,9 +310,9 @@ class _MetricsSkeleton extends StatelessWidget {
       );
 }
 
-class _QuietError extends StatelessWidget {
+class _QuietNote extends StatelessWidget {
   final String text;
-  const _QuietError(this.text);
+  const _QuietNote(this.text);
   @override
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
