@@ -227,6 +227,23 @@ class _RechargeButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Placeholder build (no real operator number injected yet): never render
+    // buttons that dial a dead line — show a generic contact line instead.
+    if (OperatorContact.isPlaceholder) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceRaised,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.borderHairline),
+        ),
+        child: const Text(
+          'Recharge के लिए अपने Nirman operator से संपर्क करें।',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 14, color: AppColors.inkPrimary),
+        ),
+      );
+    }
     final wa = Uri.parse(
       'https://wa.me/${OperatorContact.phoneE164}'
       '?text=${Uri.encodeComponent(OperatorContact.whatsappMessage)}',

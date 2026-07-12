@@ -4,15 +4,29 @@
 /// yet (Razorpay is a later story). These values drive the "contact us to
 /// recharge" affordances on the paused screen.
 ///
-/// PLACEHOLDER — set to Nirman's real support number before shipping. Kept as a
-/// single const (not hardcoded inline) so it is trivial to change and obvious it
-/// needs a real value. Format: E.164 digits WITHOUT '+' for wa.me (e.g. 9198...).
+/// The real number is injected at build time (the build-apk.ps1 --dart-define
+/// flow), e.g.:
+///   --dart-define=OPERATOR_PHONE_E164=9198XXXXXXXX
+///   --dart-define=OPERATOR_PHONE_DISPLAY="+91 98XXX XXXXX"
+/// Until then [isPlaceholder] is true and the paused screen hides the dead
+/// call/WhatsApp buttons instead of pointing builders at 00000 00000
+/// (audit medium: placeholder number had no build-time check).
 class OperatorContact {
-  /// Support phone in E.164 without '+' (India country code 91). PLACEHOLDER.
-  static const phoneE164 = '910000000000';
+  /// Support phone in E.164 without '+' (India country code 91) for wa.me.
+  static const phoneE164 = String.fromEnvironment(
+    'OPERATOR_PHONE_E164',
+    defaultValue: '910000000000',
+  );
 
-  /// Human-readable form shown in the UI. PLACEHOLDER.
-  static const phoneDisplay = '+91 00000 00000';
+  /// Human-readable form shown in the UI.
+  static const phoneDisplay = String.fromEnvironment(
+    'OPERATOR_PHONE_DISPLAY',
+    defaultValue: '+91 00000 00000',
+  );
+
+  /// True while the build carries the placeholder number — UI must not render
+  /// call/WhatsApp affordances that would dial a dead line.
+  static const isPlaceholder = phoneE164 == '910000000000';
 
   /// Prefilled WhatsApp message (Hindi-first) when a builder taps "recharge".
   static const whatsappMessage =

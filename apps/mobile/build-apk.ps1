@@ -53,6 +53,21 @@ $flutterArgs = @(
   "--dart-define=SUPABASE_URL=$url",
   "--dart-define=SUPABASE_ANON_KEY=$key"
 )
+
+# Operator support number (Story 9.6 paused screen). Optional keys in .env.local:
+#   OPERATOR_PHONE_E164=9198XXXXXXXX      (digits only, for wa.me / tel:)
+#   OPERATOR_PHONE_DISPLAY=+91 98XXX XXXXX
+# Without them the app keeps the placeholder and HIDES the call/WhatsApp buttons.
+$opPhone   = $env['OPERATOR_PHONE_E164']
+$opDisplay = $env['OPERATOR_PHONE_DISPLAY']
+if (-not [string]::IsNullOrWhiteSpace($opPhone)) {
+  $flutterArgs += "--dart-define=OPERATOR_PHONE_E164=$opPhone"
+  if (-not [string]::IsNullOrWhiteSpace($opDisplay)) {
+    $flutterArgs += "--dart-define=OPERATOR_PHONE_DISPLAY=$opDisplay"
+  }
+} else {
+  Write-Host 'WARNING: OPERATOR_PHONE_E164 not set in .env.local — paused screen will hide the recharge call/WhatsApp buttons (placeholder build).' -ForegroundColor Yellow
+}
 if ($ExtraArgs) { $flutterArgs += $ExtraArgs }
 
 # Flutter writes warnings to stderr; with ErrorActionPreference=Stop PowerShell
