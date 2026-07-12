@@ -60,7 +60,7 @@ void main() {
       await tester.pumpWidget(_wrap(
         LeadCard(lead: _lead(location: 'Bandra')),
       ));
-      expect(find.text('Bandra'), findsOneWidget);
+      expect(find.textContaining('Bandra'), findsOneWidget);
     });
 
     testWidgets('shows "No name" when name is null', (tester) async {
@@ -71,13 +71,16 @@ void main() {
 
   group('LeadCard — incomplete indicator', () {
     testWidgets('shows Incomplete text when isIncomplete=true', (tester) async {
-      await tester.pumpWidget(_wrap(LeadCard(lead: _lead(isIncomplete: true))));
-      expect(find.text('Incomplete'), findsOneWidget);
+      // lastActionAt set: an untouched lead's "not contacted yet" flag
+      // outranks incomplete in the one-flag priority (rep-home v2).
+      await tester.pumpWidget(_wrap(LeadCard(
+          lead: _lead(isIncomplete: true, lastActionAt: DateTime(2026, 6, 1)))));
+      expect(find.text('Details missing'), findsOneWidget);
     });
 
     testWidgets('no Incomplete text when isIncomplete=false', (tester) async {
       await tester.pumpWidget(_wrap(LeadCard(lead: _lead(isIncomplete: false))));
-      expect(find.text('Incomplete'), findsNothing);
+      expect(find.text('Details missing'), findsNothing);
     });
   });
 
@@ -86,12 +89,12 @@ void main() {
       await tester.pumpWidget(_wrap(LeadCard(
         lead: _lead(pendingOutcomeAt: DateTime.now()),
       )));
-      expect(find.text('Awaiting outcome'), findsOneWidget);
+      expect(find.text('Log your call outcome'), findsOneWidget);
     });
 
     testWidgets('no Awaiting outcome badge when pendingOutcomeAt is null', (tester) async {
       await tester.pumpWidget(_wrap(LeadCard(lead: _lead())));
-      expect(find.text('Awaiting outcome'), findsNothing);
+      expect(find.text('Log your call outcome'), findsNothing);
     });
   });
 
@@ -137,14 +140,14 @@ void main() {
       await tester.pumpWidget(_wrap(
         LeadCard(lead: _lead(customerCode: 'NIR-44D77')),
       ));
-      expect(find.text('NIR-44D77'), findsOneWidget);
+      expect(find.textContaining('NIR-44D77'), findsOneWidget);
     });
 
     testWidgets('shows visit ordinal when visit_count > 0', (tester) async {
       await tester.pumpWidget(_wrap(
         LeadCard(lead: _lead(customerCode: 'NIR-44D77', visitCount: 2)),
       ));
-      expect(find.text('2nd visit'), findsOneWidget);
+      expect(find.textContaining('2nd visit'), findsOneWidget);
     });
 
     testWidgets('no ordinal when visit_count is 0', (tester) async {

@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/offline/offline_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../leads/data/lead_repository.dart';
@@ -23,7 +22,6 @@ import '../../alarms/data/alarm_sync_service.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../motivation/providers/motivation_providers.dart';
 import '../../motivation/data/models/motivation_stats.dart';
-import '../../motivation/data/models/monthly_best.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -345,41 +343,7 @@ class _LeadsView extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Spacer(),
-                // Untouched filter chip — tap to see leads never actioned.
-                Builder(builder: (context) {
-                  final untouched = leads.where((l) => l.isUntouched).length;
-                  if (untouched == 0) return const SizedBox.shrink();
-                  return GestureDetector(
-                    onTap: () => context.push('/leads/filtered',
-                        extra: LeadFilter.untouched),
-                    child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.statusColdBg,
-                        borderRadius: BorderRadius.circular(9999),
-                        border: Border.all(color: const Color(0xFFC6D6E9)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.auto_awesome_rounded,
-                              size: 11, color: AppColors.statusCold),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$untouched untouched',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.statusCold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+                // (untouched chip removed — it lives in the work queue now)
               ],
             ),
           ),
@@ -474,79 +438,94 @@ class _HomeHeaderCard extends ConsumerWidget {
           data: (s) => s,
           orElse: MotivationStats.zero,
         );
-    final best = ref.watch(myMonthlyBestProvider).maybeWhen(
-          data: (b) => b,
-          orElse: () => MonthlyBest.empty,
-        );
+    final untouched = leads.where((l) => l.isUntouched).length;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
-      decoration: BoxDecoration(
-        color: AppColors.evergreen,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Today · ${_eyebrowDate(now)}',
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 10.5 * 0.12,
-              color: const Color(0xFFE9E4D6).withValues(alpha: 0.55),
+    // Rep-home v2 (2026-07-13): the boxy 4-tile grid truncated its own labels
+    // and never looked tappable. Split into (1) a slim dark identity strip —
+    // date + motivation only — and (2) a WORK QUEUE of full-width tappable
+    // rows (icon, full label, count, chevron), showing ONLY non-zero queues.
+    final queue = <_QueueEntry>[
+      if (pendingCalls > 0)
+        _QueueEntry(Icons.phone_callback_rounded, 'Call outcomes to log',
+            pendingCalls, LeadFilter.pendingOutcome, alert: true),
+      if (followupsToday > 0)
+        _QueueEntry(Icons.alarm_rounded, 'Follow-ups today', followupsToday,
+            LeadFilter.followupsToday),
+      if (visitsToday > 0)
+        _QueueEntry(Icons.event_available_rounded, 'Visits today', visitsToday,
+            LeadFilter.visitsToday),
+      if (untouched > 0)
+        _QueueEntry(Icons.fiber_new_rounded, 'Untouched leads', untouched,
+            LeadFilter.untouched),
+      if (incomplete > 0)
+        _QueueEntry(Icons.edit_note_rounded, 'Incomplete profiles', incomplete,
+            LeadFilter.incomplete),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── 1 · Context line: no container, no dark band, nothing truncates.
+        // Date + this month's score in plain text under the title. The
+        // motivation machinery (streak, beat-your-best) lives in the You tab.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: _eyebrowDate(now)),
+              const TextSpan(text: '  ·  '),
+              TextSpan(
+                text: '${stats.soldThisMonth} sold',
+                style: const TextStyle(
+                    color: AppColors.inkPrimary, fontWeight: FontWeight.w700),
+              ),
+              const TextSpan(text: ' this month'),
+              if (stats.followupStreakDays > 0) ...[
+                const TextSpan(text: '  ·  '),
+                TextSpan(
+                  text: '${stats.followupStreakDays}d',
+                  style: const TextStyle(
+                      color: AppColors.inkPrimary,
+                      fontWeight: FontWeight.w700),
+                ),
+                const TextSpan(text: ' streak'),
+              ],
+            ]),
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.inkSecondary,
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              _HeaderTile(
-                count: followupsToday,
-                label: 'Follow-ups',
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.followupsToday),
-              ),
-              const SizedBox(width: 8),
-              _HeaderTile(
-                count: visitsToday,
-                label: 'Visits',
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.visitsToday),
-              ),
-              const SizedBox(width: 8),
-              _HeaderTile(
-                count: incomplete,
-                label: 'Incomplete',
-                alert: incomplete > 0,
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.incomplete),
-              ),
-              const SizedBox(width: 8),
-              _HeaderTile(
-                count: pendingCalls,
-                label: 'Call pending',
-                alert: pendingCalls > 0,
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.pendingOutcome),
-              ),
-            ],
-          ),
-          // Progress footer line.
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.only(top: 10),
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                    color: const Color(0xFFE9E4D6).withValues(alpha: 0.12)),
-              ),
-            ),
-            child: Row(
+        ),
+
+        // ── 2 · Work queue: the Leads tab's dark anchor (each tab gets one
+        // evergreen element — You has the profile card, Leads has this).
+        // Full-width tappable rows, non-zero queues only.
+        if (queue.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Material(
+            color: AppColors.evergreen,
+            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
+            child: Column(
               children: [
-                _ProgItem(label: 'Sold this month', value: '${stats.soldThisMonth}'),
-                _ProgItem(label: 'Streak', value: '${stats.followupStreakDays} days'),
-                _BestHint(stats: stats, best: best),
+                for (var i = 0; i < queue.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 56,
+                      color:
+                          const Color(0xFFE9E4D6).withValues(alpha: 0.10),
+                    ),
+                  _QueueRow(entry: queue[i]),
+                ],
               ],
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -558,124 +537,85 @@ class _HomeHeaderCard extends ConsumerWidget {
   }
 }
 
-class _HeaderTile extends StatelessWidget {
-  final int count;
+/// One tappable work-queue row: icon tile · full label · count pill · chevron.
+class _QueueEntry {
+  final IconData icon;
   final String label;
+  final int count;
+  final LeadFilter filter;
   final bool alert;
-  final VoidCallback? onTap;
-
-  const _HeaderTile({
-    required this.count,
-    required this.label,
-    this.alert = false,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final numberColor = alert && count > 0
-        ? AppColors.brassBright
-        : const Color(0xFFF2EEE2);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE9E4D6).withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: const Color(0xFFE9E4D6).withValues(alpha: 0.10)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$count',
-                style: AppType.display(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  color: numberColor,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: const Color(0xFFE9E4D6).withValues(alpha: 0.60),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  const _QueueEntry(this.icon, this.label, this.count, this.filter,
+      {this.alert = false});
 }
 
-class _ProgItem extends StatelessWidget {
-  final String label;
-  final String value;
-  const _ProgItem({required this.label, required this.value});
+class _QueueRow extends StatelessWidget {
+  final _QueueEntry entry;
+  const _QueueRow({required this.entry});
+
+  // Dark-surface inks (match the You-tab profile card).
+  static const _ivory = Color(0xFFF2EEE2);
+  static const _ivoryFaint = Color(0xFFE9E4D6);
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Text.rich(
-        TextSpan(
+    return InkWell(
+      onTap: () => context.push('/leads/filtered', extra: entry.filter),
+      splashColor: _ivoryFaint.withValues(alpha: 0.08),
+      highlightColor: _ivoryFaint.withValues(alpha: 0.05),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        child: Row(
           children: [
-            TextSpan(text: '$label '),
-            TextSpan(
-              text: value,
-              style: const TextStyle(
-                color: Color(0xFFF2EEE2),
-                fontWeight: FontWeight.w700,
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: entry.alert
+                    ? AppColors.brassSoft
+                    : _ivoryFaint.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                entry.icon,
+                size: 17,
+                color: entry.alert
+                    ? const Color(0xFF6E5423)
+                    : AppColors.brassBright,
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                entry.label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _ivory,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+              decoration: BoxDecoration(
+                color: entry.alert
+                    ? AppColors.brassSoft
+                    : _ivoryFaint.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(9999),
+              ),
+              child: Text(
+                '${entry.count}',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: entry.alert ? const Color(0xFF6E5423) : _ivory,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right_rounded,
+                size: 20, color: _ivoryFaint.withValues(alpha: 0.4)),
           ],
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 11.5,
-          color: const Color(0xFFE9E4D6).withValues(alpha: 0.60),
-        ),
-      ),
-    );
-  }
-}
-
-class _BestHint extends StatelessWidget {
-  final MotivationStats stats;
-  final MonthlyBest best;
-  const _BestHint({required this.stats, required this.best});
-
-  @override
-  Widget build(BuildContext context) {
-    final String text;
-    if (best.allTimeBest > 0) {
-      final toBeat = best.allTimeBest - best.thisMonthSold + 1;
-      text = toBeat <= 0
-          ? 'New personal best 🏆'
-          : '$toBeat ${toBeat == 1 ? 'sale' : 'sales'} to beat your best 🏆';
-    } else {
-      text = 'Conversion ${stats.conversionRate.toStringAsFixed(1)}%';
-    }
-    return Expanded(
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.right,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: AppColors.brassBright,
         ),
       ),
     );
