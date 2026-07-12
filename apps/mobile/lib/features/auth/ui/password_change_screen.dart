@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../utils/auth_validators.dart';
@@ -98,7 +97,7 @@ class _PasswordChangeScreenState extends ConsumerState<PasswordChangeScreen> {
           iconTheme: const IconThemeData(color: AppColors.inkPrimary),
           title: Text(
             'Change password',
-            style: GoogleFonts.fraunces(
+            style: AppType.display(
               fontSize: 21, fontWeight: FontWeight.w500, color: AppColors.inkPrimary,
             ),
           ),

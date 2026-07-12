@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Brand palette — UI redesign tokens (see ui-redesign/redesign-handoff.md §3).
 // Constant NAMES are preserved so existing call sites restyle "for free"; only
@@ -112,5 +113,35 @@ extension LeadStatusDisplay on String {
       case 'dead':   return 'Dead';
       default:       return 'Unknown';
     }
+  }
+}
+
+/// ui-modern-refresh (2026-07-12, DESIGN.md §Typography) — ONE type family.
+///
+/// Every screen/sheet title in the app calls [AppType.display]. It used to be
+/// GoogleFonts.fraunces (display serif) which clashed with the Inter body
+/// ("font difference on top") and read dated. Now the same family as body,
+/// carried by weight + tight tracking instead of a second font.
+///
+/// The incoming [fontWeight] from old call sites is deliberately IGNORED:
+/// serif title weights (w500/w600) are too light for a sans title. Optical
+/// rule instead: <24px → w800, >=24px → w700. Swap this ONE function to
+/// re-skin every title in the app.
+class AppType {
+  AppType._();
+
+  static TextStyle display({
+    double fontSize = 21,
+    FontWeight? fontWeight, // accepted + ignored — see doc comment
+    Color color = AppColors.inkPrimary,
+    double? height,
+  }) {
+    return GoogleFonts.inter(
+      fontSize: fontSize,
+      fontWeight: fontSize >= 24 ? FontWeight.w700 : FontWeight.w800,
+      letterSpacing: -0.4,
+      color: color,
+      height: height,
+    );
   }
 }

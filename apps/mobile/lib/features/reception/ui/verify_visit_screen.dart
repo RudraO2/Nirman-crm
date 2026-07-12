@@ -97,7 +97,7 @@ class _VerifyVisitScreenState extends ConsumerState<VerifyVisitScreen> {
         iconTheme: const IconThemeData(color: AppColors.inkPrimary),
         title: Text(
           'Reception check-in',
-          style: GoogleFonts.fraunces(
+          style: AppType.display(
             fontSize: 21,
             fontWeight: FontWeight.w500,
             color: AppColors.inkPrimary,
@@ -283,7 +283,7 @@ class _VerifiedPanel extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'Visit verified',
-            style: GoogleFonts.fraunces(
+            style: AppType.display(
               fontSize: 24,
               fontWeight: FontWeight.w600,
               color: const Color(0xFFF2EEE2),

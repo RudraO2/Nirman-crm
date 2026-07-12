@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../core/theme/app_theme.dart';
-import '../data/models/monthly_best.dart';
 import '../providers/motivation_providers.dart';
 
 /// Renders the previous-month card and/or the new-best banner based on the RPC.

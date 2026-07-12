@@ -7,7 +7,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/auth_repository.dart';
 import '../data/amendments_repository.dart';
@@ -100,7 +99,7 @@ class _AmendmentsExecutionScreenState
         iconTheme: const IconThemeData(color: AppColors.inkPrimary),
         title: Text(
           'Amendments',
-          style: GoogleFonts.fraunces(
+          style: AppType.display(
             fontSize: 21,
             fontWeight: FontWeight.w500,
             color: AppColors.inkPrimary,

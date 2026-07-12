@@ -8,7 +8,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../amendments/providers/amendments_providers.dart';
 import '../../auth/data/auth_repository.dart';
@@ -62,7 +61,7 @@ class YouScreen extends ConsumerWidget {
         surfaceTintColor: Colors.transparent,
         title: Text(
           'You',
-          style: GoogleFonts.fraunces(
+          style: AppType.display(
             fontSize: 21,
             fontWeight: FontWeight.w500,
             color: AppColors.inkPrimary,
