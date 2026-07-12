@@ -25,6 +25,7 @@ class AmendmentsExecutionScreen extends ConsumerStatefulWidget {
 class _AmendmentsExecutionScreenState
     extends ConsumerState<AmendmentsExecutionScreen> {
   String _statusFilter = ''; // db value, '' = all
+  final Set<String> _advancing = {}; // amendment ids with an in-flight status RPC
 
   Future<void> _refresh() async {
     try {
@@ -35,6 +36,11 @@ class _AmendmentsExecutionScreenState
   }
 
   Future<void> _advance(ExecutionAmendment a, AmendmentStatus to) async {
+    // In-flight guard: a double-tap fired the RPC twice — the server's
+    // transition validation rejected the second call, but the user got a
+    // confusing duplicate error toast (audit medium).
+    if (_advancing.contains(a.amendmentId)) return;
+    setState(() => _advancing.add(a.amendmentId));
     try {
       await ref.read(amendmentsRepositoryProvider).setAmendmentStatus(
             amendmentId: a.amendmentId,
@@ -54,6 +60,8 @@ class _AmendmentsExecutionScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't update. Try again.")),
       );
+    } finally {
+      if (mounted) setState(() => _advancing.remove(a.amendmentId));
     }
   }
 
