@@ -29,6 +29,7 @@ interface ActiveHold {
   held_at: string
   expires_at: string
   seconds_to_expiry: number
+  unit_status_version: number
 }
 
 interface BookingStats {
@@ -150,12 +151,22 @@ export function HoldsClient({ projects }: { projects: HoldsProjectRow[] }) {
   function forceRelease(h: ActiveHold) {
     startRelease(async () => {
       const supabase = createClient()
+      // CAS token from load time (audit low): if the hold was confirmed/expired
+      // since the page rendered, the RPC fails with unit_version_conflict
+      // instead of force-releasing a state the operator never saw.
       const { error: rpcErr } = await supabase.rpc('change_unit_inventory_state', {
         p_unit_id: h.unit_id,
         p_action: 'force_release',
-        p_expected_version: null,
+        p_expected_version: h.unit_status_version ?? null,
       })
-      if (rpcErr) { toast.error(rpcErr.message); return }
+      if (rpcErr) {
+        if (rpcErr.message.includes('unit_version_conflict')) {
+          toast.error('This unit changed since the page loaded — refreshing. Check the list and retry.')
+          load()
+          return
+        }
+        toast.error(rpcErr.message); return
+      }
       toast.success(`Hold on unit ${h.unit_no} released`)
       load()
     })
