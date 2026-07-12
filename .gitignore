@@ -64,3 +64,6 @@ apps/*/.mcp.json
 
 # Local-only throwaway seeds (never commit — may contain seeded auth users)
 *.local.sql
+
+# Claude Code worktrees (demo-showroom etc.)
+.claude/
