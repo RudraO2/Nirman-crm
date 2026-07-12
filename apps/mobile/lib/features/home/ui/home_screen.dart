@@ -499,24 +499,26 @@ class _HomeHeaderCard extends ConsumerWidget {
           ),
         ),
 
-        // ── 2 · Work queue: full-width tappable rows, non-zero only ────────
+        // ── 2 · Work queue: the Leads tab's dark anchor (each tab gets one
+        // evergreen element — You has the profile card, Leads has this).
+        // Full-width tappable rows, non-zero queues only.
         if (queue.isNotEmpty) ...[
           const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.paper,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.line),
-            ),
+          Material(
+            color: AppColors.evergreen,
+            borderRadius: BorderRadius.circular(18),
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 for (var i = 0; i < queue.length; i++) ...[
                   if (i > 0)
-                    const Divider(
-                        height: 1,
-                        thickness: 1,
-                        color: AppColors.line,
-                        indent: 56),
+                    Divider(
+                      height: 1,
+                      thickness: 1,
+                      indent: 56,
+                      color:
+                          const Color(0xFFE9E4D6).withValues(alpha: 0.10),
+                    ),
                   _QueueRow(entry: queue[i]),
                 ],
               ],
@@ -550,10 +552,16 @@ class _QueueRow extends StatelessWidget {
   final _QueueEntry entry;
   const _QueueRow({required this.entry});
 
+  // Dark-surface inks (match the You-tab profile card).
+  static const _ivory = Color(0xFFF2EEE2);
+  static const _ivoryFaint = Color(0xFFE9E4D6);
+
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: () => context.push('/leads/filtered', extra: entry.filter),
+      splashColor: _ivoryFaint.withValues(alpha: 0.08),
+      highlightColor: _ivoryFaint.withValues(alpha: 0.05),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
         child: Row(
@@ -562,7 +570,9 @@ class _QueueRow extends StatelessWidget {
               width: 34,
               height: 34,
               decoration: BoxDecoration(
-                color: entry.alert ? AppColors.brassSoft : AppColors.mist,
+                color: entry.alert
+                    ? AppColors.brassSoft
+                    : _ivoryFaint.withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -570,7 +580,7 @@ class _QueueRow extends StatelessWidget {
                 size: 17,
                 color: entry.alert
                     ? const Color(0xFF6E5423)
-                    : AppColors.inkSecondary,
+                    : AppColors.brassBright,
               ),
             ),
             const SizedBox(width: 12),
@@ -580,7 +590,7 @@ class _QueueRow extends StatelessWidget {
                 style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.inkPrimary,
+                  color: _ivory,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -588,7 +598,9 @@ class _QueueRow extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
               decoration: BoxDecoration(
-                color: entry.alert ? AppColors.brassSoft : AppColors.mist,
+                color: entry.alert
+                    ? AppColors.brassSoft
+                    : _ivoryFaint.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(9999),
               ),
               child: Text(
@@ -596,15 +608,13 @@ class _QueueRow extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12.5,
                   fontWeight: FontWeight.w800,
-                  color: entry.alert
-                      ? const Color(0xFF6E5423)
-                      : AppColors.inkPrimary,
+                  color: entry.alert ? const Color(0xFF6E5423) : _ivory,
                 ),
               ),
             ),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right_rounded,
-                size: 20, color: AppColors.inkDisabled),
+            Icon(Icons.chevron_right_rounded,
+                size: 20, color: _ivoryFaint.withValues(alpha: 0.4)),
           ],
         ),
       ),
