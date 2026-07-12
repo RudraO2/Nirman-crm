@@ -1,33 +1,69 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/luminous/logo";
 
 const links = [
-  { label: "Home", href: "#top", active: true },
-  { label: "The Console", href: "#platform" },
-  { label: "Builders", href: "#testimonials" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Contact", href: "#footer" },
+  { label: "Home", href: "#top", section: "top" },
+  { label: "The Console", href: "#platform", section: "platform" },
+  { label: "Builders", href: "#testimonials", section: "testimonials" },
+  { label: "Pricing", href: "#pricing", section: "pricing" },
+  { label: "Contact", href: "#footer", section: "footer" },
 ];
 
 export function Nav() {
+  // Scroll-spy (audit low: "Home" was hardcoded active forever). Track the
+  // section nearest the top of the viewport via IntersectionObserver.
+  const [active, setActive] = useState("top");
+
+  useEffect(() => {
+    const visible = new Map<string, number>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) visible.set(e.target.id, e.intersectionRatio);
+          else visible.delete(e.target.id);
+        }
+        // Pick the section in view following the nav's own order, so the
+        // highlight is stable when two sections straddle the viewport.
+        for (const l of links) {
+          if (visible.has(l.section)) {
+            setActive(l.section);
+            return;
+          }
+        }
+      },
+      { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.1, 0.5] },
+    );
+    for (const l of links) {
+      const el = document.getElementById(l.section);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <nav className="relative z-50 mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
       <Logo />
 
       <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 px-1.5 py-1.5 backdrop-blur-md md:flex">
-        {links.map((link) => (
-          <a
-            key={link.label}
-            href={link.href}
-            className={
-              link.active
-                ? "flex items-center gap-2 rounded-full bg-neutral-800/80 px-4 py-1.5 text-sm text-white shadow-inner"
-                : "rounded-full px-4 py-1.5 text-sm text-neutral-400 transition-colors hover:text-white"
-            }
-          >
-            {link.active && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
-            {link.label}
-          </a>
-        ))}
+        {links.map((link) => {
+          const isActive = active === link.section;
+          return (
+            <a
+              key={link.label}
+              href={link.href}
+              className={
+                isActive
+                  ? "flex items-center gap-2 rounded-full bg-neutral-800/80 px-4 py-1.5 text-sm text-white shadow-inner"
+                  : "rounded-full px-4 py-1.5 text-sm text-neutral-400 transition-colors hover:text-white"
+              }
+            >
+              {isActive && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
+              {link.label}
+            </a>
+          );
+        })}
       </div>
 
       <a
