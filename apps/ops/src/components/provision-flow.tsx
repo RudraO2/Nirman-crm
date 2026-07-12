@@ -16,11 +16,22 @@ type Start = 'trial' | 'paid'
 const selectCls =
   'h-8 w-full rounded-[8px] border border-input bg-background px-2.5 text-sm text-foreground outline-none focus:border-ring focus:ring-3 focus:ring-ring/40'
 
+// Where the builder admin signs in — shown on the credentials handoff screen.
+const ADMIN_SIGNIN_URL = process.env.NEXT_PUBLIC_BUILDER_ADMIN_URL ?? 'https://app.nirman.in'
+
 function genPassword(builder: string): string {
   const stem = (builder.replace(/[^A-Za-z]/g, '').slice(0, 5) || 'Acme')
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
+  // CSPRNG with rejection sampling (256 % 56 !== 0 — modulo alone would bias)
+  const limit = Math.floor(256 / chars.length) * chars.length
   let s = ''
-  for (let i = 0; i < 7; i++) s += chars[Math.floor(Math.random() * chars.length)]
+  const buf = new Uint8Array(32)
+  while (s.length < 7) {
+    crypto.getRandomValues(buf)
+    for (const b of buf) {
+      if (b < limit && s.length < 7) s += chars[b % chars.length]
+    }
+  }
   return `${stem.charAt(0).toUpperCase()}${stem.slice(1).toLowerCase()}-${s}`
 }
 
@@ -126,7 +137,7 @@ export function ProvisionFlow({ plans }: { plans: Plan[] }) {
           <div className="rounded-[12px] border border-border bg-card p-5">
             <p className="eyebrow mb-3">Credentials to hand over</p>
             <div className="rounded-[10px] border border-input bg-background px-4">
-              <CredRow label="Sign-in URL" value="your builder admin URL" onCopy={copy} />
+              <CredRow label="Sign-in URL" value={ADMIN_SIGNIN_URL} mono onCopy={copy} />
               <CredRow label="Username" value={username.trim()} mono onCopy={copy} />
               <CredRow label="Temp password" value={password} mono onCopy={copy} last />
             </div>
@@ -137,7 +148,17 @@ export function ProvisionFlow({ plans }: { plans: Plan[] }) {
             </div>
             <div className="mt-5 flex gap-2.5">
               <Button onClick={() => router.push('/')}>Back to tenants</Button>
-              <Button variant="outline" onClick={() => { setResult(null); setStep(1); setName(''); setUsername(''); setAdminName(''); setPassword(genPassword('')) }}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  // Full reset — stale plan/amount/method/mfa from the last builder
+                  // must not leak into the next tenant's first payment record.
+                  setResult(null); setStep(1)
+                  setName(''); setUsername(''); setAdminName(''); setPassword(genPassword(''))
+                  setTimezone('Asia/Kolkata'); setStart('trial'); setMethod('upi'); setMfaCode('')
+                  setPlanId(plans[0]?.id ?? ''); setAmount(plans[0] ? String(plans[0].price_inr) : '')
+                }}
+              >
                 Provision another
               </Button>
             </div>
