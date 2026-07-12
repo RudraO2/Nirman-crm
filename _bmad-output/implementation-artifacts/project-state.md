@@ -77,6 +77,42 @@ additionally get the web dashboard. Founder touches ONLY provisioning + money.
   live in Supabase dashboard logs. Free fix: weekly log check ritual + the CI badge; later a
   log-drain. Write the ritual into the ops checklist.
 
+### Simplicity & progressive-disclosure review — 2026-07-12 (verdict + targets)
+
+Rudra's USP = simplicity vs Espo/Odoo. Reviewed all 3 surfaces' navigation + gating:
+
+**Verdict: role-based disclosure ✅ done well; usage-based disclosure ❌ missing.**
+- Mobile = 3 tabs (Leads/Plan/You); power features behind You, cleanly ROLE-gated
+  (Organization=head; Booking=head/leader; Reception=receptionist/head; Team
+  leads=leader/partner/head; Amendments=head/exec-member — the best gate in the app).
+  Rep core loop (status→follow-up→call) untouched by Epics 12–16. USP intact there.
+- BUT nothing is gated by what the TENANT USES: mobile "Availability" is the one
+  ungated You entry (every rep of a zero-project tenant sees an empty grid);
+  admin sidebar (`apps/admin/src/components/nav.ts` NAV_GROUPS) is static — the
+  Inventory group (Units/Holds/Amendments/Updates/Projects, 5 tabs) always shows,
+  even for a leads-only builder. ~⅓ of the admin app is furniture for them.
+
+**Adopt usage-gating in EXACTLY three spots (one signal: tenant has ≥1 project/units):**
+1. Admin Inventory group → collapse to a single "Set up inventory" entry until
+   a project exists, then unfold.
+2. Mobile "Availability" You-entry → hide until the tenant has units.
+3. Mobile "Booking dashboard" → same data-gate on top of the role gate.
+Do NOT touch: rep loop, Plan tab, admin Home/Leads/Insights/Team/Data, ops console.
+
+**Other simplicity findings (unfixed, deliberate backlog):**
+- Two-buttons-one-job: Team page has "New employee" AND "Invite link" — collapse
+  to invite-first eventually, keep admin-create as fallback.
+- The heavy part isn't software, it's the PROCESS the head must enforce (visit
+  codes, verified-visit-before-hold, payment attestation) — onboarding material,
+  not code.
+- Standing guardrail for ALL future scope (incl. the parked brainstorm doc):
+  every feature must pass "can a 45-year-old rep use it without training?" —
+  else it goes head-side behind a gate, or not at all. Additions that are
+  REMOVALS/HIDINGS (like the 3 above) are the preferred kind.
+
+→ Next step chosen 2026-07-12: run this through Sally (bmad-ux) in a fresh
+session for a proper disclosure UX spec before any code. Prompt handed to Rudra.
+
 **P2 — quality of life, after real usage data**
 - Leader/head read-only web view (platform segregation currently blocks employees from web).
 - Per-user notification preferences (mute inventory pings, keep follow-ups).
