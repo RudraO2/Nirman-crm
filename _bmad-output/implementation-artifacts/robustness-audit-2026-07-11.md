@@ -1,5 +1,24 @@
 # Robustness / Completeness Audit — 2026-07-11
 
+> ## ✅ REMEDIATION COMPLETE — 2026-07-12
+>
+> **Every finding below is CLOSED.** Two same-day phases:
+> - **Phase 1:** all 4 🔴 CRITICAL + all 13 🟠 HIGH — migrations **0097–0103** on prod,
+>   `login`/`create-lead`/`update-lead` edge fns redeployed, git `a6a8196`.
+> - **Phase 2:** all 25 🟡 MEDIUM + all 9 ⚪ LOW — migrations **0104–0106** on prod
+>   (head = 0106, fn bodies verified live), git through `a3cb84e`. Mobile 268/268 tests,
+>   analyze 0 errors; admin/ops/marketing tsc clean.
+> - Found already fixed during phase 2 (no redo): M-CSPRNG temp password, M-provision-another
+>   reset, M-confirm_booking expiry (0101), doc-drift M×2 + L×1; L-provision TOCTOU closed by
+>   0097's global unique username index.
+> - **Still needs Rudra (not code):** real operator phone (`OPERATOR_PHONE_E164` in .env.local
+>   + APK rebuild), review draft `/privacy` + `/terms` copy, Vercel envs/deploys +
+>   NEXT_PUBLIC service-key check, `/demo` worktree merge decision, real social/contact
+>   channels, seed `platform_admins` row.
+>
+> Detail: sprint-status.yaml 2026-07-12 note + memory `project_audit_remediation.md`.
+> The findings below are kept verbatim as the historical record.
+
 Read-only, multi-agent audit across all 5 surfaces (apps/mobile, apps/admin, apps/ops,
 apps/marketing, supabase/migrations+functions), each finding independently adversarially
 re-verified against actual source before inclusion. Nothing was fixed, committed, or
