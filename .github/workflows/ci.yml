@@ -1,0 +1,55 @@
+# CI — typecheck the three web apps + analyze/test the Flutter app on every push/PR.
+# Mirrors the local verify bar: tsc --noEmit per app; flutter analyze (errors fatal,
+# pre-existing infos/warnings tolerated) + full test suite. Generated *.g.dart files
+# are committed, so no build_runner step is needed.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web typecheck (admin · ops · marketing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install workspace deps
+        run: npm ci
+      - name: tsc apps/admin
+        run: npx tsc --noEmit
+        working-directory: apps/admin
+      - name: tsc apps/ops
+        run: npx tsc --noEmit
+        working-directory: apps/ops
+      - name: tsc apps/marketing
+        run: npx tsc --noEmit
+        working-directory: apps/marketing
+
+  mobile:
+    name: Flutter analyze + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.44.0
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      # Errors fail the build; the handful of pre-existing infos/warnings do not
+      # (same bar as nirman-crm/CLAUDE.md: "flutter analyze at 0 errors").
+      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
+      - run: flutter test
