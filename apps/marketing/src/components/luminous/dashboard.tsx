@@ -214,7 +214,7 @@ export function Dashboard() {
             <span className="h-3 w-3 rounded-full bg-green-500/70" />
             <div className="ml-4 flex-1">
               <div className="mx-auto w-fit rounded-md bg-white/5 px-3 py-1 text-xs text-neutral-400">
-                crm.nirmanmedia.com
+                app.nirman.in
               </div>
             </div>
           </div>
