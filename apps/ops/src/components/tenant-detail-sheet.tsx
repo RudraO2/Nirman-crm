@@ -263,6 +263,7 @@ export function TenantDetailSheet({
             noteLabel="Reason"
             confirmLabel="Suspend tenant"
             destructive
+            requireMfa
             busy={busy}
             onConfirm={doSuspend}
           />

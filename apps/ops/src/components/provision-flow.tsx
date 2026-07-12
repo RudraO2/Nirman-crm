@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { inr, rpcErrorMessage } from '@/lib/format'
+import { verifyStepUp } from '@/lib/step-up'
 import { PAYMENT_METHODS, type Plan, type PaymentMethod } from '@/lib/types'
 import { UserPlus, Check, Copy, TriangleAlert, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
@@ -46,6 +47,8 @@ export function ProvisionFlow({ plans }: { plans: Plan[] }) {
   const [start, setStart] = useState<Start>('trial')
   const [amount, setAmount] = useState(plans[0] ? String(plans[0].price_inr) : '')
   const [method, setMethod] = useState<PaymentMethod>('upi')
+  // Story 9.7 step-up: a fresh authenticator code is required to actually provision.
+  const [mfaCode, setMfaCode] = useState('')
 
   const selectedPlan = plans.find((p) => p.id === planId)
   const amountNum = Number(amount)
@@ -54,7 +57,7 @@ export function ProvisionFlow({ plans }: { plans: Plan[] }) {
   const step1ok = name.trim().length > 0
   const step2ok = username.trim().length > 0 && password.length >= 8
   const step3ok = start === 'trial' || (!!planId && amountValid)
-  const canProvision = step1ok && step2ok && step3ok && !busy
+  const canProvision = step1ok && step2ok && step3ok && mfaCode.length === 6 && !busy
 
   const displayUser = useMemo(() => {
     const u = username.trim().toLowerCase()
@@ -73,6 +76,13 @@ export function ProvisionFlow({ plans }: { plans: Plan[] }) {
 
   async function provision() {
     setBusy(true)
+    // Step-up: re-confirm a fresh authenticator code before creating the account.
+    const stepUp = await verifyStepUp(mfaCode)
+    if (!stepUp.ok) {
+      setBusy(false)
+      toast.error(stepUp.error ?? 'Verification failed.')
+      return
+    }
     const supabase = createClient()
     const { data, error } = await supabase.rpc('provision_tenant', {
       p_builder_name: name.trim(),
@@ -302,6 +312,20 @@ export function ProvisionFlow({ plans }: { plans: Plan[] }) {
                     </Field>
                   </div>
                 )}
+
+                {/* Story 9.7 step-up — a fresh authenticator code to actually create the account. */}
+                <Field label="Authenticator code" required>
+                  <Input
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    placeholder="••••••"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    className="text-center font-mono tracking-[0.4em]"
+                  />
+                  <p className="text-[11px] text-muted-foreground">Confirms it&apos;s you before a new builder login is created.</p>
+                </Field>
               </div>
             )}
           </div>

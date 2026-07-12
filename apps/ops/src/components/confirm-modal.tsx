@@ -13,11 +13,15 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
+import { verifyStepUp } from '@/lib/step-up'
 
 /**
  * Typed-confirmation modal (design §10 safety rail). The operator must retype
  * the exact tenant name before the action can fire — the confirm button stays
  * disabled until it matches. Used for Suspend / Reactivate.
+ *
+ * Story 9.7: when `requireMfa` is set (destructive actions), a fresh 6-digit TOTP
+ * code is also required and verified (step-up) before `onConfirm` fires.
  */
 export function ConfirmModal({
   open,
@@ -29,6 +33,7 @@ export function ConfirmModal({
   confirmLabel,
   destructive = false,
   busy = false,
+  requireMfa = false,
   onConfirm,
 }: {
   open: boolean
@@ -40,16 +45,38 @@ export function ConfirmModal({
   confirmLabel: string
   destructive?: boolean
   busy?: boolean
+  requireMfa?: boolean
   onConfirm: (note: string) => void
 }) {
   const [typed, setTyped] = useState('')
   const [note, setNote] = useState('')
+  const [code, setCode] = useState('')
+  const [mfaError, setMfaError] = useState<string | null>(null)
+  const [verifying, setVerifying] = useState(false)
 
   const matches = typed.trim() === tenantName.trim()
+  const codeReady = !requireMfa || code.length === 6
 
   function reset() {
     setTyped('')
     setNote('')
+    setCode('')
+    setMfaError(null)
+    setVerifying(false)
+  }
+
+  async function handleConfirm() {
+    if (requireMfa) {
+      setVerifying(true)
+      setMfaError(null)
+      const r = await verifyStepUp(code)
+      setVerifying(false)
+      if (!r.ok) {
+        setMfaError(r.error ?? 'Verification failed.')
+        return
+      }
+    }
+    onConfirm(note)
   }
 
   return (
@@ -92,18 +119,40 @@ export function ConfirmModal({
               rows={2}
             />
           </div>
+          {requireMfa && (
+            <div className="space-y-1.5">
+              <Label htmlFor="confirm-mfa" className="text-xs text-muted-foreground">
+                Authenticator code <span className="opacity-60">(required)</span>
+              </Label>
+              <Input
+                id="confirm-mfa"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={6}
+                placeholder="••••••"
+                value={code}
+                onChange={(e) => {
+                  setCode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                  setMfaError(null)
+                }}
+                className="text-center font-mono tracking-[0.4em]"
+                aria-invalid={!!mfaError}
+              />
+              {mfaError && <p className="text-xs text-destructive">{mfaError}</p>}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy || verifying}>
             Cancel
           </Button>
           <Button
             variant={destructive ? 'destructive-solid' : 'default'}
-            disabled={!matches || busy}
-            onClick={() => onConfirm(note)}
+            disabled={!matches || !codeReady || busy || verifying}
+            onClick={handleConfirm}
           >
-            {busy ? 'Working…' : confirmLabel}
+            {verifying ? 'Verifying…' : busy ? 'Working…' : confirmLabel}
           </Button>
         </DialogFooter>
       </DialogContent>
