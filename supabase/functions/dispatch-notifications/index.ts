@@ -16,6 +16,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { sendFcmNotification } from '../_shared/fcm.ts';
+import { sendEmail } from '../_shared/email.ts';
 import { requireCronSecret } from '../_shared/serviceAuth.ts';
 
 interface DomainEvent {
@@ -31,6 +32,7 @@ const HANDLED_TYPES = [
   'developer_update_posted',
   'inventory_changed',
   'hold_expiring',
+  'demo_request_created',
 ];
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -126,6 +128,26 @@ Deno.serve(async (req) => {
             kind: kind ?? '',
             unit_id: unitId,
             ...(projectId ? { route: `/inventory/${projectId}` } : { route: '/inventory' }),
+          });
+          break;
+        }
+        case 'demo_request_created': {
+          // Story 8.5 first consumer: email the founder the moment a prospect
+          // submits the marketing demo form. Dormant until RESEND_API_KEY +
+          // FOUNDER_NOTIFY_EMAIL are set (sendEmail logs a skip).
+          const founderEmail = Deno.env.get('FOUNDER_NOTIFY_EMAIL');
+          const requestId = ev.payload?.demo_request_id as string | undefined;
+          if (!founderEmail || !requestId) break;
+          const { data: reqRow } = await supabase
+            .from('demo_requests')
+            .select('email, source, created_at')
+            .eq('id', requestId)
+            .single();
+          if (!reqRow) break;
+          await sendEmail({
+            to: founderEmail,
+            subject: 'Nirman CRM — new demo request',
+            text: `A prospect just asked for a demo.\n\nContact: ${reqRow.email}\nSource: ${reqRow.source}\nAt: ${reqRow.created_at}\n\nFull list: ops console → demo requests.`,
           });
           break;
         }
