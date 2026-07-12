@@ -95,8 +95,17 @@ class AlarmSyncService {
     });
   }
 
-  static String _displayName(String? name) =>
-      (name == null || name.trim().isEmpty) ? 'your lead' : name.trim();
+  // Masked to first name + last-name initial: the payload is persisted as
+  // plaintext by the native alarm plugin (audit medium) — keep the stored PII
+  // minimal while the ring screen stays human. Full name lives behind the
+  // lead-detail tap (authenticated fetch).
+  static String _displayName(String? name) {
+    final trimmed = name?.trim() ?? '';
+    if (trimmed.isEmpty) return 'your lead';
+    final parts = trimmed.split(RegExp(r'\s+'));
+    if (parts.length == 1) return parts.first;
+    return '${parts.first} ${parts.last[0]}.';
+  }
 }
 
 void _log(Map<String, Object?> fields) {

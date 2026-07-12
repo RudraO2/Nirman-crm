@@ -328,7 +328,10 @@ class AlarmPackageScheduler implements AlarmScheduler {
         volumeEnforced: true,
       ),
       notificationSettings: alarm.NotificationSettings(
-        title: 'Follow-up: ${payload.leadName}',
+        // No customer name here (audit medium): the title is lockscreen-visible
+        // and persisted plaintext by the alarm plugin. The name shows only on
+        // the in-app ring screen (masked at the sync seam).
+        title: 'Follow-up reminder',
         body: payload.isSnooze
             ? 'Snoozed follow-up reminder'
             : 'Your follow-up is coming up',
