@@ -2,7 +2,11 @@
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { differenceInCalendarDays, format, startOfDay, subDays } from 'date-fns'
+import { Calendar as CalendarIcon } from 'lucide-react'
 import { TabStrip } from '@/components/tab-strip'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   BarChart,
   Bar,
@@ -52,6 +56,9 @@ const RANGE_LABELS: Record<string, string> = {
   '30': 'Last 30 days',
 }
 
+// Cap how far back "Custom" can query — generous, but bounds a stray old-date pick.
+const MAX_CUSTOM_DAYS = 730
+
 const DEFAULT_STATUSES = ['warm', 'cold', 'hot']
 const EXTRA_STATUSES = ['dead', 'sold', 'future']
 
@@ -74,11 +81,35 @@ export function PerformanceDashboard({
   initialRange: string
 }) {
   const router = useRouter()
-  const p_days = initialRange === '1' ? 1 : initialRange === '7' ? 7 : 30
+  // p_days is the single source of truth; isCustom is derived from it (not from the
+  // raw string) so malformed/out-of-range input can't disagree with what's displayed.
+  const parsedDays = Number(initialRange)
+  const p_days =
+    Number.isInteger(parsedDays) && parsedDays > 0
+      ? Math.min(parsedDays, MAX_CUSTOM_DAYS)
+      : 30
+  const isCustom = p_days !== 1 && p_days !== 7 && p_days !== 30
 
   const [sortDesc, setSortDesc] = useState(true)
   const [showExtra, setShowExtra] = useState(false)
   const [showDonutExtra, setShowDonutExtra] = useState(false)
+  const [pickerOpen, setPickerOpen] = useState(false)
+
+  // Custom picker shows/selects a start date; "Last Nd" pills stay day-count based.
+  const customStartDate = useMemo(
+    () => (isCustom ? startOfDay(subDays(new Date(), p_days - 1)) : undefined),
+    [isCustom, p_days],
+  )
+
+  function handlePickDate(date: Date | undefined) {
+    if (!date) return
+    const days = Math.max(
+      1,
+      Math.min(differenceInCalendarDays(new Date(), date) + 1, MAX_CUSTOM_DAYS),
+    )
+    setPickerOpen(false)
+    router.push(`/performance?range=${days}`)
+  }
 
   // Sort employees by active_leads
   const sortedStats = useMemo(
@@ -123,7 +154,7 @@ export function PerformanceDashboard({
         </div>
 
         {/* Date range filter */}
-        <div className="inline-flex gap-0.5 rounded-[10px] border border-line bg-mist p-[3px]">
+        <div className="inline-flex items-center gap-0.5 rounded-[10px] border border-line bg-mist p-[3px]">
           {(['1', '7', '30'] as const).map((r) => (
             <button
               key={r}
@@ -139,6 +170,40 @@ export function PerformanceDashboard({
               {RANGE_LABELS[r]}
             </button>
           ))}
+          <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+            <PopoverTrigger asChild>
+              <button
+                aria-pressed={isCustom}
+                aria-label={
+                  isCustom
+                    ? `Custom range, last ${p_days} days — change`
+                    : 'Pick a custom date range'
+                }
+                className={
+                  isCustom
+                    ? 'inline-flex items-center gap-1 rounded-[8px] bg-paper px-3.5 py-[5px] text-[12.5px] font-semibold text-ink shadow-[0_1px_3px_rgba(0,0,0,.08)]'
+                    : 'inline-flex items-center gap-1 rounded-[8px] px-3.5 py-[5px] text-[12.5px] font-medium text-ink-2 transition hover:text-ink'
+                }
+              >
+                <CalendarIcon className="size-3.5" />
+                {isCustom ? `Custom · ${p_days}d` : 'Custom'}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={customStartDate}
+                defaultMonth={customStartDate}
+                disabled={{ after: new Date(), before: subDays(new Date(), MAX_CUSTOM_DAYS) }}
+                onSelect={handlePickDate}
+              />
+              <div className="border-t border-line p-2 text-center text-xs text-ink-2">
+                {customStartDate
+                  ? `${format(customStartDate, 'MMM d')} – Today`
+                  : 'Pick a start date'}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 

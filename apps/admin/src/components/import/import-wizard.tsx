@@ -74,13 +74,19 @@ export function ImportWizard({ employees }: Props) {
 
   useEffect(() => {
     if (step !== 'preview' || !parseResult) return
+    // Back+Continue can re-enter 'preview' while an earlier check is still in flight
+    // (it couldn't before Back existed); ignore stale resolutions so they can't clobber a newer one.
+    let ignore = false
     setCrossDbLoading(true)
     const phoneHeader = parseResult.columns.find((c) => mappings[c] === 'Phone')
     const phones = phoneHeader ? parseResult.rows.map((r) => r[phoneHeader]).filter(Boolean) : []
     checkPhoneHashesAction(phones)
-      .then((matched) => setCrossDbDupes(matched.length))
-      .catch(() => setCrossDbDupes(0))
-      .finally(() => setCrossDbLoading(false))
+      .then((matched) => { if (!ignore) setCrossDbDupes(matched.length) })
+      .catch(() => { if (!ignore) setCrossDbDupes(0) })
+      .finally(() => { if (!ignore) setCrossDbLoading(false) })
+    return () => {
+      ignore = true
+    }
   }, [step, parseResult])
 
   function reset() {
@@ -244,7 +250,17 @@ export function ImportWizard({ employees }: Props) {
               </TableBody>
             </Table>
           </div>
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => {
+                // Clear so re-picking the same filename still fires a change event (matches reset()).
+                if (fileInputRef.current) fileInputRef.current.value = ''
+                setStep('upload')
+              }}
+            >
+              Back
+            </Button>
             <Button onClick={() => setStep('preview')}>Continue to Preview</Button>
           </div>
         </div>
@@ -304,7 +320,10 @@ export function ImportWizard({ employees }: Props) {
             </Table>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-between">
+            <Button variant="outline" onClick={() => setStep('map')}>
+              Back
+            </Button>
             <Button onClick={() => setStep('assign')}>Select Employees</Button>
           </div>
         </div>
@@ -360,12 +379,15 @@ export function ImportWizard({ employees }: Props) {
             )}
           </div>
 
-          <div className="relative flex justify-end">
+          <div className="relative flex justify-between">
             {isPending && (
               <div className="absolute inset-0 flex items-center justify-center rounded-md bg-background/60">
                 <span className="text-sm text-muted-foreground">Importing…</span>
               </div>
             )}
+            <Button variant="outline" disabled={isPending} onClick={() => setStep('preview')}>
+              Back
+            </Button>
             <Button
               disabled={selectedEmployees.length === 0 || isPending}
               onClick={handleImport}

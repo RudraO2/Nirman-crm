@@ -27,7 +27,11 @@ export default async function PerformancePage({
 }) {
   const sp = await searchParams
   const range = typeof sp.range === 'string' ? sp.range : '30'
-  const p_days = range === '1' ? 1 : range === '7' ? 7 : 30
+  // Mirrors PerformanceDashboard's p_days derivation so the fetched window always
+  // matches what's displayed (same 730-day cap as the client-side Custom picker).
+  const parsedDays = Number(range)
+  const p_days =
+    Number.isInteger(parsedDays) && parsedDays > 0 ? Math.min(parsedDays, 730) : 30
 
   const supabase = await createClient()
 
