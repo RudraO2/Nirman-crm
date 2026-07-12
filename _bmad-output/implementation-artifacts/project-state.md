@@ -116,7 +116,7 @@ session for a proper disclosure UX spec before any code. Prompt handed to Rudra.
 **✅ IMPLEMENTED 2026-07-12** per the resulting spec
 (`planning-artifacts/ux-progressive-disclosure.md` — 1 signal, 4 gates, 1 button
 consolidation; Amendments gate + WORKSPACE-header suppression added by the spec):
-- **Signal (0115, NOT yet pushed to prod):** `tenants.inventory_first_used_at`
+- **Signal (0115, ✅ ON PROD 2026-07-12 — head now 0115, backfill verified 1/1 tenant):** `tenants.inventory_first_used_at`
   one-way marker (backfilled from earliest project; AFTER INSERT trigger on
   `projects`; never cleared) + RPC `tenant_uses_inventory()` for all authenticated.
   Deliberately reads the JWT tenant claim directly (not `auth_tenant_id()`) so a
@@ -137,8 +137,9 @@ consolidation; Amendments gate + WORKSPACE-header suppression added by the spec)
   Reception deliberately NOT gated (spec §3 ruled it out).
 - Verified: tsc clean, flutter analyze 0 errors, mobile suite 275/275. Admin
   eslint failures are pre-existing (set-state-in-effect across old files).
-- Left: `supabase db push --linked` for 0115 + deploy admin; all uncommitted on
-  `main` as of this note.
+- ✅ Committed + pushed (`34b49bf`), 0115 applied to prod, spec file marked
+  implemented — all done 2026-07-12. Left: admin redeploy on Vercel picks up the
+  sidebar changes (auto if the Vercel project tracks `main`).
 
 **P2 — quality of life, after real usage data**
 - Leader/head read-only web view (platform segregation currently blocks employees from web).
