@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nirman CRM — Simple Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══ Same brand as rich version — simpler structure ═══ */
+:root{
+  --evergreen:#132A21; --evergreen-2:#1B382C; --evergreen-3:#0D1F18;
+  --ivory:#F6F3EC; --paper:#FFFFFF; --mist:#EDE8DD;
+  --ink:#1C231F; --ink-2:#5C665F; --ink-3:#98A29A;
+  --line:#E4DFD3; --line-2:#CFC8B8;
+  --brass:#A8823C; --brass-soft:#EADFC4; --brass-bright:#C9A354;
+  --hot:#C24638; --hot-bg:#F9E9E6;
+  --warm:#C07A17; --warm-bg:#F7EDD9;
+  --cold:#3E6DA6; --cold-bg:#E6EDF6;
+  --dead:#78817B; --dead-bg:#ECEEEC;
+  --sold:#2F7D4F; --sold-bg:#E3F0E7;
+  --future:#7A5BA8; --future-bg:#EEE8F6;
+  --danger:#B3372B;
+  --radius:14px;
+  --font-ui:'Inter',system-ui,sans-serif;
+  --font-display:'Fraunces',Georgia,serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --shadow:0 1px 2px rgba(28,35,31,.05),0 4px 16px rgba(28,35,31,.05);
+  --shadow-lg:0 8px 40px rgba(13,31,24,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--font-ui);background:var(--ivory);color:var(--ink);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font:inherit;font-size:14px;color:var(--ink)}
+::placeholder{color:var(--ink-3)}
+
+.shell{display:flex;min-height:100vh}
+
+/* ── Sidebar: only 6 destinations ── */
+.sidebar{width:220px;flex-shrink:0;background:linear-gradient(180deg,var(--evergreen),var(--evergreen-3));color:#E9E4D6;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.brand{padding:24px 20px;display:flex;align-items:center;gap:10px}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:var(--brass);display:grid;place-items:center;font-family:var(--font-display);font-weight:600;font-style:italic;font-size:17px;color:var(--evergreen-3)}
+.brand-name{font-family:var(--font-display);font-size:17px}
+.brand-name em{color:var(--brass-bright)}
+.nav-list{flex:1;padding:6px 12px}
+.nav-item{display:flex;align-items:center;gap:11px;width:100%;padding:11px 12px;border-radius:10px;color:rgba(233,228,214,.72);font-size:14px;font-weight:500;margin-bottom:3px;transition:all .15s;text-align:left}
+.nav-item svg{width:17px;height:17px;flex-shrink:0;opacity:.75}
+.nav-item:hover{background:var(--evergreen-2);color:#F2EEE2}
+.nav-item.active{background:rgba(201,163,84,.16);color:var(--brass-bright)}
+.nav-item small{display:block;font-size:10.5px;font-weight:400;color:rgba(233,228,214,.4);margin-top:1px}
+.nav-item.active small{color:rgba(201,163,84,.65)}
+.side-foot{padding:16px;border-top:1px solid rgba(233,228,214,.08);display:flex;align-items:center;gap:10px}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--brass-soft);color:var(--evergreen);display:grid;place-items:center;font-weight:700;font-size:12px}
+.side-foot b{font-size:12.5px;color:#F2EEE2;display:block}
+.side-foot span{font-size:11px;color:rgba(233,228,214,.5)}
+
+/* ── Main ── */
+.main{flex:1;min-width:0;padding:30px 34px;max-width:1180px;margin:0 auto}
+.view{display:none;animation:fade .25s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);margin-bottom:6px}
+h1.title{font-family:var(--font-display);font-size:29px;font-weight:500;letter-spacing:-.01em;line-height:1.15}
+h1.title em{font-style:italic;font-weight:400;color:var(--ink-2)}
+.sub{font-size:13.5px;color:var(--ink-2);margin-top:5px}
+
+/* tabs — the workhorse of this layout */
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin-bottom:20px}
+.tab{padding:9px 16px;font-size:13.5px;font-weight:600;color:var(--ink-2);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--brass);border-bottom-color:var(--brass)}
+.tab .n{background:var(--mist);border-radius:99px;font-size:10.5px;padding:1px 7px;margin-left:5px;color:var(--ink-2)}
+.pane{display:none}
+.pane.on{display:block;animation:fade .2s ease}
+
+/* primitives (same family as rich version) */
+.card{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card-pad{padding:20px 22px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.card-head b{font-size:13.5px;font-weight:600}
+.card-head .muted{font-size:12px;color:var(--ink-2);font-weight:400}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:9px;padding:8px 15px;font-size:13px;font-weight:600;transition:all .15s;border:1px solid transparent;white-space:nowrap}
+.btn-brass{background:var(--brass);color:#fff}
+.btn-brass:hover{background:#96732F}
+.btn-primary{background:var(--evergreen);color:#F2EEE2}
+.btn-outline{border-color:var(--line-2);color:var(--ink);background:var(--paper)}
+.btn-outline:hover{background:var(--mist)}
+.btn-ghost{color:var(--ink-2)}
+.btn-ghost:hover{background:var(--mist);color:var(--ink)}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
+.input,select.input{background:var(--paper);border:1px solid var(--line-2);border-radius:9px;padding:8px 12px;outline:none;transition:border-color .15s}
+.input:focus{border-color:var(--brass);box-shadow:0 0 0 3px rgba(168,130,60,.14)}
+textarea.input{width:100%;resize:vertical}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
+.field .input,.field select{width:100%}
+.check{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2);cursor:pointer}
+.check input{width:15px;height:15px;accent-color:var(--brass)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:99px;text-transform:capitalize}
+.pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.hot{background:var(--hot-bg);color:var(--hot)} .pill.warm{background:var(--warm-bg);color:var(--warm)}
+.pill.cold{background:var(--cold-bg);color:var(--cold)} .pill.dead{background:var(--dead-bg);color:var(--dead)}
+.pill.sold{background:var(--sold-bg);color:var(--sold)} .pill.future{background:var(--future-bg);color:var(--future)}
+.chip{display:inline-flex;align-items:center;border:1px solid var(--line-2);border-radius:99px;padding:4px 13px;font-size:12.5px;font-weight:500;color:var(--ink-2);background:var(--paper);transition:all .15s}
+.chip.on{background:var(--evergreen);border-color:var(--evergreen);color:#F2EEE2}
+.seg{display:inline-flex;background:var(--mist);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
+.seg button{padding:5px 13px;border-radius:8px;font-size:12.5px;font-weight:500;color:var(--ink-2)}
+.seg button.on{background:var(--paper);color:var(--ink);font-weight:600;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);padding:11px 16px;border-bottom:1px solid var(--line);white-space:nowrap}
+tbody td{padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#FBF9F4}
+tbody tr.selected{background:var(--brass-soft)}
+.mono{font-family:var(--font-mono);font-size:12px;color:var(--ink-2)}
+.num{font-variant-numeric:tabular-nums}
+.right{text-align:right}
+.muted{color:var(--ink-2)}
+.faint{color:var(--ink-3);font-style:italic}
+
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.metric{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);cursor:pointer;transition:border-color .2s}
+.metric:hover{border-color:var(--brass)}
+.metric .m-label{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-2)}
+.metric .m-value{font-family:var(--font-display);font-size:38px;font-weight:500;line-height:1.1;margin-top:8px;font-variant-numeric:tabular-nums}
+.metric .m-ref{font-size:12px;color:var(--ink-3);margin-top:4px}
+.m-delta{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:1px 7px;margin-left:5px}
+.up{background:var(--sold-bg);color:var(--sold)}
+
+.banner{display:flex;align-items:center;gap:12px;border-radius:12px;padding:11px 16px;font-size:13.5px;margin-bottom:16px;background:var(--cold-bg);border:1px solid #C6D6E9;color:#2C4E77}
+.bulk-bar{display:flex;align-items:center;gap:12px;background:var(--evergreen);color:#F2EEE2;border-radius:12px;padding:10px 16px;margin-bottom:14px;box-shadow:var(--shadow-lg)}
+.spacer{flex:1}
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+
+.bars14{display:flex;align-items:flex-end;gap:6px;height:150px;padding-top:8px}
+.bars14 .day{flex:1;display:flex;flex-direction:column;justify-content:flex-end;gap:2px;height:100%}
+.bars14 .b1{background:var(--evergreen);border-radius:3px 3px 0 0;opacity:.85}
+.bars14 .b2{background:var(--brass-bright);border-radius:3px 3px 0 0}
+.bars14 .dl{font-size:9.5px;color:var(--ink-3);text-align:center;margin-top:6px;font-family:var(--font-mono)}
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2)}
+.dot{width:9px;height:9px;border-radius:3px;display:inline-block}
+
+.funnel-rows{display:flex;flex-direction:column;gap:12px}
+.f-row{display:grid;grid-template-columns:80px 1fr 160px;align-items:center;gap:14px}
+.f-name{font-size:13px;font-weight:600;text-align:right}
+.f-track{height:30px;background:var(--mist);border-radius:8px;overflow:hidden}
+.f-bar{height:100%;border-radius:8px;display:flex;align-items:center;padding-left:12px;color:#fff;font-size:12px;font-weight:700;min-width:34px}
+.f-meta{font-size:12px;color:var(--ink-2)}
+.f-meta b{color:var(--ink);font-size:13px}
+.drop{color:var(--hot);font-weight:600}
+
+.feed-item{display:flex;gap:14px;padding:14px 0;border-bottom:1px solid var(--line)}
+.feed-item:last-child{border-bottom:none}
+.feed-dot{width:34px;height:34px;border-radius:10px;background:var(--brass-soft);display:grid;place-items:center;font-size:15px;flex-shrink:0}
+.feed-item .fx b{font-size:13.5px}
+.feed-item .fx p{font-size:13px;color:var(--ink-2);margin-top:2px}
+.feed-item .when{margin-left:auto;font-size:11.5px;color:var(--ink-3);white-space:nowrap}
+
+.tower-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.unit{border-radius:10px;padding:10px 8px;text-align:center;font-size:12px;border:1px solid transparent;transition:transform .12s}
+.unit:hover{transform:translateY(-2px)}
+.unit b{display:block;font-size:13px;font-weight:700}
+.unit span{font-size:10px;opacity:.85}
+.u-available{background:var(--sold-bg);color:var(--sold);border-color:#BFDCC9}
+.u-hold{background:var(--warm-bg);color:var(--warm);border-color:#EBD9AF}
+.u-sold{background:var(--evergreen);color:var(--brass-bright)}
+.u-blocked{background:var(--mist);color:var(--ink-3);border-color:var(--line)}
+
+.tier-pill{display:inline-block;font-size:11px;font-weight:600;padding:3px 11px;border-radius:99px}
+.t-super{background:var(--evergreen);color:var(--brass-bright)} .t-head{background:var(--brass);color:#fff}
+.t-lead{background:var(--brass-soft);color:#6E5423} .t-rep{background:var(--paper);color:var(--ink-2);border:1px solid var(--line-2)}
+.t-agency{background:var(--cold-bg);color:var(--cold)} .t-recep{background:var(--mist);color:var(--ink-3)}
+
+.steps{display:flex;align-items:center;margin-bottom:22px}
+.step{display:flex;align-items:center;gap:8px}
+.step .n{width:26px;height:26px;border-radius:50%;border:2px solid var(--line-2);color:var(--ink-3);display:grid;place-items:center;font-size:12px;font-weight:700;background:var(--paper)}
+.step span{font-size:12.5px;font-weight:600;color:var(--ink-3)}
+.step.done .n{background:var(--sold);border-color:var(--sold);color:#fff}
+.step.now .n{background:var(--evergreen);border-color:var(--evergreen);color:#F2EEE2}
+.step.now span,.step.done span{color:var(--ink)}
+.step-line{flex:1;height:2px;background:var(--line);margin:0 10px;min-width:20px}
+.dropzone{border:2px dashed var(--line-2);border-radius:16px;padding:40px 24px;text-align:center;background:var(--paper)}
+.dropzone b{display:block;font-size:15px;margin:8px 0 4px}
+.dropzone span{font-size:12.5px;color:var(--ink-2)}
+
+dialog{border:none;border-radius:18px;box-shadow:var(--shadow-lg);padding:0;width:min(440px,92vw);background:var(--paper)}
+dialog::backdrop{background:rgba(13,31,24,.45)}
+.dlg-head{padding:20px 24px 0}
+.dlg-head h3{font-family:var(--font-display);font-size:19px;font-weight:500}
+.dlg-head p{font-size:12.5px;color:var(--ink-2);margin-top:3px}
+.dlg-body{padding:18px 24px;display:flex;flex-direction:column;gap:14px}
+.dlg-foot{display:flex;justify-content:flex-end;gap:8px;padding:0 24px 20px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid-53{display:grid;grid-template-columns:3fr 2fr;gap:16px}
+@media(max-width:980px){.grid-53,.grid2{grid-template-columns:1fr}.sidebar{display:none}}
+.section-gap{margin-top:18px}
+/* ═══ Demo hotspots (toggled by the /demo shell) ═══ */
+.demo-hints{position:fixed;inset:0;pointer-events:none;z-index:9998}
+.demo-dot{position:fixed;width:22px;height:22px;padding:0;border:none;background:none;pointer-events:auto;cursor:pointer;transform:translate(-50%,-50%)}
+.demo-dot i{position:absolute;inset:5px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 3px rgba(201,163,84,.30)}
+.demo-dot::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid var(--brass);animation:demoPing 1.7s ease-out infinite}
+.demo-dot[data-open="1"] i{background:var(--brass-bright)}
+@keyframes demoPing{0%{transform:scale(.55);opacity:.85}100%{transform:scale(1.7);opacity:0}}
+.demo-tip{position:fixed;pointer-events:auto;max-width:232px;background:var(--evergreen);color:#F2EEE2;border:1px solid rgba(201,163,84,.45);border-radius:12px;padding:10px 13px;font-size:12.5px;line-height:1.5;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.demo-tip b{color:var(--brass-bright)}
+@media(prefers-reduced-motion:reduce){.demo-dot::after{animation:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══ SIDEBAR — 6 places, each says what lives inside ══ -->
+<aside class="sidebar">
+  <div class="brand"><div class="brand-mark">N</div><div class="brand-name">Nirman <em>CRM</em></div></div>
+  <div class="nav-list">
+    <button class="nav-item active" data-view="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg><span>Home<small>today · team pulse</small></span></button>
+    <button class="nav-item" data-view="leads"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/></svg><span>Leads<small>active · future · archived</small></span></button>
+    <button class="nav-item" data-view="insights"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg><span>Insights<small>funnel · performance</small></span></button>
+    <button class="nav-item" data-view="team"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span>Team<small>accounts · hierarchy</small></span></button>
+    <button class="nav-item" data-view="inventory"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14"/><path d="M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"/></svg><span>Inventory<small>units · holds · updates</small></span></button>
+    <button class="nav-item" data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Data<small>import · export</small></span></button>
+  </div>
+  <div class="side-foot"><div class="avatar">AD</div><div><b>admin@nirman.in</b><span>Builder admin</span></div></div>
+</aside>
+
+<main class="main">
+
+<!-- ════ HOME = dashboard + activity, one screen ════ -->
+<section class="view active" id="view-home">
+  <div class="page-head">
+    <div><p class="eyebrow">Wednesday · 4 July</p><h1 class="title">Business <em>at a glance</em></h1></div>
+  </div>
+  <div class="metric-grid">
+    <div class="metric" onclick="go('leads')"><div class="m-label">Leads today</div><div class="m-value">14</div><div class="m-ref">vs 9 yesterday <span class="m-delta up">+56%</span></div></div>
+    <div class="metric" onclick="go('leads')"><div class="m-label">Follow-ups missed</div><div class="m-value">3</div><div class="m-ref">vs 7 yesterday <span class="m-delta up">−57%</span></div></div>
+    <div class="metric" onclick="go('leads')"><div class="m-label">Sold this month</div><div class="m-value">11</div><div class="m-ref">vs 8 last month <span class="m-delta up">+38%</span></div></div>
+  </div>
+  <div class="grid-53">
+    <div class="card">
+      <div class="card-head"><b>Pipeline pulse <span class="muted">· last 14 days</span></b></div>
+      <div class="card-pad">
+        <div class="bars14" id="home-bars"></div>
+        <div class="legend"><span><i class="dot" style="background:var(--evergreen)"></i>New leads</span><span><i class="dot" style="background:var(--brass-bright)"></i>Status changes</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head"><b>Team today</b><span class="pill sold" style="text-transform:none">● live</span></div>
+      <table>
+        <thead><tr><th>Who</th><th>Last seen</th><th class="right">Updates</th><th class="right">Done</th></tr></thead>
+        <tbody>
+          <tr><td><b>ravi.kumar</b></td><td><span class="pill sold" style="text-transform:none">2 min</span></td><td class="right num">9</td><td class="right num">6</td></tr>
+          <tr><td><b>priya.n</b></td><td><span class="pill sold" style="text-transform:none">18 min</span></td><td class="right num">7</td><td class="right num">4</td></tr>
+          <tr><td><b>suresh.b</b></td><td><span class="pill warm" style="text-transform:none">3 hrs</span></td><td class="right num">2</td><td class="right num">1</td></tr>
+          <tr><td><b>meena.j</b></td><td><span class="faint">quiet</span></td><td class="right num">0</td><td class="right num">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ════ LEADS = active + future pool + archived, tabbed ════ -->
+<section class="view" id="view-leads">
+  <div class="page-head">
+    <div><p class="eyebrow">Sales</p><h1 class="title">Leads</h1></div>
+  </div>
+  <div class="tabs" data-tabs="leads">
+    <button class="tab on" data-pane="l-active">Active <span class="n">248</span></button>
+    <button class="tab" data-pane="l-future">Future pool <span class="n">12</span></button>
+    <button class="tab" data-pane="l-archived">Archived <span class="n">21</span></button>
+  </div>
+
+  <!-- Active -->
+  <div class="pane on" id="l-active">
+    <div class="toolbar">
+      <input class="input" style="width:230px" type="search" placeholder="Search name or phone…">
+      <select class="input"><option>Any status</option><option>hot</option><option>warm</option><option>cold</option><option>sold</option></select>
+      <select class="input"><option>Any employee</option><option>Unassigned</option><option>ravi.kumar</option><option>priya.n</option><option>suresh.b</option></select>
+      <button class="btn btn-ghost btn-sm">Clear</button>
+    </div>
+    <div class="bulk-bar" id="bulk-bar" style="display:none">
+      <b><span id="bulk-n">0</span> leads selected</b>
+      <button class="btn btn-brass btn-sm" onclick="dlg('dlg-assign')">Bulk assign</button>
+      <span class="spacer"></span>
+      <button class="btn btn-sm" style="color:rgba(242,238,226,.7)" onclick="clearSel()">Clear</button>
+    </div>
+    <div class="card">
+      <table id="leads-table">
+        <thead><tr><th style="width:36px"><input type="checkbox" id="sel-all" class="rowck"></th><th>Name</th><th>Phone</th><th>Status</th><th>Assigned to</th><th>Deadline</th><th class="right">Action</th></tr></thead>
+        <tbody>
+          <tr><td><input type="checkbox" class="rowck"></td><td><b>Anil Traders</b></td><td class="mono">•••4821</td><td><span class="pill hot">hot</span></td><td>priya.n</td><td class="muted num">05 Jul, 6 pm</td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-assign')">Reassign</button></td></tr>
+          <tr><td><input type="checkbox" class="rowck"></td><td><b>Meena Shah</b></td><td class="mono">•••7734</td><td><span class="pill warm">warm</span></td><td>ravi.kumar</td><td class="muted num">04 Jul, 2 pm</td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-assign')">Reassign</button></td></tr>
+          <tr><td><input type="checkbox" class="rowck"></td><td><span class="faint">Unnamed</span></td><td class="mono">•••1198</td><td><span class="pill warm">warm</span></td><td><span class="faint">Unassigned</span></td><td class="muted">—</td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-assign')">Assign</button></td></tr>
+          <tr><td><input type="checkbox" class="rowck"></td><td><b>Farhan Ali</b></td><td class="mono">•••0925</td><td><span class="pill cold">cold</span></td><td>suresh.b</td><td class="muted num">08 Jul, 10 am</td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-assign')">Reassign</button></td></tr>
+          <tr><td><input type="checkbox" class="rowck"></td><td><b>Deepa Rao</b></td><td class="mono">•••5567</td><td><span class="pill sold">sold</span></td><td>meena.j</td><td class="muted">—</td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-assign')">Reassign</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Future pool -->
+  <div class="pane" id="l-future">
+    <div class="banner">
+      <span>✨ <b>4 future leads</b> match the new project <b>Prestige Sunrise</b>.</span>
+      <span class="spacer"></span>
+      <button class="btn btn-primary btn-sm" onclick="dlg('dlg-react')">Review &amp; reactivate</button>
+      <button class="btn btn-ghost btn-sm">✕</button>
+    </div>
+    <div class="toolbar">
+      <span class="muted" style="font-size:12px">Interest:</span>
+      <button class="chip on">All</button><button class="chip">2BHK</button><button class="chip">3BHK</button><button class="chip">Villa</button><button class="chip">Commercial</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Interest</th><th>Waiting</th><th class="right">Action</th></tr></thead>
+        <tbody>
+          <tr><td><b>Vikram Steel Co</b></td><td class="mono">•••3402</td><td>Commercial</td><td class="num muted">15 days</td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-react')">Reactivate</button></td></tr>
+          <tr><td><b>Rhea Kapoor</b></td><td class="mono">•••8810</td><td>3BHK</td><td class="num muted">32 days</td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-react')">Reactivate</button></td></tr>
+          <tr><td><b>Joseph M.</b></td><td class="mono">•••2245</td><td>Villa</td><td class="num muted">41 days</td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-react')">Reactivate</button></td></tr>
+          <tr><td><b>Sunita Devi</b></td><td class="mono">•••6672</td><td>2BHK</td><td class="num muted">58 days</td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-react')">Reactivate</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Archived -->
+  <div class="pane" id="l-archived">
+    <div class="card">
+      <table>
+        <thead><tr><th>Name</th><th>Phone</th><th>Status</th><th>Why</th><th class="right">Action</th></tr></thead>
+        <tbody>
+          <tr><td><b>Kiran B.</b></td><td class="mono">•••9911</td><td><span class="pill dead">dead</span></td><td class="muted">Bought elsewhere</td><td class="right"><button class="btn btn-outline btn-sm">Restore</button></td></tr>
+          <tr><td><b>Prakash &amp; Sons</b></td><td class="mono">•••3378</td><td><span class="pill dead">dead</span></td><td class="muted">Budget mismatch</td><td class="right"><button class="btn btn-outline btn-sm">Restore</button></td></tr>
+          <tr><td><b>Deepa Rao</b></td><td class="mono">•••5567</td><td><span class="pill sold">sold</span></td><td class="muted">Closed 21 Jun · Unit A-303</td><td class="right muted">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ════ INSIGHTS = funnel + performance, one page ════ -->
+<section class="view" id="view-insights">
+  <div class="page-head">
+    <div><p class="eyebrow">Sales</p><h1 class="title">Insights</h1><p class="sub">Funnel and team performance · 248 leads</p></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <select class="input"><option>All employees</option><option>ravi.kumar</option><option>priya.n</option><option>suresh.b</option></select>
+      <select class="input"><option>All projects</option><option>Prestige Sunrise</option><option>Nirman Heights</option></select>
+      <div class="seg"><button>Today</button><button class="on">7 days</button><button>30 days</button><button>All</button></div>
+    </div>
+  </div>
+  <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+    <div class="metric"><div class="m-label">Warm → Hot</div><div class="m-value" style="font-size:30px">41.2%</div><div class="m-ref">conversion</div></div>
+    <div class="metric"><div class="m-label">Visit rate</div><div class="m-value" style="font-size:30px">27.8%</div><div class="m-ref">of total leads</div></div>
+    <div class="metric"><div class="m-label">Close rate</div><div class="m-value" style="font-size:30px">8.9%</div><div class="m-ref">of total leads</div></div>
+  </div>
+  <div class="card section-gap">
+    <div class="card-head"><b>Funnel <span class="muted">· where leads drop off</span></b></div>
+    <div class="card-pad funnel-rows">
+      <div class="f-row"><span class="f-name">Total</span><div class="f-track"><div class="f-bar" style="width:100%;background:#5C665F">248</div></div><span class="f-meta"><b>248</b> leads</span></div>
+      <div class="f-row"><span class="f-name">Warm</span><div class="f-track"><div class="f-bar" style="width:69%;background:var(--warm)">170</div></div><span class="f-meta"><b>170</b> · <span class="drop">▼ 31%</span></span></div>
+      <div class="f-row"><span class="f-name">Hot</span><div class="f-track"><div class="f-bar" style="width:28%;background:var(--hot)">70</div></div><span class="f-meta"><b>70</b> · <span class="drop">▼ 59%</span></span></div>
+      <div class="f-row"><span class="f-name">Visited</span><div class="f-track"><div class="f-bar" style="width:28%;background:var(--future)">69</div></div><span class="f-meta"><b>69</b> · ▼ 1%</span></div>
+      <div class="f-row"><span class="f-name">Sold</span><div class="f-track"><div class="f-bar" style="width:9%;background:var(--sold)">22</div></div><span class="f-meta"><b>22</b> · <span class="drop">▼ 68%</span></span></div>
+    </div>
+  </div>
+  <div class="card section-gap">
+    <div class="card-head"><b>By employee <span class="muted">· 4 active · click a row for their leads</span></b><button class="btn btn-outline btn-sm" id="extra-toggle">More columns</button></div>
+    <table id="perf-table">
+      <thead><tr>
+        <th>Name</th><th class="right">Active</th>
+        <th class="right" style="color:var(--warm)">Warm</th><th class="right" style="color:var(--cold)">Cold</th><th class="right" style="color:var(--hot)">Hot</th>
+        <th class="right xtra" hidden>Dead</th><th class="right xtra" hidden style="color:var(--sold)">Sold</th><th class="right xtra" hidden style="color:var(--future)">Future</th>
+        <th class="right">Done</th><th class="right">Missed</th><th class="right">Conv%</th>
+      </tr></thead>
+      <tbody>
+        <tr onclick="go('leads')" style="cursor:pointer"><td><b>ravi.kumar</b></td><td class="right num">54</td><td class="right num" style="color:var(--warm)">30</td><td class="right num" style="color:var(--cold)">14</td><td class="right num" style="color:var(--hot)">10</td><td class="right num xtra" hidden>6</td><td class="right num xtra" hidden style="color:var(--sold)">5</td><td class="right num xtra" hidden style="color:var(--future)">3</td><td class="right num">21</td><td class="right num">0</td><td class="right num">9.2</td></tr>
+        <tr onclick="go('leads')" style="cursor:pointer"><td><b>priya.n</b></td><td class="right num">47</td><td class="right num" style="color:var(--warm)">22</td><td class="right num" style="color:var(--cold)">15</td><td class="right num" style="color:var(--hot)">10</td><td class="right num xtra" hidden>4</td><td class="right num xtra" hidden style="color:var(--sold)">4</td><td class="right num xtra" hidden style="color:var(--future)">2</td><td class="right num">18</td><td class="right num" style="color:var(--hot)"><b>2</b></td><td class="right num">8.5</td></tr>
+        <tr onclick="go('leads')" style="cursor:pointer"><td><b>suresh.b</b></td><td class="right num">39</td><td class="right num" style="color:var(--warm)">20</td><td class="right num" style="color:var(--cold)">12</td><td class="right num" style="color:var(--hot)">7</td><td class="right num xtra" hidden>8</td><td class="right num xtra" hidden style="color:var(--sold)">2</td><td class="right num xtra" hidden style="color:var(--future)">4</td><td class="right num">14</td><td class="right num" style="color:var(--hot)"><b>1</b></td><td class="right num">5.1</td></tr>
+        <tr onclick="go('leads')" style="cursor:pointer"><td><b>meena.j</b></td><td class="right num">31</td><td class="right num" style="color:var(--warm)">18</td><td class="right num" style="color:var(--cold)">9</td><td class="right num" style="color:var(--hot)">4</td><td class="right num xtra" hidden>3</td><td class="right num xtra" hidden style="color:var(--sold)">1</td><td class="right num xtra" hidden style="color:var(--future)">3</td><td class="right num">11</td><td class="right num">0</td><td class="right num">3.2</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ════ TEAM = accounts + hierarchy, one table ════ -->
+<section class="view" id="view-team">
+  <div class="page-head">
+    <div><p class="eyebrow">People</p><h1 class="title">Team</h1><p class="sub">One row per person — account, tier and reporting line together</p></div>
+    <button class="btn btn-brass" onclick="dlg('dlg-emp')">+ New employee</button>
+  </div>
+  <div class="card">
+    <table>
+      <thead><tr><th>User</th><th>Tier</th><th>Reports to</th><th>Status</th><th class="right">Actions</th></tr></thead>
+      <tbody>
+        <tr><td><b>admin@nirman.in</b></td><td><span class="tier-pill t-super">Super Admin</span></td><td class="muted">—</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-person')">Edit</button></td></tr>
+        <tr><td><b>ravi.kumar</b></td><td><span class="tier-pill t-head">Builder Head</span></td><td>admin@nirman.in</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-person')">Edit</button></td></tr>
+        <tr><td><b>priya.n</b></td><td><span class="tier-pill t-lead">Team Leader</span></td><td>ravi.kumar</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-person')">Edit</button></td></tr>
+        <tr><td><b>suresh.b</b></td><td><span class="tier-pill t-rep">Front-line Rep</span></td><td>priya.n</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-person')">Edit</button></td></tr>
+        <tr><td><b>skyline.props</b></td><td><span class="tier-pill t-agency">Partner / Agency</span></td><td class="muted">Skyline Properties</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-person')">Edit</button></td></tr>
+        <tr style="opacity:.55"><td><b>old.intern</b></td><td><span class="tier-pill t-recep">Reception</span></td><td class="muted">—</td><td><span class="pill dead" style="text-transform:none">Inactive</span></td><td class="right"><button class="btn btn-outline btn-sm" onclick="dlg('dlg-person')">Edit</button></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ════ INVENTORY = projects + units + holds + amendments + updates ════ -->
+<section class="view" id="view-inventory">
+  <div class="page-head">
+    <div><p class="eyebrow">Builder Ops</p><h1 class="title">Inventory</h1></div>
+    <select class="input" style="width:200px"><option>Prestige Sunrise</option><option>Nirman Heights</option><option>Green Acres Plots</option></select>
+  </div>
+  <div class="tabs" data-tabs="inv">
+    <button class="tab on" data-pane="i-units">Units</button>
+    <button class="tab" data-pane="i-holds">Holds <span class="n">3</span></button>
+    <button class="tab" data-pane="i-amend">Amendments <span class="n">2</span></button>
+    <button class="tab" data-pane="i-updates">Updates</button>
+    <button class="tab" data-pane="i-projects">Projects</button>
+  </div>
+
+  <div class="pane on" id="i-units">
+    <div class="toolbar">
+      <div class="legend" style="margin:0">
+        <span><i class="dot" style="background:var(--sold-bg);border:1px solid #BFDCC9"></i>Available</span>
+        <span><i class="dot" style="background:var(--warm-bg);border:1px solid #EBD9AF"></i>On hold</span>
+        <span><i class="dot" style="background:var(--evergreen)"></i>Sold</span>
+        <span><i class="dot" style="background:var(--mist);border:1px solid var(--line)"></i>Blocked</span>
+      </div>
+      <span class="spacer"></span>
+      <button class="btn btn-brass" onclick="dlg('dlg-grid')">⊞ Generate grid</button>
+    </div>
+    <div class="card card-pad">
+      <p class="eyebrow" style="margin-bottom:10px">Floor 5</p>
+      <div class="tower-grid" style="margin-bottom:16px">
+        <div class="unit u-available"><b>A-501</b><span>2BHK · ₹82L</span></div>
+        <div class="unit u-available"><b>A-502</b><span>2BHK · ₹82L</span></div>
+        <div class="unit u-hold"><b>A-503</b><span>hold 14h</span></div>
+        <div class="unit u-sold"><b>A-504</b><span>sold</span></div>
+      </div>
+      <p class="eyebrow" style="margin-bottom:10px">Floor 4</p>
+      <div class="tower-grid" style="margin-bottom:16px">
+        <div class="unit u-sold"><b>A-401</b><span>sold</span></div>
+        <div class="unit u-available"><b>A-402</b><span>2BHK · ₹80L</span></div>
+        <div class="unit u-available"><b>A-403</b><span>3BHK · ₹1.1Cr</span></div>
+        <div class="unit u-blocked"><b>A-404</b><span>blocked</span></div>
+      </div>
+      <p class="eyebrow" style="margin-bottom:10px">Floor 3</p>
+      <div class="tower-grid">
+        <div class="unit u-available"><b>A-301</b><span>2BHK · ₹78L</span></div>
+        <div class="unit u-hold"><b>A-302</b><span>hold 3h</span></div>
+        <div class="unit u-sold"><b>A-303</b><span>sold</span></div>
+        <div class="unit u-available"><b>A-304</b><span>3BHK · ₹1.05Cr</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="i-holds">
+    <div class="metric-grid" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">
+      <div class="metric"><div class="m-label">Active holds</div><div class="m-value" style="font-size:30px">5</div></div>
+      <div class="metric"><div class="m-label">Bookings · 30d</div><div class="m-value" style="font-size:30px">9</div></div>
+      <div class="metric"><div class="m-label">Hold → sold</div><div class="m-value" style="font-size:30px">64%</div></div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Unit</th><th>Lead</th><th>Held by</th><th>Expires</th><th class="right">Actions</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" style="font-size:13px"><b>A-503</b></td><td>Anil Traders</td><td>priya.n</td><td><span class="pill warm" style="text-transform:none">14 h</span></td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-book')">Confirm</button> <button class="btn btn-outline btn-sm">Release</button></td></tr>
+          <tr><td class="mono" style="font-size:13px"><b>A-302</b></td><td>Meena Shah</td><td>ravi.kumar</td><td><span class="pill hot" style="text-transform:none">3 h</span></td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-book')">Confirm</button> <button class="btn btn-outline btn-sm">Release</button></td></tr>
+          <tr><td class="mono" style="font-size:13px"><b>B-1104</b></td><td>Farhan Ali</td><td>suresh.b</td><td><span class="pill sold" style="text-transform:none">2 d</span></td><td class="right"><button class="btn btn-brass btn-sm" onclick="dlg('dlg-book')">Confirm</button> <button class="btn btn-outline btn-sm">Release</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pane" id="i-amend">
+    <div class="banner" style="background:var(--brass-soft);border-color:#DCC998;color:#6E5423">
+      <span>Committee: <b>admin@nirman.in</b>, <b>ravi.kumar</b> — every request needs all approvals.</span>
+      <span class="spacer"></span>
+      <button class="btn btn-outline btn-sm">Manage</button>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Unit</th><th>Request</th><th>Status</th><th class="right">Actions</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" style="font-size:13px"><b>A-504</b></td><td>Change buyer name on agreement</td><td><span class="pill warm" style="text-transform:none">Pending 1/2</span></td><td class="right"><button class="btn btn-brass btn-sm">Approve</button> <button class="btn btn-ghost btn-sm" style="color:var(--danger)">Reject</button></td></tr>
+          <tr><td class="mono" style="font-size:13px"><b>B-1104</b></td><td>Payment plan 80:20 → 50:50</td><td><span class="pill warm" style="text-transform:none">Pending 0/2</span></td><td class="right"><button class="btn btn-brass btn-sm">Approve</button> <button class="btn btn-ghost btn-sm" style="color:var(--danger)">Reject</button></td></tr>
+          <tr><td class="mono" style="font-size:13px"><b>A-303</b></td><td>Add co-applicant</td><td><span class="pill sold" style="text-transform:none">Approved</span></td><td class="right muted">—</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pane" id="i-updates">
+    <div class="toolbar"><span class="muted" style="font-size:13px">News broadcast to the field team.</span><span class="spacer"></span><button class="btn btn-brass" onclick="dlg('dlg-post')">✎ Post update</button></div>
+    <div class="card card-pad" style="max-width:720px">
+      <div class="feed-item"><div class="feed-dot">🏗️</div><div class="fx"><b>Tower A slab work complete</b><p>Prestige Sunrise · 12th floor slab done, possession unchanged.</p></div><span class="when">Today 10:40</span></div>
+      <div class="feed-item"><div class="feed-dot">📋</div><div class="fx"><b>RERA renewal filed</b><p>Nirman Heights · certificate expected in 2 weeks.</p></div><span class="when">Yesterday</span></div>
+      <div class="feed-item"><div class="feed-dot">🎉</div><div class="fx"><b>Phase 2 pricing approved</b><p>Green Acres · new rate card Monday — hot leads first.</p></div><span class="when">28 Jun</span></div>
+    </div>
+  </div>
+
+  <div class="pane" id="i-projects">
+    <div class="toolbar"><span class="spacer"></span><button class="btn btn-brass" onclick="dlg('dlg-proj')">+ New project</button></div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Name</th><th>Type</th><th>Status</th><th>Created</th><th class="right">Actions</th></tr></thead>
+        <tbody>
+          <tr><td><b>Prestige Sunrise</b></td><td>Flat</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="muted num">14 Jun 2026</td><td class="right"><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+          <tr><td><b>Nirman Heights</b></td><td>Flat</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="muted num">02 Mar 2026</td><td class="right"><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+          <tr><td><b>Green Acres Plots</b></td><td>Plot</td><td><span class="pill sold" style="text-transform:none">Active</span></td><td class="muted num">18 Jan 2026</td><td class="right"><button class="btn btn-outline btn-sm">Edit</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ════ DATA = import + export, tabbed ════ -->
+<section class="view" id="view-data">
+  <div class="page-head">
+    <div><p class="eyebrow">Data</p><h1 class="title">Import <em>&amp;</em> export</h1></div>
+  </div>
+  <div class="tabs" data-tabs="data">
+    <button class="tab on" data-pane="d-import">Import</button>
+    <button class="tab" data-pane="d-export">Export</button>
+  </div>
+
+  <div class="pane on" id="d-import">
+    <div class="steps">
+      <div class="step done"><span class="n">✓</span><span>Upload</span></div><div class="step-line"></div>
+      <div class="step now"><span class="n">2</span><span>Map</span></div><div class="step-line"></div>
+      <div class="step"><span class="n">3</span><span>Preview</span></div><div class="step-line"></div>
+      <div class="step"><span class="n">4</span><span>Assign</span></div><div class="step-line"></div>
+      <div class="step"><span class="n">5</span><span>Done</span></div>
+    </div>
+    <div class="grid2">
+      <div class="dropzone">
+        <div style="font-size:30px">📄</div>
+        <b>leads-june.xlsx</b>
+        <span>412 rows · 8 columns · 17 duplicates will be skipped</span>
+      </div>
+      <div class="card">
+        <div class="card-head"><b>Map columns → CRM fields</b></div>
+        <table>
+          <tbody>
+            <tr><td class="mono">Customer Name</td><td class="right"><select class="input" style="width:160px"><option selected>Name</option><option>Phone</option><option>Location</option><option>Ignore</option></select></td></tr>
+            <tr><td class="mono">Mobile</td><td class="right"><select class="input" style="width:160px"><option selected>Phone</option><option>Ignore</option></select></td></tr>
+            <tr><td class="mono">Area</td><td class="right"><select class="input" style="width:160px"><option selected>Location</option><option>Ignore</option></select></td></tr>
+            <tr style="background:var(--warm-bg)"><td class="mono">Col H (unmatched)</td><td class="right"><select class="input" style="width:160px"><option selected>— choose —</option><option>Budget</option><option>Remarks</option><option>Ignore</option></select></td></tr>
+          </tbody>
+        </table>
+        <div style="display:flex;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--line)">
+          <button class="btn btn-ghost">← Back</button>
+          <button class="btn btn-primary">Continue →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pane" id="d-export">
+    <div class="card" style="max-width:620px">
+      <div class="card-pad" style="display:flex;flex-direction:column;gap:16px">
+        <div class="grid2">
+          <div class="field"><label>Status</label><select class="input"><option>Any</option><option>hot</option><option>warm</option><option>cold</option><option>sold</option></select></div>
+          <div class="field"><label>Employee</label><select class="input"><option>Any</option><option>ravi.kumar</option><option>priya.n</option></select></div>
+        </div>
+        <div class="grid2">
+          <div class="field"><label>Project</label><select class="input"><option>Any</option><option>Prestige Sunrise</option><option>Nirman Heights</option></select></div>
+          <div class="field"><label>Created between</label><div style="display:flex;gap:8px"><input class="input" type="date" value="2026-06-01" style="width:100%"><input class="input" type="date" value="2026-07-04" style="width:100%"></div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;background:var(--mist);border-radius:10px;padding:10px 14px">
+          <span class="muted" style="font-size:13px">Matching leads:</span><b style="font-family:var(--font-display);font-size:20px">186</b>
+          <span class="spacer"></span>
+          <button class="btn btn-brass">⬇ Download .xlsx</button>
+        </div>
+        <p class="muted" style="font-size:12px">🔒 Full phone numbers included — export logged with your user, filters and count. <a href="#" style="color:var(--brass)">History</a></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- ══ DIALOGS ══ -->
+<dialog id="dlg-assign">
+  <div class="dlg-head"><h3>Assign lead</h3><p>Employee + action deadline</p></div>
+  <div class="dlg-body">
+    <div class="field"><label>Employee</label><select class="input"><option>ravi.kumar</option><option>priya.n</option><option>suresh.b</option><option>meena.j</option></select></div>
+    <div class="field"><label>Deadline</label><input class="input" type="datetime-local" value="2026-07-05T18:00"></div>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Assign</button></div>
+</dialog>
+
+<dialog id="dlg-emp">
+  <div class="dlg-head"><h3>New employee</h3><p>One-time password shown after creation</p></div>
+  <div class="dlg-body">
+    <div class="field"><label>Username</label><input class="input" placeholder="e.g. arjun.mehta" style="width:100%"></div>
+    <div class="field"><label>Tier</label><select class="input"><option selected>Front-line Rep</option><option>Team Leader</option><option>Builder Head</option><option>Partner / Agency</option><option>Reception</option></select></div>
+    <div class="field"><label>Reports to</label><select class="input"><option>— none —</option><option>priya.n</option><option>ravi.kumar</option></select></div>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Create</button></div>
+</dialog>
+
+<dialog id="dlg-person">
+  <div class="dlg-head"><h3>suresh.b</h3><p>Account, tier and reporting in one place</p></div>
+  <div class="dlg-body">
+    <div class="field"><label>Tier</label><select class="input"><option>Super Admin</option><option>Builder Head</option><option>Team Leader</option><option selected>Front-line Rep</option><option>Partner / Agency</option><option>Reception</option></select></div>
+    <div class="field"><label>Reports to</label><select class="input"><option>— none —</option><option selected>priya.n (Team Leader)</option><option>ravi.kumar (Builder Head)</option></select></div>
+    <div class="field"><label>Agency</label><select class="input" disabled><option>— only for Partner / Agency —</option></select></div>
+    <div style="display:flex;gap:8px;border-top:1px solid var(--line);padding-top:14px">
+      <button class="btn btn-outline btn-sm">Reset password</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger)">Deactivate account</button>
+    </div>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Save</button></div>
+</dialog>
+
+<dialog id="dlg-proj">
+  <div class="dlg-head"><h3>New project</h3></div>
+  <div class="dlg-body">
+    <div class="field"><label>Name</label><input class="input" placeholder="e.g. Prestige Sunrise" style="width:100%"></div>
+    <div class="field"><label>Property type</label><select class="input"><option>— none —</option><option>Flat</option><option>Plot</option><option>Villa</option><option>Commercial</option></select></div>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Create</button></div>
+</dialog>
+
+<dialog id="dlg-grid">
+  <div class="dlg-head"><h3>Generate unit grid</h3><p>Bulk-create units for a tower</p></div>
+  <div class="dlg-body">
+    <div class="field"><label>Tower</label><select class="input"><option>— none —</option><option selected>Tower A</option><option>Tower B</option></select></div>
+    <div class="grid2">
+      <div class="field"><label>Floors</label><input class="input" type="number" value="5"></div>
+      <div class="field"><label>Units / floor</label><input class="input" type="number" value="4"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Configuration</label><input class="input" value="2BHK"></div>
+      <div class="field"><label>Hold timer (hrs)</label><input class="input" type="number" value="24"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label>Carpet (sqft)</label><input class="input" placeholder="1080"></div>
+      <div class="field"><label>List price (₹)</label><input class="input" placeholder="82,00,000"></div>
+    </div>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Generate</button></div>
+</dialog>
+
+<dialog id="dlg-book">
+  <div class="dlg-head"><h3>Confirm booking · A-503</h3><p>Marks the unit sold, closes the hold</p></div>
+  <div class="dlg-body">
+    <label class="check"><input type="checkbox"> Payment / token verified with the lead</label>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Confirm booking</button></div>
+</dialog>
+
+<dialog id="dlg-post">
+  <div class="dlg-head"><h3>Post developer update</h3><p>Visible to the whole field team</p></div>
+  <div class="dlg-body">
+    <div class="field"><label>Project</label><select class="input"><option>All projects</option><option>Prestige Sunrise</option><option>Nirman Heights</option></select></div>
+    <div class="field"><label>Update</label><textarea class="input" rows="3" placeholder="What's the update?"></textarea></div>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Post</button></div>
+</dialog>
+
+<dialog id="dlg-react">
+  <div class="dlg-head"><h3>Reactivate future leads</h3><p>Back into the pipeline, assigned</p></div>
+  <div class="dlg-body">
+    <div class="field"><label>Assign to</label><select class="input"><option>Round-robin (all active)</option><option>ravi.kumar</option><option>priya.n</option></select></div>
+    <div class="field"><label>New status</label><select class="input"><option selected>warm</option><option>hot</option><option>cold</option></select></div>
+  </div>
+  <div class="dlg-foot"><button class="btn btn-ghost" onclick="this.closest('dialog').close()">Cancel</button><button class="btn btn-brass" onclick="this.closest('dialog').close()">Reactivate</button></div>
+</dialog>
+
+<script>
+// nav
+function go(v){
+  document.querySelectorAll('.view').forEach(s=>s.classList.toggle('active',s.id==='view-'+v));
+  document.querySelectorAll('.nav-item').forEach(b=>b.classList.toggle('active',b.dataset.view===v));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.nav-item').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view)));
+
+// tabs
+document.querySelectorAll('.tabs').forEach(t=>{
+  t.querySelectorAll('.tab').forEach(tab=>tab.addEventListener('click',()=>{
+    t.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+    tab.classList.add('on');
+    const scope=t.parentElement;
+    scope.querySelectorAll(':scope > .pane').forEach(p=>p.classList.toggle('on',p.id===tab.dataset.pane));
+  }));
+});
+
+function dlg(id){document.getElementById(id).showModal()}
+
+// bulk select
+const rowcks=[...document.querySelectorAll('#leads-table tbody .rowck')];
+const selAll=document.getElementById('sel-all');
+function syncBulk(){
+  const n=rowcks.filter(c=>c.checked).length;
+  document.getElementById('bulk-bar').style.display=n>=2?'flex':'none';
+  document.getElementById('bulk-n').textContent=n;
+  rowcks.forEach(c=>c.closest('tr').classList.toggle('selected',c.checked));
+  selAll.checked=n===rowcks.length&&n>0; selAll.indeterminate=n>0&&n<rowcks.length;
+}
+rowcks.forEach(c=>c.addEventListener('change',syncBulk));
+selAll.addEventListener('change',()=>{rowcks.forEach(c=>c.checked=selAll.checked);syncBulk()});
+function clearSel(){rowcks.forEach(c=>c.checked=false);syncBulk()}
+
+// home bars
+const days=[[4,2],[6,3],[3,5],[8,4],[5,2],[9,6],[7,3],[2,1],[6,4],[10,5],[8,7],[5,3],[11,6],[14,8]];
+const max=Math.max(...days.flat());
+document.getElementById('home-bars').innerHTML=days.map((d,i)=>{
+  const dt=new Date(2026,5,21+i);
+  return `<div class="day" title="${d[0]} new · ${d[1]} changes"><div class="b1" style="height:${d[0]/max*100}%"></div><div class="b2" style="height:${d[1]/max*100}%"></div><div class="dl">${String(dt.getDate()).padStart(2,'0')}</div></div>`;
+}).join('');
+
+// perf extra cols
+let extra=false;
+document.getElementById('extra-toggle').addEventListener('click',e=>{
+  extra=!extra;
+  document.querySelectorAll('#perf-table .xtra').forEach(c=>c.hidden=!extra);
+  e.target.textContent=extra?'Fewer columns':'More columns';
+});
+
+// segmented + chips visual
+document.querySelectorAll('.seg').forEach(s=>s.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{s.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on')})));
+document.querySelectorAll('#l-future .chip').forEach(c=>c.addEventListener('click',()=>{c.parentElement.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));c.classList.add('on')}));
+
+/* ═══ Demo bridge — postMessage seam for the /demo React shell ═══
+   Contract: shell → {source:'nirman-demo', action:'navigate', target}
+             inner → {source:'nirman-demo-inner', event:'ready'|'navigated', screen} */
+(function(){
+  var ORIGIN = location.origin;
+  function emit(ev, extra){
+    try { parent.postMessage(Object.assign({source:'nirman-demo-inner', event:ev}, extra||{}), ORIGIN); } catch(e){}
+  }
+  // Wrap go() so free-click navigation announces itself + refreshes hotspots.
+  if (typeof go === 'function') {
+    var _go = go;
+    go = function(v){ _go(v); emit('navigated', {screen: v}); scheduleHints(); };
+    window.go = go;
+  }
+  window.demoNavigate = function(target){ if (typeof go === 'function') go(target); };
+
+  /* ── In-context hotspots ── */
+  var HINTS = [
+    {sel:'.metric-grid', text:'<b>Your day at a glance.</b> Today\'s leads, missed follow-ups and sales — first thing.'},
+    {sel:'#home-bars', text:'<b>Pipeline pulse.</b> New leads vs status changes across 14 days.'},
+    {sel:'#leads-table', text:'<b>Every lead in one table.</b> Filter, search, bulk-select and reassign in seconds.'},
+    {sel:'.funnel-rows', text:'<b>Where leads drop off.</b> The exact stage you\'re losing deals.'},
+    {sel:'#view-team table', text:'<b>Team &amp; hierarchy.</b> Accounts, tiers and reporting lines together.'},
+    {sel:'.tower-grid', text:'<b>Live unit inventory.</b> Available, on-hold, sold and blocked at a glance.'},
+    {sel:'.dropzone', text:'<b>Import in minutes.</b> Map spreadsheet columns to fields; duplicates auto-skipped.'}
+  ];
+  var hintsOn=false, layer=null, raf=0;
+  function ensureLayer(){ if(!layer){ layer=document.createElement('div'); layer.className='demo-hints'; document.body.appendChild(layer);} }
+  function clearTips(){ if(!layer) return; layer.querySelectorAll('.demo-tip').forEach(function(t){t.remove()}); layer.querySelectorAll('.demo-dot').forEach(function(d){d.removeAttribute('data-open')}); }
+  function showTip(dot,text){
+    var tip=document.createElement('div'); tip.className='demo-tip'; tip.innerHTML=text; layer.appendChild(tip);
+    var dr=dot.getBoundingClientRect(), tw=tip.offsetWidth, th=tip.offsetHeight;
+    var left=Math.min(Math.max(8, dr.left+dr.width/2 - tw + 24), window.innerWidth - tw - 8);
+    var top=dr.bottom + 8; if(top+th>window.innerHeight-8) top=Math.max(8, dr.top - th - 8);
+    tip.style.left=left+'px'; tip.style.top=top+'px';
+  }
+  function renderHints(){
+    ensureLayer(); layer.innerHTML='';
+    if(!hintsOn) return;
+    HINTS.forEach(function(h){
+      var el=document.querySelector(h.sel); if(!el) return;
+      var r=el.getBoundingClientRect();
+      if(r.width===0||r.height===0) return;
+      if(r.bottom<10||r.top>window.innerHeight-10||r.right<10||r.left>window.innerWidth-10) return;
+      var dot=document.createElement('button'); dot.type='button'; dot.className='demo-dot'; dot.setAttribute('aria-label','Feature highlight'); dot.innerHTML='<i></i>';
+      var x=Math.min(window.innerWidth-14, Math.max(14, r.left + Math.min(r.width-14, r.width*0.5+40)));
+      var y=Math.max(14, r.top + 16);
+      dot.style.left=x+'px'; dot.style.top=y+'px';
+      dot.addEventListener('click', function(ev){ ev.stopPropagation(); var open=dot.getAttribute('data-open')==='1'; clearTips(); if(!open){ dot.setAttribute('data-open','1'); showTip(dot,h.text); } });
+      layer.appendChild(dot);
+    });
+  }
+  function scheduleHints(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(function(){ setTimeout(renderHints, 40); }); }
+  window.addEventListener('scroll', scheduleHints, true);
+  window.addEventListener('resize', scheduleHints);
+  document.addEventListener('click', function(e){ if(!(e.target.closest && e.target.closest('.demo-dot,.demo-tip'))) clearTips(); }, true);
+
+  window.addEventListener('message', function(e){
+    if (e.origin !== ORIGIN) return;
+    var d = e.data || {};
+    if (d.source !== 'nirman-demo') return;
+    if (d.action === 'navigate') window.demoNavigate(d.target);
+    else if (d.action === 'hints'){ hintsOn=!!d.on; renderHints(); }
+  });
+  emit('ready');
+})();
+</script>
+</body>
+</html>

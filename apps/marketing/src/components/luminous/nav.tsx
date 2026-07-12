@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Logo } from "@/components/luminous/logo";
 
+// `section` drives the scroll-spy; route links (no section) never highlight.
 const links = [
   { label: "Home", href: "#top", section: "top" },
+  { label: "Live Demo", href: "/demo", section: null },
   { label: "The Console", href: "#platform", section: "platform" },
   { label: "Builders", href: "#testimonials", section: "testimonials" },
   { label: "Pricing", href: "#pricing", section: "pricing" },
@@ -27,7 +30,7 @@ export function Nav() {
         // Pick the section in view following the nav's own order, so the
         // highlight is stable when two sections straddle the viewport.
         for (const l of links) {
-          if (visible.has(l.section)) {
+          if (l.section && visible.has(l.section)) {
             setActive(l.section);
             return;
           }
@@ -36,6 +39,7 @@ export function Nav() {
       { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.1, 0.5] },
     );
     for (const l of links) {
+      if (!l.section) continue;
       const el = document.getElementById(l.section);
       if (el) observer.observe(el);
     }
@@ -48,9 +52,9 @@ export function Nav() {
 
       <div className="hidden items-center gap-1 rounded-full border border-white/10 bg-white/5 px-1.5 py-1.5 backdrop-blur-md md:flex">
         {links.map((link) => {
-          const isActive = active === link.section;
+          const isActive = link.section !== null && active === link.section;
           return (
-            <a
+            <Link
               key={link.label}
               href={link.href}
               className={
@@ -61,7 +65,7 @@ export function Nav() {
             >
               {isActive && <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />}
               {link.label}
-            </a>
+            </Link>
           );
         })}
       </div>
