@@ -9,7 +9,7 @@ import { RenewDialog } from '@/components/renew-dialog'
 import { createClient } from '@/lib/supabase/client'
 import { relativeDays, fmtDate, fmtDateTime, inr, rpcErrorMessage } from '@/lib/format'
 import type { OpsTenant, Plan, TenantPayment, PaymentMethod } from '@/lib/types'
-import { CreditCard, Ban, RotateCcw, TriangleAlert } from 'lucide-react'
+import { CreditCard, Ban, RotateCcw, TriangleAlert, KeyRound, Copy } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function TenantDetailSheet({
@@ -38,6 +38,8 @@ export function TenantDetailSheet({
   const [renewInterval, setRenewInterval] = useState<number | null>(null)
   const [suspendOpen, setSuspendOpen] = useState(false)
   const [reactivateOpen, setReactivateOpen] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetResult, setResetResult] = useState<{ username: string; tempPassword: string } | null>(null)
 
   const tenantId = active?.tenant_id ?? null
   // Quick chips only for UNAMBIGUOUS intervals (audit low): with two plans of the
@@ -128,6 +130,27 @@ export function TenantDetailSheet({
     await afterMutation()
   }
 
+  async function doResetPassword(usernameNote: string) {
+    if (!tenantId) return
+    setBusy(true)
+    const supabase = createClient()
+    const { data, error } = await supabase.rpc('ops_reset_tenant_admin_password', {
+      p_tenant_id: tenantId,
+      p_username: usernameNote.trim() || null,
+    })
+    setBusy(false)
+    if (error) {
+      // multiple_admins_specify_username: <list> — founder re-opens and types one.
+      toast.error(rpcErrorMessage(error))
+      return
+    }
+    setResetOpen(false)
+    setResetResult({
+      username: data.username as string,
+      tempPassword: data.temp_password as string,
+    })
+  }
+
   const t = active
   const isSuspended = t?.status === 'suspended'
   const isCancelled = t?.status === 'cancelled'
@@ -211,7 +234,50 @@ export function TenantDetailSheet({
                       <Ban /> Suspend
                     </Button>
                   )}
+                  <Button size="sm" variant="outline" onClick={() => { setResetResult(null); setResetOpen(true) }}>
+                    <KeyRound /> Reset admin password
+                  </Button>
                 </section>
+
+                {/* One-time temp-password handoff (0114) — never shown again. */}
+                {resetResult && (
+                  <section className="mt-4 rounded-[11px] border border-st-grace/40 bg-st-grace-bg p-4">
+                    <p className="eyebrow mb-2">Temp password — copy NOW, shown once</p>
+                    <dl className="space-y-2 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <dt className="text-muted-foreground">Username</dt>
+                        <dd className="flex items-center gap-1.5 font-mono text-xs">
+                          {resetResult.username}
+                          <button
+                            type="button"
+                            aria-label="Copy username"
+                            className="rounded border border-input p-1 text-muted-foreground hover:text-foreground"
+                            onClick={() => { navigator.clipboard?.writeText(resetResult.username); toast.success('Copied') }}
+                          >
+                            <Copy className="size-3" />
+                          </button>
+                        </dd>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <dt className="text-muted-foreground">Temp password</dt>
+                        <dd className="flex items-center gap-1.5 font-mono text-xs">
+                          {resetResult.tempPassword}
+                          <button
+                            type="button"
+                            aria-label="Copy temp password"
+                            className="rounded border border-input p-1 text-muted-foreground hover:text-foreground"
+                            onClick={() => { navigator.clipboard?.writeText(resetResult.tempPassword); toast.success('Copied') }}
+                          >
+                            <Copy className="size-3" />
+                          </button>
+                        </dd>
+                      </div>
+                    </dl>
+                    <p className="mt-2.5 text-[11px] text-foreground/70">
+                      They&apos;re forced to set a new password on first login. All their old sessions are signed out.
+                    </p>
+                  </section>
+                )}
 
                 {/* Payment ledger */}
                 <section className="mt-6">
@@ -290,6 +356,19 @@ export function TenantDetailSheet({
             requireMfa
             busy={busy}
             onConfirm={doReactivate}
+          />
+          <ConfirmModal
+            open={resetOpen}
+            onOpenChange={setResetOpen}
+            title={`Reset ${t.name}'s admin password?`}
+            description="Generates a one-time temp password (shown once), forces a change on first login, and signs out all their sessions. If the tenant has several admins, type the exact username below — leave blank when there is only one."
+            tenantName={t.name}
+            noteLabel="Admin username (blank = the only admin)"
+            confirmLabel="Reset password"
+            destructive
+            requireMfa
+            busy={busy}
+            onConfirm={doResetPassword}
           />
         </>
       )}
