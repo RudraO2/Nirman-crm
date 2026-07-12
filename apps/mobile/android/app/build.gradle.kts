@@ -30,6 +30,13 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
+            // proguard-rules.pro: keep Firebase ComponentRegistrar no-arg
+            // constructors — R8 stripped CrashlyticsRegistrar.<init>() and
+            // killed Crashlytics in every release build.
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
@@ -44,8 +51,11 @@ flutter {
     source = "../.."
 }
 
-dependencies {
-    implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
-    implementation("com.google.firebase:firebase-messaging")
-    implementation("com.google.firebase:firebase-crashlytics")
-}
+// NO manual Firebase deps here. The flutter plugins (firebase_core,
+// firebase_messaging, firebase_crashlytics) each bundle their own matched
+// native libraries. The old hand-pinned firebase-bom:33.0.0 sat UNDER the
+// versions firebase_crashlytics 4.3.10 expects and broke component
+// registration in release builds ("FirebaseCrashlytics component is not
+// present" — app stuck on splash until the fail-soft guard in main.dart).
+// If a future native-only Firebase API is ever needed, add it WITHOUT a BoM
+// and let Gradle resolve against the plugin versions.

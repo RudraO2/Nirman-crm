@@ -6,6 +6,34 @@ Repo: `nirman-crm/` (github.com/RudraO2/Nirman-crm, branch `main`). Supabase pro
 
 ---
 
+## ⚡ STATE DELTA — 2026-07-13 (newest; then read the 07-12 delta below)
+
+Live on-device eyeball session with Rudra (local-stack APK, all-role demo logins) drove
+two days of fixes — all on `main`, migrations through **0118 on prod**:
+
+1. **Server bugs found live + fixed on prod:** 0117 get_lead_by_id now honors
+   visible_user_ids() (team-list taps dead-ended); 0118 share tier scoping (receptionist
+   never a recipient; internal↔external share leak CLOSED — was real, repro'd);
+   0116 stats hygiene (F-2 off-by-one, ERRCODE 42501 ×6, active-lead unification) —
+   the three "open backend deferred items" below are now CLOSED.
+2. **UI modernization merged (Rudra-approved at every step):** single-family Inter
+   typography (AppType.display; Fraunces/sourceSerif4 retired), theme-owned
+   AppBar/buttons/snackbars, wheel time picker, back-nav fixed (Leads=home, password
+   screen pushes), receptionist single-surface shell, capability-gated Share, admin
+   Plan tab hidden, admin home = VISUAL insights (momentum bars + pipeline band),
+   rep home v2 (evergreen work-queue rows, one-signal lead cards). Design system:
+   PRODUCT.md + DESIGN.md at repo root (see CLAUDE.md §UI).
+3. **Crashlytics release-build bug ROOT-CAUSED + FIXED 2026-07-13:** R8 stripped
+   ComponentRegistrar no-arg ctors → "component is not present" → (pre-guard) splash
+   brick. Fix = android/app/proguard-rules.pro keep rule + proguardFiles wiring +
+   manual firebase-bom removed from build.gradle.kts (plugins manage native versions).
+   Verified live on device: "Initializing Firebase Crashlytics 19.4.4". main.dart
+   fail-soft guard retained as defense. **Play Store release path unblocked** (keystore
+   still needed — Rudra).
+4. pubspec bumped 1.0.0+1 → **1.1.0+2**. Sprint-status stale entries closed
+   (8.4–8.7, 9.4/9.5, epic 11). FCM permission now asked post-login, not on the login
+   screen. Local demo tenant has all six role logins (demo1234) incl. leader@nirman.local.
+
 ## ⚡ STATE DELTA — 2026-07-12 (read BEFORE the frozen snapshot below)
 
 The snapshot below was frozen 2026-07-11, BEFORE three same-day waves of work. Corrections:
