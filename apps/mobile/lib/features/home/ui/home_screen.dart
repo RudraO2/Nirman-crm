@@ -98,11 +98,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       appBar: AppBar(
         title: Text(
           'My Leads',
-          style: GoogleFonts.sourceSerif4(
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-            color: AppColors.inkPrimary,
-          ),
+          // ui-modern-refresh: was sourceSerif4 — the one serif the Fraunces
+          // sweep missed. One family everywhere.
+          style: AppType.display(fontSize: 21),
         ),
         backgroundColor: AppColors.surfaceBase,
         elevation: 0,

@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/wheel_time_picker.dart';
 import '../data/lead_repository.dart';
 
 Future<bool?> showRescheduleVisitSheet(
@@ -77,18 +78,10 @@ class _RescheduleVisitSheetState extends ConsumerState<_RescheduleVisitSheet> {
     );
     if (pickedDate == null || !mounted) return;
 
-    final pickedTime = await showTimePicker(
-      context: context,
+    // A1 — alarm-style wheel (12h + AM/PM), not the Material clock dial.
+    final pickedTime = await showWheelTimePicker(
+      context,
       initialTime: TimeOfDay(hour: _base.hour, minute: _base.minute),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.light(
-            primary: AppColors.accentStrong,
-            onPrimary: Colors.white,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (pickedTime == null || !mounted) return;
 

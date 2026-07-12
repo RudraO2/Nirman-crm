@@ -6,6 +6,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/wheel_time_picker.dart';
 import '../data/lead_repository.dart';
 import '../data/models/lead_model.dart';
 import '../providers/lead_providers.dart';
@@ -133,19 +134,10 @@ class _PendingOutcomeSheetState extends ConsumerState<_PendingOutcomeSheet> {
       ),
     );
     if (date == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
+    // A1 — alarm-style wheel (12h + AM/PM), not the Material clock dial.
+    final time = await showWheelTimePicker(
+      context,
       initialTime: const TimeOfDay(hour: 10, minute: 0),
-      builder: (ctx, child) => Theme(
-        data: Theme.of(ctx).copyWith(
-          colorScheme: ColorScheme.dark(
-            primary: AppColors.accentStrong,
-            surface: AppColors.surfaceRaised,
-            onSurface: AppColors.inkPrimary,
-          ),
-        ),
-        child: child!,
-      ),
     );
     if (time == null) return;
     setState(() {
