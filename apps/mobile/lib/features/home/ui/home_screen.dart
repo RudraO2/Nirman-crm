@@ -143,45 +143,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 
-  /// Head/admin home — pulse card + team activity + (rare) own leads.
+  /// Head/admin home — visual insights only. His own leads (rare) live in
+  /// Team leads with everyone else's; no duplicate list here.
   Widget _adminBody() {
-    final ownLeads = ref.watch(myLeadsProvider).valueOrNull ?? const <LeadListItem>[];
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(adminHomeMetricsProvider);
         ref.invalidate(teamActivityProvider);
-        ref.invalidate(myLeadsProvider);
+        ref.invalidate(pipeline14dProvider);
+        ref.invalidate(statusDistributionProvider);
       },
       color: AppColors.accentStrong,
       backgroundColor: AppColors.surfaceRaised,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-        children: [
-          const AdminHomeView(),
-          if (ownLeads.isNotEmpty) ...[
-            const Padding(
-              padding: EdgeInsets.fromLTRB(0, 22, 0, 8),
-              child: Text(
-                'MY OWN LEADS',
-                style: TextStyle(
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.26,
-                  color: AppColors.inkSecondary,
-                ),
-              ),
-            ),
-            for (final lead in ownLeads)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: LeadCard(
-                  lead: lead,
-                  onTap: () => context.push('/lead/${lead.id}'),
-                ),
-              ),
-          ],
-        ],
+        children: const [AdminHomeView()],
       ),
     );
   }

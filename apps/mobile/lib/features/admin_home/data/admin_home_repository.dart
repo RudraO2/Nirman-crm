@@ -68,6 +68,19 @@ class TeamActivityRow {
       );
 }
 
+class StatusCount {
+  final String status;
+  final int count;
+  const StatusCount(this.status, this.count);
+}
+
+class PipelineDay {
+  final DateTime day;
+  final int newLeads;
+  final int statusChanges;
+  const PipelineDay(this.day, this.newLeads, this.statusChanges);
+}
+
 class AdminHomeRepository {
   final SupabaseClient _supabase;
   const AdminHomeRepository(this._supabase);
@@ -96,6 +109,29 @@ class AdminHomeRepository {
             TeamActivityRow.fromJson(Map<String, dynamic>.from(r as Map)))
         .toList();
   }
+
+  /// Live pipeline shape — lead count per status (0054/0116, admin-only).
+  Future<List<StatusCount>> getStatusDistribution() async {
+    final rows = await _supabase.rpc('get_lead_status_distribution');
+    return (rows as List).map((r) {
+      final m = Map<String, dynamic>.from(r as Map);
+      return StatusCount(
+          m['status'] as String, (m['lead_count'] as num?)?.toInt() ?? 0);
+    }).toList();
+  }
+
+  /// New leads + status changes per day, last 14 days (0054/0116, admin-only).
+  Future<List<PipelineDay>> getPipeline14d() async {
+    final rows = await _supabase.rpc('get_pipeline_activity_14d');
+    return (rows as List).map((r) {
+      final m = Map<String, dynamic>.from(r as Map);
+      return PipelineDay(
+        DateTime.parse(m['day'] as String),
+        (m['new_leads'] as num?)?.toInt() ?? 0,
+        (m['status_changes'] as num?)?.toInt() ?? 0,
+      );
+    }).toList();
+  }
 }
 
 @riverpod
@@ -111,4 +147,14 @@ Future<AdminHomeMetrics> adminHomeMetrics(AdminHomeMetricsRef ref) {
 @riverpod
 Future<List<TeamActivityRow>> teamActivity(TeamActivityRef ref) {
   return ref.watch(adminHomeRepositoryProvider).getTeamActivity();
+}
+
+@riverpod
+Future<List<StatusCount>> statusDistribution(StatusDistributionRef ref) {
+  return ref.watch(adminHomeRepositoryProvider).getStatusDistribution();
+}
+
+@riverpod
+Future<List<PipelineDay>> pipeline14d(Pipeline14dRef ref) {
+  return ref.watch(adminHomeRepositoryProvider).getPipeline14d();
 }

@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../billing/providers/billing_providers.dart';
 import '../../leads/data/models/lead_model.dart';
 import '../../leads/providers/lead_providers.dart';
@@ -35,6 +36,21 @@ class AppShell extends ConsumerWidget {
           orElse: () => 0,
         );
 
+    // The head's Plan tab listed HIS follow-ups — he has none; his home is
+    // the insights view. Two tabs for admins (eyeball review 2026-07-13).
+    // Fail-soft (no session / tests) → rep shell.
+    bool isAdmin;
+    try {
+      isAdmin = ref
+              .read(authRepositoryProvider)
+              .currentSession
+              ?.user
+              .appMetadata['role'] ==
+          'admin';
+    } catch (_) {
+      isAdmin = false;
+    }
+
     // Eyeball feedback A5 — Leads is the app's home. Phone-back on Plan/You
     // returns to Leads instead of exiting; back on Leads exits. Pushed
     // subscreens sit above the shell on the root navigator, so their pops are
@@ -56,6 +72,7 @@ class AppShell extends ConsumerWidget {
         bottomNavigationBar: _TabBar(
           currentIndex: navigationShell.currentIndex,
           planBadge: overdue,
+          isAdmin: isAdmin,
           onTap: (i) => navigationShell.goBranch(
             i,
             // Re-tapping the active tab pops to its initial location.
@@ -120,11 +137,13 @@ class _ExpiryBanner extends StatelessWidget {
 class _TabBar extends StatelessWidget {
   final int currentIndex;
   final int planBadge;
+  final bool isAdmin;
   final ValueChanged<int> onTap;
 
   const _TabBar({
     required this.currentIndex,
     required this.planBadge,
+    required this.isAdmin,
     required this.onTap,
   });
 
@@ -142,20 +161,25 @@ class _TabBar extends StatelessWidget {
           child: Row(
             children: [
               _TabItem(
-                icon: Icons.groups_2_outlined,
-                activeIcon: Icons.groups_2_rounded,
-                label: 'Leads',
+                icon: isAdmin ? Icons.insights_outlined : Icons.groups_2_outlined,
+                activeIcon:
+                    isAdmin ? Icons.insights_rounded : Icons.groups_2_rounded,
+                label: isAdmin ? 'Home' : 'Leads',
                 selected: currentIndex == 0,
                 onTap: () => onTap(0),
               ),
-              _TabItem(
-                icon: Icons.event_note_outlined,
-                activeIcon: Icons.event_note_rounded,
-                label: 'Plan',
-                selected: currentIndex == 1,
-                badge: planBadge,
-                onTap: () => onTap(1),
-              ),
+              // Plan lists the CALLER's follow-ups — pointless for the head,
+              // so the slot doesn't exist for admins (branch index 1 stays
+              // wired; the item is just never rendered).
+              if (!isAdmin)
+                _TabItem(
+                  icon: Icons.event_note_outlined,
+                  activeIcon: Icons.event_note_rounded,
+                  label: 'Plan',
+                  selected: currentIndex == 1,
+                  badge: planBadge,
+                  onTap: () => onTap(1),
+                ),
               _TabItem(
                 icon: Icons.person_outline_rounded,
                 activeIcon: Icons.person_rounded,

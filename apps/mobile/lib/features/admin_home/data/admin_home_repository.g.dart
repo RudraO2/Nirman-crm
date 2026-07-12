@@ -64,5 +64,44 @@ final teamActivityProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef TeamActivityRef = AutoDisposeFutureProviderRef<List<TeamActivityRow>>;
+String _$statusDistributionHash() =>
+    r'ef26d37ef4e2b97819e2ab259e8f7a93f0762f19';
+
+/// See also [statusDistribution].
+@ProviderFor(statusDistribution)
+final statusDistributionProvider =
+    AutoDisposeFutureProvider<List<StatusCount>>.internal(
+      statusDistribution,
+      name: r'statusDistributionProvider',
+      debugGetCreateSourceHash:
+          const bool.fromEnvironment('dart.vm.product')
+              ? null
+              : _$statusDistributionHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef StatusDistributionRef = AutoDisposeFutureProviderRef<List<StatusCount>>;
+String _$pipeline14dHash() => r'1e7b1dfed1fb17b1de39b1cfa0e000f0bd0eea7f';
+
+/// See also [pipeline14d].
+@ProviderFor(pipeline14d)
+final pipeline14dProvider =
+    AutoDisposeFutureProvider<List<PipelineDay>>.internal(
+      pipeline14d,
+      name: r'pipeline14dProvider',
+      debugGetCreateSourceHash:
+          const bool.fromEnvironment('dart.vm.product')
+              ? null
+              : _$pipeline14dHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef Pipeline14dRef = AutoDisposeFutureProviderRef<List<PipelineDay>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
