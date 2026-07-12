@@ -1,10 +1,10 @@
-// Story 2.5 — Lead card widget · UI redesign §6.3
-// White card, hairline border, 16px radius. Row 1 = red dot (incomplete) + name
-// + tinted status pill. Meta line = phone · location. ONE flag line replacing
-// the old stacked badges: a state span (pending > incomplete > untouched >
-// shared > stale, by priority) optionally paired with the next follow-up / visit
-// date span (red when overdue). Pending-outcome keeps the 3px brass left edge;
-// stale keeps dimming.
+// Story 2.5 — Lead card widget · rep-home v2 (2026-07-13).
+// ONE-SIGNAL rule: name + status pill, a single grey meta line
+// (phone · location · code · visit), and AT MOST ONE flag line in at most
+// one color. The old card wore four signal systems at once (red incomplete
+// dot, blue Untouched, red Overdue, brass side stripe) — Rudra: "some red
+// things, some blue things, not organized." Side-stripe accents are also a
+// design-system ban.
 
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
@@ -25,29 +25,14 @@ class LeadCard extends StatelessWidget {
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
         child: Container(
-          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.surfaceRaised,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.line),
           ),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // 3px pending-outcome left accent (brass-bright).
-                if (lead.hasPendingOutcome)
-                  Container(width: 3, color: AppColors.brassBright),
-
-                // Card body
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
-                    child: _CardBody(lead: lead),
-                  ),
-                ),
-              ],
-            ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(15, 13, 15, 13),
+            child: _CardBody(lead: lead),
           ),
         ),
       ),
@@ -67,26 +52,21 @@ class _CardBody extends StatelessWidget {
     final nameColor = dim ? AppColors.inkDisabled : AppColors.inkPrimary;
     final metaColor = dim ? AppColors.inkDisabled : AppColors.inkSecondary;
 
-    final state = _stateFlag(lead);
-    final date = _dateFlag(lead);
+    final flag = _flag(lead);
+    final metaBits = <String>[
+      lead.displayPhone,
+      if (lead.location != null && lead.location!.isNotEmpty) lead.location!,
+      if (lead.customerCode != null) lead.customerCode!,
+      if (lead.visitCount > 0) '${visitOrdinal(lead.visitCount)} visit',
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Row 1: red dot (incomplete) + name | status pill ───────────────
+        // ── Row 1: name | status pill ──────────────────────────────────────
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            if (lead.isIncomplete) ...[
-              Container(
-                width: 8, height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.statusHot,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 7),
-            ],
             Expanded(
               child: Text(
                 lead.name ?? 'No name',
@@ -103,134 +83,75 @@ class _CardBody extends StatelessWidget {
           ],
         ),
 
-        // ── Meta line: phone · location ────────────────────────────────────
+        // ── ONE meta line: phone · location · code · visit ─────────────────
         const SizedBox(height: 3),
-        Row(
-          children: [
-            Text(
-              lead.displayPhone,
-              style: TextStyle(fontSize: 12.5, color: metaColor),
-            ),
-            if (lead.location != null && lead.location!.isNotEmpty) ...[
-              Text(' · ',
-                  style: TextStyle(color: AppColors.inkDisabled, fontSize: 12.5)),
-              Expanded(
-                child: Text(
-                  lead.location!,
-                  style: TextStyle(fontSize: 12.5, color: metaColor),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ],
+        Text(
+          metaBits.join(' · '),
+          style: TextStyle(fontSize: 12.5, color: metaColor),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
 
-        // ── Visit code · ordinal (Story 13.8-mobile) ───────────────────────
-        // The read-out code + walk-in count, straight off get_my_leads (0093).
-        if (lead.customerCode != null || lead.visitCount > 0) ...[
-          const SizedBox(height: 3),
-          Row(
-            children: [
-              if (lead.customerCode != null)
-                Flexible(
-                  child: Text(
-                    lead.customerCode!,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: metaColor,
-                      letterSpacing: 0.3,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              if (lead.customerCode != null && lead.visitCount > 0)
-                Text(' · ',
-                    style: TextStyle(
-                        fontSize: 11.5, color: AppColors.inkDisabled)),
-              if (lead.visitCount > 0)
-                Text(
-                  '${visitOrdinal(lead.visitCount)} visit',
-                  style: TextStyle(fontSize: 11.5, color: metaColor),
-                ),
-            ],
-          ),
-        ],
-
-        // ── Single flag line: state span (· date span) ─────────────────────
-        if (state != null || date != null) ...[
+        // ── ONE flag, one color, most-actionable wins ───────────────────────
+        if (flag != null) ...[
           const SizedBox(height: 5),
-          Row(
-            children: [
-              if (state != null)
-                Flexible(
-                  child: Text(
-                    state.text,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: state.color,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              if (state != null && date != null)
-                Text(' · ',
-                    style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.inkDisabled)),
-              if (date != null)
-                Flexible(
-                  child: Text(
-                    date.text,
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: date.color,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-            ],
+          Text(
+            flag.text,
+            style: TextStyle(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w600,
+              color: flag.color,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ],
     );
   }
 
-  // Primary state flag — mockup priority (pending > incomplete > untouched >
-  // shared > stale). Overdue / upcoming dates ride in the separate date span.
-  static _Flag? _stateFlag(LeadListItem lead) {
+  // THE flag — single most-actionable thing about this lead, one color.
+  // Red is reserved for overdue (a real fire). Everything else is amber
+  // (needs you) or grey (context). Priority: call outcome > overdue >
+  // follow-up today > untouched > incomplete > upcoming date > shared > stale.
+  static _Flag? _flag(LeadListItem lead) {
     if (lead.hasPendingOutcome) {
-      return const _Flag('Awaiting outcome', Color(0xFF7A5D24));
+      return const _Flag('Log your call outcome', AppColors.statusWarm);
     }
-    if (lead.isIncomplete) {
-      return const _Flag('Incomplete', AppColors.statusIncomplete);
+    if (lead.nextFollowupAt != null && lead.hasOverdueFollowup) {
+      return _Flag(_followupLabel(lead.nextFollowupAt!), AppColors.error);
+    }
+    if (lead.nextFollowupAt != null && _isToday(lead.nextFollowupAt!)) {
+      return _Flag(
+          'Follow-up ${_followupLabel(lead.nextFollowupAt!)}', AppColors.statusWarm);
     }
     if (lead.isUntouched) {
-      return const _Flag('Untouched', AppColors.statusCold);
+      return const _Flag('New — not contacted yet', AppColors.inkSecondary);
+    }
+    if (lead.isIncomplete) {
+      return const _Flag('Details missing', AppColors.statusIncomplete);
+    }
+    if (lead.nextFollowupAt != null) {
+      return _Flag('Follow-up ${_followupLabel(lead.nextFollowupAt!)}',
+          AppColors.inkSecondary);
+    }
+    if (lead.visitDate != null) {
+      return _Flag(
+          'Visit ${_dateLabel(lead.visitDate!)}', AppColors.inkSecondary);
     }
     if (lead.isShared) {
-      return const _Flag('Shared', AppColors.statusFuture);
+      return const _Flag('Shared with you', AppColors.inkSecondary);
     }
     if (lead.isStale) {
-      return const _Flag('Stale', AppColors.statusWarm);
+      return const _Flag('No activity for a while', AppColors.inkDisabled);
     }
     return null;
   }
 
-  static _Flag? _dateFlag(LeadListItem lead) {
-    if (lead.nextFollowupAt != null) {
-      return _Flag(
-        _followupLabel(lead.nextFollowupAt!),
-        lead.hasOverdueFollowup ? AppColors.error : AppColors.inkSecondary,
-      );
-    }
-    if (lead.visitDate != null) {
-      return _Flag('Visit ${_dateLabel(lead.visitDate!)}', AppColors.inkSecondary);
-    }
-    return null;
+  static bool _isToday(DateTime dt) {
+    final l = dt.toLocal();
+    final now = DateTime.now();
+    return l.year == now.year && l.month == now.month && l.day == now.day;
   }
 
   static String _followupLabel(DateTime dt) {

@@ -345,41 +345,7 @@ class _LeadsView extends StatelessWidget {
                     ),
                   ),
                 ),
-                const Spacer(),
-                // Untouched filter chip — tap to see leads never actioned.
-                Builder(builder: (context) {
-                  final untouched = leads.where((l) => l.isUntouched).length;
-                  if (untouched == 0) return const SizedBox.shrink();
-                  return GestureDetector(
-                    onTap: () => context.push('/leads/filtered',
-                        extra: LeadFilter.untouched),
-                    child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.statusColdBg,
-                        borderRadius: BorderRadius.circular(9999),
-                        border: Border.all(color: const Color(0xFFC6D6E9)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.auto_awesome_rounded,
-                              size: 11, color: AppColors.statusCold),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$untouched untouched',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.statusCold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
+                // (untouched chip removed — it lives in the work queue now)
               ],
             ),
           ),
@@ -479,74 +445,115 @@ class _HomeHeaderCard extends ConsumerWidget {
           orElse: () => MonthlyBest.empty,
         );
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 15, 16, 15),
-      decoration: BoxDecoration(
-        color: AppColors.evergreen,
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Today · ${_eyebrowDate(now)}',
-            style: TextStyle(
-              fontSize: 10.5,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 10.5 * 0.12,
-              color: const Color(0xFFE9E4D6).withValues(alpha: 0.55),
-            ),
+    final untouched = leads.where((l) => l.isUntouched).length;
+
+    // Rep-home v2 (2026-07-13): the boxy 4-tile grid truncated its own labels
+    // and never looked tappable. Split into (1) a slim dark identity strip —
+    // date + motivation only — and (2) a WORK QUEUE of full-width tappable
+    // rows (icon, full label, count, chevron), showing ONLY non-zero queues.
+    final queue = <_QueueEntry>[
+      if (pendingCalls > 0)
+        _QueueEntry(Icons.phone_callback_rounded, 'Call outcomes to log',
+            pendingCalls, LeadFilter.pendingOutcome, alert: true),
+      if (followupsToday > 0)
+        _QueueEntry(Icons.alarm_rounded, 'Follow-ups today', followupsToday,
+            LeadFilter.followupsToday),
+      if (visitsToday > 0)
+        _QueueEntry(Icons.event_available_rounded, 'Visits today', visitsToday,
+            LeadFilter.visitsToday),
+      if (untouched > 0)
+        _QueueEntry(Icons.fiber_new_rounded, 'Untouched leads', untouched,
+            LeadFilter.untouched),
+      if (incomplete > 0)
+        _QueueEntry(Icons.edit_note_rounded, 'Incomplete profiles', incomplete,
+            LeadFilter.incomplete),
+    ];
+
+    return Column(
+      children: [
+        // ── 1 · Identity strip: date + motivation, nothing to tap ──────────
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
+          decoration: BoxDecoration(
+            color: AppColors.evergreen,
+            borderRadius: BorderRadius.circular(18),
           ),
-          const SizedBox(height: 10),
-          Row(
+          child: Row(
             children: [
-              _HeaderTile(
-                count: followupsToday,
-                label: 'Follow-ups',
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.followupsToday),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Today · ${_eyebrowDate(now)}',
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 10.5 * 0.12,
+                        color:
+                            const Color(0xFFE9E4D6).withValues(alpha: 0.55),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text.rich(
+                      TextSpan(children: [
+                        const TextSpan(text: 'Sold '),
+                        TextSpan(
+                          text: '${stats.soldThisMonth}',
+                          style: const TextStyle(
+                              color: Color(0xFFF2EEE2),
+                              fontWeight: FontWeight.w700),
+                        ),
+                        const TextSpan(text: ' this month · streak '),
+                        TextSpan(
+                          text: '${stats.followupStreakDays}d',
+                          style: const TextStyle(
+                              color: Color(0xFFF2EEE2),
+                              fontWeight: FontWeight.w700),
+                        ),
+                      ]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: const Color(0xFFE9E4D6).withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              const SizedBox(width: 8),
-              _HeaderTile(
-                count: visitsToday,
-                label: 'Visits',
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.visitsToday),
-              ),
-              const SizedBox(width: 8),
-              _HeaderTile(
-                count: incomplete,
-                label: 'Incomplete',
-                alert: incomplete > 0,
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.incomplete),
-              ),
-              const SizedBox(width: 8),
-              _HeaderTile(
-                count: pendingCalls,
-                label: 'Call pending',
-                alert: pendingCalls > 0,
-                onTap: () => context.push('/leads/filtered', extra: LeadFilter.pendingOutcome),
-              ),
+              const SizedBox(width: 12),
+              _BestHint(stats: stats, best: best),
             ],
           ),
-          // Progress footer line.
+        ),
+
+        // ── 2 · Work queue: full-width tappable rows, non-zero only ────────
+        if (queue.isNotEmpty) ...[
+          const SizedBox(height: 10),
           Container(
-            margin: const EdgeInsets.only(top: 12),
-            padding: const EdgeInsets.only(top: 10),
             decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(
-                    color: const Color(0xFFE9E4D6).withValues(alpha: 0.12)),
-              ),
+              color: AppColors.paper,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.line),
             ),
-            child: Row(
+            child: Column(
               children: [
-                _ProgItem(label: 'Sold this month', value: '${stats.soldThisMonth}'),
-                _ProgItem(label: 'Streak', value: '${stats.followupStreakDays} days'),
-                _BestHint(stats: stats, best: best),
+                for (var i = 0; i < queue.length; i++) ...[
+                  if (i > 0)
+                    const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: AppColors.line,
+                        indent: 56),
+                  _QueueRow(entry: queue[i]),
+                ],
               ],
             ),
           ),
         ],
-      ),
+      ],
     );
   }
 
@@ -558,92 +565,77 @@ class _HomeHeaderCard extends ConsumerWidget {
   }
 }
 
-class _HeaderTile extends StatelessWidget {
-  final int count;
+/// One tappable work-queue row: icon tile · full label · count pill · chevron.
+class _QueueEntry {
+  final IconData icon;
   final String label;
+  final int count;
+  final LeadFilter filter;
   final bool alert;
-  final VoidCallback? onTap;
-
-  const _HeaderTile({
-    required this.count,
-    required this.label,
-    this.alert = false,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final numberColor = alert && count > 0
-        ? AppColors.brassBright
-        : const Color(0xFFF2EEE2);
-
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
-          decoration: BoxDecoration(
-            color: const Color(0xFFE9E4D6).withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: const Color(0xFFE9E4D6).withValues(alpha: 0.10)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$count',
-                style: AppType.display(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                  color: numberColor,
-                  height: 1.1,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 10.5,
-                  color: const Color(0xFFE9E4D6).withValues(alpha: 0.60),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  const _QueueEntry(this.icon, this.label, this.count, this.filter,
+      {this.alert = false});
 }
 
-class _ProgItem extends StatelessWidget {
-  final String label;
-  final String value;
-  const _ProgItem({required this.label, required this.value});
+class _QueueRow extends StatelessWidget {
+  final _QueueEntry entry;
+  const _QueueRow({required this.entry});
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Text.rich(
-        TextSpan(
+    return InkWell(
+      onTap: () => context.push('/leads/filtered', extra: entry.filter),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        child: Row(
           children: [
-            TextSpan(text: '$label '),
-            TextSpan(
-              text: value,
-              style: const TextStyle(
-                color: Color(0xFFF2EEE2),
-                fontWeight: FontWeight.w700,
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: entry.alert ? AppColors.brassSoft : AppColors.mist,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                entry.icon,
+                size: 17,
+                color: entry.alert
+                    ? const Color(0xFF6E5423)
+                    : AppColors.inkSecondary,
               ),
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                entry.label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.inkPrimary,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 2),
+              decoration: BoxDecoration(
+                color: entry.alert ? AppColors.brassSoft : AppColors.mist,
+                borderRadius: BorderRadius.circular(9999),
+              ),
+              child: Text(
+                '${entry.count}',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: entry.alert
+                      ? const Color(0xFF6E5423)
+                      : AppColors.inkPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right_rounded,
+                size: 20, color: AppColors.inkDisabled),
           ],
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          fontSize: 11.5,
-          color: const Color(0xFFE9E4D6).withValues(alpha: 0.60),
         ),
       ),
     );
