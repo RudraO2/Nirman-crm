@@ -63,7 +63,9 @@ class _UnitDetailSheetState extends ConsumerState<UnitDetailSheet> {
 
     setState(() => _confirming = true);
     try {
-      await ref.read(inventoryRepositoryProvider).confirmBooking(holdId);
+      await ref
+          .read(inventoryRepositoryProvider)
+          .confirmBooking(holdId, paymentVerified: ok);
       ref.invalidate(projectUnitsProvider(widget.projectId));
       ref.invalidate(activeHoldProvider(unit.unitId));
       navigator.pop();

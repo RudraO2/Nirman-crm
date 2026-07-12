@@ -33,6 +33,9 @@ class _BookingDashboardScreenState
   String _projectFilter = '';
   // '' = all agents. Applied server-side for stats, client-side for the holds list.
   String _agentFilter = '';
+  // In-flight guard for convert-to-sold (audit medium: double-tap fired the RPC
+  // twice; the server backstopped it, but the second round-trip was wasted).
+  bool _converting = false;
 
   Future<void> _refresh() async {
     try {
@@ -47,10 +50,14 @@ class _BookingDashboardScreenState
   }
 
   Future<void> _convert(ActiveHold hold) async {
+    if (_converting) return;
     final ok = await showConfirmBookingDialog(context, hold.unitNo);
     if (!ok || !mounted) return;
+    setState(() => _converting = true);
     try {
-      await ref.read(inventoryRepositoryProvider).confirmBooking(hold.holdId);
+      await ref
+          .read(inventoryRepositoryProvider)
+          .confirmBooking(hold.holdId, paymentVerified: ok);
       if (!mounted) return;
       ref.invalidate(activeHoldsProvider);
       ref.invalidate(bookingStatsProvider);
@@ -66,6 +73,8 @@ class _BookingDashboardScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Couldn't confirm the booking. Try again.")),
       );
+    } finally {
+      if (mounted) setState(() => _converting = false);
     }
   }
 

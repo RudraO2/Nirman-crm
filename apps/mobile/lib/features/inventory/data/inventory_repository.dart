@@ -158,13 +158,15 @@ class InventoryRepository {
   }
 
   /// Story 15.4 — confirm a hold as a booking (hold→sold, lead→sold via the shipped
-  /// status seam). Payment attestation is enforced in the UI; we always send true.
+  /// status seam). [paymentVerified] carries the manager's attestation from the
+  /// confirm dialog — never a literal, so the RPC receives the actual attested value.
   /// Throws [ConfirmException] (notAllowed / stale / paymentNotVerified / generic).
-  Future<void> confirmBooking(String holdId) async {
+  Future<void> confirmBooking(String holdId,
+      {required bool paymentVerified}) async {
     try {
       await _supabase.rpc(
         'confirm_booking',
-        params: {'p_hold_id': holdId, 'p_payment_verified': true},
+        params: {'p_hold_id': holdId, 'p_payment_verified': paymentVerified},
       );
     } on PostgrestException catch (e) {
       throw ConfirmException.fromPostgrest(e);
