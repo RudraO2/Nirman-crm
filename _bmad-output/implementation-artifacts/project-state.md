@@ -30,6 +30,25 @@ Full-flow practicality review after everything above shipped. The app IS usable 
 (provision → import → invite team → work leads → visit → hold → confirm → sold → recharge).
 These are the gaps that will hurt real users, ranked. Nothing here blocks builder #1.
 
+### Admin & offline — how it works (shipped 2026-07-12, prod head 0114)
+
+**One app, every role.** The mobile APK serves the whole tenant team — rep, leader,
+receptionist, partner, AND the builder head/admin (role decides the screens). Admins
+additionally get the web dashboard. Founder touches ONLY provisioning + money.
+
+- **Any number of admins per tenant.** Team page → "Invite link" → Role: **Admin** →
+  share the link. Invitee picks their own username/password; signs in to the web
+  dashboard and the mobile app. (0113 — minting requires the admin role, no escalation.)
+- **Builder admin forgot their password:** ops console → tenant → **Reset admin
+  password** (typed-name + fresh TOTP). One-time temp password shown once; forced
+  change on first login; all their old sessions killed. Multiple admins → the dialog's
+  username field picks which one. (0114 — audit-logged, password never stored.)
+- **Offline (mobile):** lead list is cached on-device and served with an amber
+  "Offline — leads from Xm ago" banner when the network dies; mark-dead / call-outcome /
+  set-follow-up queue locally and replay in order when back online (server stays the
+  arbiter; rejected replays drop). New-lead creation stays online-only (dupe check
+  needs the server). Routine hold-expiry no longer push-spams the team (0112).
+
 **P0 — before the app is in many reps' hands**
 - **Play Store release** (Rudra CONFIRMED 2026-07-12 he'll pay the one-time Play Console fee).
   Checklist: ① 🚨 **generate a real release keystore** — `apps/mobile/android/app/build.gradle.kts`
@@ -48,14 +67,12 @@ These are the gaps that will hurt real users, ranked. Nothing here blocks builde
   keep `new_stock` + manual force-release pings.
 
 **P1 — before builder #5**
-- **Offline Phase 1 (write queue).** Queue the 3 hot writes (status change, set follow-up, call
-  outcome) locally when offline; replay in order on reconnect. Server guards (LeadReassignedError,
-  status transitions) already arbitrate conflicts — client just needs calm "synced/failed" states.
-- **Second-admin path.** Invites create employees only; a builder wanting 2 admins needs founder
-  SQL today. Either an ops-console "add admin" action or role choice on invites (with guard).
-- **Admin password self-recovery.** Employee reset exists (admin-driven); if the ADMIN forgets
-  theirs, it's founder-level surgery. Ops-console "reset builder-admin password" button (the
-  reset-employee-password fn logic already exists — needs an ops-side caller).
+- ~~**Offline Phase 1 (write queue).**~~ **✅ SHIPPED 2026-07-12** with Phase 0 — see
+  §Admin & offline (how it works) below. Suite 275/275.
+- ~~**Second-admin path.**~~ **✅ SHIPPED 2026-07-12** (0113) — invite dialog has an
+  Employee/Admin toggle; only an existing admin can mint, no founder needed.
+- ~~**Admin password self-recovery.**~~ **✅ SHIPPED 2026-07-12** (0114) — ops console →
+  tenant row → "Reset admin password" (TOTP-gated, temp password shown once).
 - **Server-side error visibility ritual.** Crashlytics covers mobile; edge-fn/db failures only
   live in Supabase dashboard logs. Free fix: weekly log check ritual + the CI badge; later a
   log-drain. Write the ritual into the ops checklist.

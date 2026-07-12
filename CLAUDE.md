@@ -62,6 +62,15 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
 - To go back to the local stack: `mv .env.development.local.bak .env.development.local`
   (and `supabase start` for the Docker stack). Delete the `.bak` to make prod permanent.
 
+## Admin management (2026-07-12)
+
+- **Second/Nth admin**: builder admin self-serves via Team → Invite link → Role: Admin
+  (0113, `create_invitation(p_label, p_role)`; accept-invite writes the role to both stores).
+- **Builder admin forgot password**: ops console → tenant → Reset admin password
+  (0114, `ops_reset_tenant_admin_password(tenant_id, username?)` — platform-admin+TOTP,
+  dual-store $2a hash, must_change=true, sessions revoked, temp password returned ONCE).
+  This productizes the manual SQL recipe below — prefer the button.
+
 ## Password reset (2026-07-08) — DO NOT special-case
 
 - Edge fn `reset-employee-password` (admin-only, tenant-scoped, deployed to prod)
