@@ -7,7 +7,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../../../core/offline/offline_store.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../leads/data/lead_repository.dart';
@@ -23,7 +22,6 @@ import '../../alarms/data/alarm_sync_service.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../motivation/providers/motivation_providers.dart';
 import '../../motivation/data/models/motivation_stats.dart';
-import '../../motivation/data/models/monthly_best.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -440,11 +438,6 @@ class _HomeHeaderCard extends ConsumerWidget {
           data: (s) => s,
           orElse: MotivationStats.zero,
         );
-    final best = ref.watch(myMonthlyBestProvider).maybeWhen(
-          data: (b) => b,
-          orElse: () => MonthlyBest.empty,
-        );
-
     final untouched = leads.where((l) => l.isUntouched).length;
 
     // Rep-home v2 (2026-07-13): the boxy 4-tile grid truncated its own labels
@@ -470,68 +463,45 @@ class _HomeHeaderCard extends ConsumerWidget {
     ];
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── 1 · Identity strip: date + motivation, nothing to tap ──────────
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(16, 13, 16, 13),
-          decoration: BoxDecoration(
-            color: AppColors.evergreen,
-            borderRadius: BorderRadius.circular(18),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Today · ${_eyebrowDate(now)}',
-                      style: TextStyle(
-                        fontSize: 10.5,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 10.5 * 0.12,
-                        color:
-                            const Color(0xFFE9E4D6).withValues(alpha: 0.55),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text.rich(
-                      TextSpan(children: [
-                        const TextSpan(text: 'Sold '),
-                        TextSpan(
-                          text: '${stats.soldThisMonth}',
-                          style: const TextStyle(
-                              color: Color(0xFFF2EEE2),
-                              fontWeight: FontWeight.w700),
-                        ),
-                        const TextSpan(text: ' this month · streak '),
-                        TextSpan(
-                          text: '${stats.followupStreakDays}d',
-                          style: const TextStyle(
-                              color: Color(0xFFF2EEE2),
-                              fontWeight: FontWeight.w700),
-                        ),
-                      ]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: const Color(0xFFE9E4D6).withValues(alpha: 0.6),
-                      ),
-                    ),
-                  ],
-                ),
+        // ── 1 · Context line: no container, no dark band, nothing truncates.
+        // Date + this month's score in plain text under the title. The
+        // motivation machinery (streak, beat-your-best) lives in the You tab.
+        Padding(
+          padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+          child: Text.rich(
+            TextSpan(children: [
+              TextSpan(text: _eyebrowDate(now)),
+              const TextSpan(text: '  ·  '),
+              TextSpan(
+                text: '${stats.soldThisMonth} sold',
+                style: const TextStyle(
+                    color: AppColors.inkPrimary, fontWeight: FontWeight.w700),
               ),
-              const SizedBox(width: 12),
-              _BestHint(stats: stats, best: best),
-            ],
+              const TextSpan(text: ' this month'),
+              if (stats.followupStreakDays > 0) ...[
+                const TextSpan(text: '  ·  '),
+                TextSpan(
+                  text: '${stats.followupStreakDays}d',
+                  style: const TextStyle(
+                      color: AppColors.inkPrimary,
+                      fontWeight: FontWeight.w700),
+                ),
+                const TextSpan(text: ' streak'),
+              ],
+            ]),
+            style: const TextStyle(
+              fontSize: 12.5,
+              fontWeight: FontWeight.w500,
+              color: AppColors.inkSecondary,
+            ),
           ),
         ),
 
         // ── 2 · Work queue: full-width tappable rows, non-zero only ────────
         if (queue.isNotEmpty) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Container(
             decoration: BoxDecoration(
               color: AppColors.paper,
@@ -636,38 +606,6 @@ class _QueueRow extends StatelessWidget {
             const Icon(Icons.chevron_right_rounded,
                 size: 20, color: AppColors.inkDisabled),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _BestHint extends StatelessWidget {
-  final MotivationStats stats;
-  final MonthlyBest best;
-  const _BestHint({required this.stats, required this.best});
-
-  @override
-  Widget build(BuildContext context) {
-    final String text;
-    if (best.allTimeBest > 0) {
-      final toBeat = best.allTimeBest - best.thisMonthSold + 1;
-      text = toBeat <= 0
-          ? 'New personal best 🏆'
-          : '$toBeat ${toBeat == 1 ? 'sale' : 'sales'} to beat your best 🏆';
-    } else {
-      text = 'Conversion ${stats.conversionRate.toStringAsFixed(1)}%';
-    }
-    return Expanded(
-      child: Text(
-        text,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        textAlign: TextAlign.right,
-        style: const TextStyle(
-          fontSize: 11.5,
-          fontWeight: FontWeight.w700,
-          color: AppColors.brassBright,
         ),
       ),
     );
