@@ -1,5 +1,6 @@
 import { Phone, Mail, MessageCircle } from "lucide-react";
 import { Logo } from "@/components/luminous/logo";
+import { DemoForm } from "@/components/luminous/demo-form";
 
 const columns = [
   { title: "Product", links: ["The Console", "Leads", "Inventory", "Insights"] },
@@ -27,19 +28,7 @@ export function Footer() {
           <p className="mt-3 text-neutral-400">
             Tell us where to reach you and we&apos;ll set up a live walkthrough for your sales floor.
           </p>
-          <form className="mx-auto mt-6 flex max-w-md gap-2">
-            <input
-              type="email"
-              placeholder="you@yourbuild.com"
-              className="h-10 flex-1 rounded-full border border-white/15 bg-white/5 px-4 text-sm text-white placeholder:text-neutral-500 focus:border-amber-500/50 focus:outline-none"
-            />
-            <button
-              type="submit"
-              className="h-10 rounded-full bg-white px-5 text-sm font-semibold text-black transition-transform hover:scale-[1.03]"
-            >
-              Book a demo
-            </button>
-          </form>
+          <DemoForm />
         </div>
 
         {/* Link columns */}
