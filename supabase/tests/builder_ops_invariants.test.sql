@@ -45,7 +45,13 @@ SELECT ok(NOT has_table_privilege('authenticated','public.amendment_events','DEL
 -- 9-13. anon can never execute the sensitive builder-ops RPCs
 SELECT ok(NOT has_function_privilege('anon','public.hold_unit(uuid,uuid)','EXECUTE'),                'anon cannot execute hold_unit');
 SELECT ok(NOT has_function_privilege('anon','public.confirm_booking(uuid,boolean)','EXECUTE'),       'anon cannot execute confirm_booking');
-SELECT ok(NOT has_function_privilege('anon','public.generate_unit_grid(uuid,uuid,int,int,jsonb,int,numeric,bigint,bigint)','EXECUTE'), 'anon cannot execute generate_unit_grid');
+-- signature grew in 0085 (flexible unit numbering); resolve it dynamically so a
+-- future param change can't abort this whole file again (unknown signature = error)
+SELECT ok(
+  (SELECT bool_and(NOT has_function_privilege('anon', p.oid, 'EXECUTE'))
+   FROM pg_proc p
+   WHERE p.pronamespace='public'::regnamespace AND p.proname='generate_unit_grid'),
+  'anon cannot execute generate_unit_grid');
 SELECT ok(NOT has_function_privilege('anon','public.get_project_units(uuid)','EXECUTE'),             'anon cannot execute get_project_units');
 SELECT ok(NOT has_function_privilege('anon','public.set_amendment_status(uuid,public.amendment_status)','EXECUTE'), 'anon cannot execute set_amendment_status');
 

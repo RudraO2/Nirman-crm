@@ -87,7 +87,11 @@ SELECT is(
   'suspended', 'ops_suspend_tenant returns suspended');                                         -- 21
 SELECT is((SELECT status::text FROM public.tenants WHERE id='00000000-0000-0000-0000-00000000000a'::uuid),
   'suspended', 'tenant A is now suspended');                                                    -- 22
-SELECT is((SELECT count(*)::int FROM public.ops_audit_log WHERE action='suspend_tenant'), 1,
+-- scoped to the fixture tenant: a developer's local DB may carry audit rows
+-- from earlier manual e2e runs (unscoped count broke there, passed on fresh CI)
+SELECT is((SELECT count(*)::int FROM public.ops_audit_log
+             WHERE action='suspend_tenant'
+               AND target_tenant_id='00000000-0000-0000-0000-00000000000a'::uuid), 1,
   'ops_suspend_tenant wrote one audit row');                                                    -- 23
 
 SELECT is(
