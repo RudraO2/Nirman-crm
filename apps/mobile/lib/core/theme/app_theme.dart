@@ -42,7 +42,9 @@ class AppColors {
   static const statusSold       = Color(0xFF2F7D4F);
   static const statusDead       = Color(0xFF78817B);
   static const statusStale      = Color(0xFF78817B);
-  static const statusIncomplete = Color(0xFFC24638);
+  // Amber, not red — an incomplete lead is a to-do, not an error (Rudra,
+  // eyeball session: "all the red things look like errors").
+  static const statusIncomplete = Color(0xFFA8761C);
 
   // Status — tinted pill backgrounds (§3)
   static const statusHotBg    = Color(0xFFF9E9E6);

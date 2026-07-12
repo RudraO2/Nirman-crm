@@ -80,12 +80,19 @@ class _VerifyVisitScreenState extends ConsumerState<VerifyVisitScreen> {
     // the 3-tab shell is server-denied for her). She still needs the two You-tab
     // basics, so they live in a small menu here. Other roles arrive from the
     // You tab and keep using it; no menu for them.
-    final isReceptionist = ref
-            .read(authRepositoryProvider)
-            .currentSession
-            ?.user
-            .appMetadata['role_tier'] ==
-        'receptionist';
+    // Fail-soft: in widget tests (and any no-session state) Supabase isn't
+    // initialized — treat as not-receptionist, menu simply hidden.
+    bool isReceptionist;
+    try {
+      isReceptionist = ref
+              .read(authRepositoryProvider)
+              .currentSession
+              ?.user
+              .appMetadata['role_tier'] ==
+          'receptionist';
+    } catch (_) {
+      isReceptionist = false;
+    }
 
     return Scaffold(
       backgroundColor: AppColors.surfaceBase,

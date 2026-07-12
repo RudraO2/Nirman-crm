@@ -17,7 +17,10 @@ import '../../leads/ui/lead_card.dart';
 import '../../leads/ui/new_lead_sheet.dart';
 import '../../leads/ui/filtered_leads_screen.dart';
 import '../../leads/ui/pending_outcome_sheet.dart';
+import '../../admin_home/data/admin_home_repository.dart';
+import '../../admin_home/ui/admin_home_view.dart';
 import '../../alarms/data/alarm_sync_service.dart';
+import '../../auth/data/auth_repository.dart';
 import '../../motivation/providers/motivation_providers.dart';
 import '../../motivation/data/models/motivation_stats.dart';
 import '../../motivation/data/models/monthly_best.dart';
@@ -93,11 +96,27 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget build(BuildContext context) {
     final leadsAsync = ref.watch(myLeadsProvider);
 
+    // The head's home is the NUMBERS, not an (almost always empty) personal
+    // lead list — his leads live with his reps (eyeball feedback 2026-07-12).
+    // Own leads, if he has any, still render below the team activity.
+    // Fail-soft (widget tests / no session): default to the rep view.
+    bool isAdmin;
+    try {
+      isAdmin = ref
+              .read(authRepositoryProvider)
+              .currentSession
+              ?.user
+              .appMetadata['role'] ==
+          'admin';
+    } catch (_) {
+      isAdmin = false;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surfaceBase,
       appBar: AppBar(
         title: Text(
-          'My Leads',
+          isAdmin ? 'Home' : 'My Leads',
           // ui-modern-refresh: was sourceSerif4 — the one serif the Fraunces
           // sweep missed. One family everywhere.
           style: AppType.display(fontSize: 21),
@@ -107,7 +126,69 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
       ),
-      body: Column(
+      body: isAdmin ? _adminBody() : _repBody(leadsAsync),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final created = await showNewLeadSheet(context);
+          if (created == true) {
+            ref.invalidate(myLeadsProvider);
+            ref.invalidate(myMotivationStatsProvider);
+          }
+        },
+        backgroundColor: AppColors.accentStrong,
+        elevation: 3,
+        tooltip: 'New Lead',
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
+    );
+  }
+
+  /// Head/admin home — pulse card + team activity + (rare) own leads.
+  Widget _adminBody() {
+    final ownLeads = ref.watch(myLeadsProvider).valueOrNull ?? const <LeadListItem>[];
+    return RefreshIndicator(
+      onRefresh: () async {
+        ref.invalidate(adminHomeMetricsProvider);
+        ref.invalidate(teamActivityProvider);
+        ref.invalidate(myLeadsProvider);
+      },
+      color: AppColors.accentStrong,
+      backgroundColor: AppColors.surfaceRaised,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+        children: [
+          const AdminHomeView(),
+          if (ownLeads.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.fromLTRB(0, 22, 0, 8),
+              child: Text(
+                'MY OWN LEADS',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.26,
+                  color: AppColors.inkSecondary,
+                ),
+              ),
+            ),
+            for (final lead in ownLeads)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: LeadCard(
+                  lead: lead,
+                  onTap: () => context.push('/lead/${lead.id}'),
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Rep home — unchanged: offline banner + urgency-sorted lead list.
+  Widget _repBody(AsyncValue<List<LeadListItem>> leadsAsync) {
+    return Column(
         children: [
           const _OfflineBanner(),
           Expanded(
@@ -177,21 +258,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final created = await showNewLeadSheet(context);
-          if (created == true) {
-            ref.invalidate(myLeadsProvider);
-            ref.invalidate(myMotivationStatsProvider);
-          }
-        },
-        backgroundColor: AppColors.accentStrong,
-        elevation: 3,
-        tooltip: 'New Lead',
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
-      ),
-    );
+      );
   }
 }
 

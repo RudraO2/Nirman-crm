@@ -59,6 +59,7 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
   final Set<String> _projectIds = {};
 
   // UI state
+  bool _showAllStatuses = false; // sold/dead demoted behind "More…"
   bool _saving = false;
   String? _errorMsg;
   String? _duplicateOwner;
@@ -195,16 +196,43 @@ class _NewLeadSheetState extends ConsumerState<NewLeadSheet> {
                   const SizedBox(height: 16),
                   _FieldLabel(label: 'Status', required: true),
                   const SizedBox(height: 6),
+                  // Daily flow = hot/warm/cold/future. Sold/dead on a NEW lead
+                  // is rare (back-entering old deals) — demoted behind "More"
+                  // so the everyday grid stays 4 honest choices.
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: const ['hot', 'warm', 'cold', 'future', 'sold', 'dead']
-                        .map((s) => _StatusChip(
-                              status: s,
-                              selected: _status == s,
-                              onTap: () => setState(() => _status = s),
-                            ))
-                        .toList(),
+                    children: [
+                      ...(_showAllStatuses
+                              ? const ['hot', 'warm', 'cold', 'future', 'sold', 'dead']
+                              : const ['hot', 'warm', 'cold', 'future'])
+                          .map((s) => _StatusChip(
+                                status: s,
+                                selected: _status == s,
+                                onTap: () => setState(() => _status = s),
+                              )),
+                      if (!_showAllStatuses)
+                        GestureDetector(
+                          onTap: () => setState(() => _showAllStatuses = true),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: AppColors.paper,
+                              borderRadius: BorderRadius.circular(99),
+                              border: Border.all(color: AppColors.borderStrong),
+                            ),
+                            child: const Text(
+                              'More…',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.inkSecondary,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 4),
 
@@ -745,8 +773,11 @@ class _SaveBar extends StatelessWidget {
                         valueColor: AlwaysStoppedAnimation(Colors.white),
                       ),
                     )
+                  // "Save Incomplete" was system jargon on the PRIMARY action —
+                  // and showed even for fully-filled leads. The form already
+                  // marks details optional; the button just saves.
                   : const Text(
-                      'Save Incomplete',
+                      'Save lead',
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                     ),
             ),

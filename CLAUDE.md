@@ -110,6 +110,20 @@ Repo: https://github.com/RudraO2/Nirman-crm · Supabase project: `vhgruadourflpx
   `apps/mobile/pubspec.yaml`, source `apps/mobile/assets/icon/app_logo.png`). Re-run
   `dart run flutter_launcher_icons` after changing it (iOS gen is disabled — no appiconset).
 
+## 🎨 UI / design work — read first
+
+- **Design system lives on `main`**: `PRODUCT.md` (users, tone, anti-references,
+  45-year-old-rep test) + `DESIGN.md` (palette, ONE-family typography rule,
+  component specs, bans). Both at repo root. Read them before ANY UI change.
+- Mobile tokens: `apps/mobile/lib/core/theme/app_theme.dart` — `AppColors`
+  (named constants only, never raw hex in screens) + `AppType.display()`
+  (every title; NEVER reintroduce a serif/display font). Theme-level
+  AppBar/button/snackbar styles in `apps/mobile/lib/app.dart` — do not
+  override colors per-screen.
+- Big/risky UI experiments: short-lived `feat/ui-*` branch, build APK for
+  Rudra's phone, merge on his verdict, delete the branch. The system itself
+  always lands back on `main`.
+
 ## BMAD docs
 
 - Canonical planning + story files live at the **workspace root**

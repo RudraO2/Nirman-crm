@@ -4,6 +4,8 @@ import 'package:alarm/alarm.dart' as alarm;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'core/notifications_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/alarms/data/models/follow_up_alarm.dart';
 import 'features/alarms/ui/alarm_ring_screen.dart';
@@ -24,9 +26,17 @@ class _NirmanAppState extends ConsumerState<NirmanApp> {
   /// pushes while an alarm keeps emitting on the ringing stream.
   final Set<int> _shown = {};
 
+  StreamSubscription<dynamic>? _authSub;
+
   @override
   void initState() {
     super.initState();
+    // Notification permission is asked HERE — on sign-in / restored session —
+    // not at cold start on the login screen (contextless asks get denied).
+    // enablePush() no-ops when Firebase is down or already enabled.
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
+      if (state.session != null) NotificationsService.enablePush();
+    });
     // Story 10.2 — when a follow-up alarm rings (incl. cold-start from the
     // full-screen intent), open the ring screen for each newly ringing alarm.
     _ringingSub = alarm.Alarm.ringing.listen((alarmSet) {
@@ -47,6 +57,7 @@ class _NirmanAppState extends ConsumerState<NirmanApp> {
   @override
   void dispose() {
     _ringingSub?.cancel();
+    _authSub?.cancel();
     super.dispose();
   }
 

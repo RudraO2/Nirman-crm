@@ -41,7 +41,8 @@ void main() {
 
     // Normalised to uppercase before the RPC call.
     expect(repo.lastCode, 'NIR-44D77');
-    expect(find.text('Visit recorded'), findsOneWidget);
+    // A4 (2026-07-12): quiet "Visit recorded" row became the big top panel.
+    expect(find.text('Visit verified'), findsOneWidget);
     expect(find.textContaining('2nd visit'), findsOneWidget);
     // Field cleared for the next walk-in.
     expect(
