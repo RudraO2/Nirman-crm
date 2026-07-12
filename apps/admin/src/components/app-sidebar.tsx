@@ -3,10 +3,12 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { NAV_GROUPS, groupIsActive } from '@/components/nav'
+import { resolveNavGroups, groupIsActive } from '@/components/nav'
+import { useTenantUsesInventory } from '@/components/inventory-signal'
 
 export function AppSidebar({ email }: { email?: string | null }) {
   const pathname = usePathname()
+  const usesInventory = useTenantUsesInventory()
   const initials = (email ?? 'AD').replace(/[^a-zA-Z]/g, '').slice(0, 2).toUpperCase() || 'AD'
 
   return (
@@ -23,7 +25,7 @@ export function AppSidebar({ email }: { email?: string | null }) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-1.5">
-        {NAV_GROUPS.map((group) => {
+        {resolveNavGroups(usesInventory).map((group) => {
           const active = groupIsActive(group, pathname)
           const Icon = group.icon
           return (

@@ -321,8 +321,11 @@ export function ProjectsClient({ initialProjects }: ProjectsClientProps) {
             )}
             {initialProjects.length === 0 && (
               <TableRow>
+                {/* Progressive disclosure §5 — name the unlock mechanism, or the
+                    sidebar unfolding after "Set up inventory" is invisible magic. */}
                 <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                  No projects yet. Create one above.
+                  No projects yet. Add your first project to unlock Units, Holds,
+                  Amendments and Updates for it.
                 </TableCell>
               </TableRow>
             )}

@@ -3,7 +3,8 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
-import { activeGroup, tabIsActive } from '@/components/nav'
+import { activeGroup, tabIsActive, INVENTORY_GROUP_KEY } from '@/components/nav'
+import { useTenantUsesInventory } from '@/components/inventory-signal'
 
 /**
  * Row of styled <Link>s to the current group's sibling routes (§2). Auto-derives
@@ -16,7 +17,12 @@ export function TabStrip({ counts }: { counts?: Record<string, number> }) {
   const params = useSearchParams()
   const archived = !!params.get('archived')
   const group = activeGroup(pathname)
+  const usesInventory = useTenantUsesInventory()
   if (!group) return null
+  // Progressive disclosure §2 — pre-signal the Inventory group is collapsed to a
+  // single "Set up inventory" entry with ZERO tabs; Holds/Amendments/Updates don't
+  // exist yet, so no strip renders on /projects (or any inventory route) either.
+  if (group.key === INVENTORY_GROUP_KEY && !usesInventory) return null
 
   return (
     <div className="mb-5 flex gap-1 border-b-2 border-line">

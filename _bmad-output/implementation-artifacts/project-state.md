@@ -113,6 +113,33 @@ Do NOT touch: rep loop, Plan tab, admin Home/Leads/Insights/Team/Data, ops conso
 → Next step chosen 2026-07-12: run this through Sally (bmad-ux) in a fresh
 session for a proper disclosure UX spec before any code. Prompt handed to Rudra.
 
+**✅ IMPLEMENTED 2026-07-12** per the resulting spec
+(`planning-artifacts/ux-progressive-disclosure.md` — 1 signal, 4 gates, 1 button
+consolidation; Amendments gate + WORKSPACE-header suppression added by the spec):
+- **Signal (0115, NOT yet pushed to prod):** `tenants.inventory_first_used_at`
+  one-way marker (backfilled from earliest project; AFTER INSERT trigger on
+  `projects`; never cleared) + RPC `tenant_uses_inventory()` for all authenticated.
+  Deliberately reads the JWT tenant claim directly (not `auth_tenant_id()`) so a
+  billing pause does NOT flip the signal — one-way survives suspension.
+- **Admin:** layout fetches the RPC (parallel with billing) → React context
+  (`components/inventory-signal.tsx`, fail-open); sidebar renders "Set up
+  inventory" (0 tabs, → `/projects`) until true (`resolveNavGroups`/
+  `INVENTORY_SETUP_GROUP` in nav.ts); TabStrip suppressed on inventory routes
+  pre-signal; Projects empty-state copy names the unlock. Team page: ONE
+  "Invite teammate" button — manual create-employee form folded INTO the invite
+  sheet behind a text link (new-employee-form.tsx deleted).
+- **Mobile:** `tenantUsesInventoryProvider` (keepAlive; clean TRUE cached for
+  session, FALSE/error re-checked every 60s so an admin creating project #1 on
+  web unfolds a running rep app ≤1 min; error fail-open) via
+  `InventoryRepository.tenantUsesInventory()`; You-tab Availability/Booking
+  dashboard/Amendments gated (role gates untouched); WORKSPACE header renders
+  only when ≥1 row visible (leads-only rep sees no WORKSPACE section at all).
+  Reception deliberately NOT gated (spec §3 ruled it out).
+- Verified: tsc clean, flutter analyze 0 errors, mobile suite 275/275. Admin
+  eslint failures are pre-existing (set-state-in-effect across old files).
+- Left: `supabase db push --linked` for 0115 + deploy admin; all uncommitted on
+  `main` as of this note.
+
 **P2 — quality of life, after real usage data**
 - Leader/head read-only web view (platform segregation currently blocks employees from web).
 - Per-user notification preferences (mute inventory pings, keep follow-ups).

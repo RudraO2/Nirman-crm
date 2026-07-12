@@ -14,6 +14,7 @@ import '../../amendments/providers/amendments_providers.dart';
 import '../../auth/data/auth_repository.dart';
 import '../../motivation/ui/personal_stats_card.dart';
 import '../../motivation/ui/monthly_best.dart';
+import '../providers/workspace_providers.dart';
 
 class YouScreen extends ConsumerWidget {
   const YouScreen({super.key});
@@ -35,6 +36,19 @@ class YouScreen extends ConsumerWidget {
     // to false; the screen + RPCs re-guard server-side.
     final isExecMember =
         ref.watch(isExecutionMemberProvider).valueOrNull ?? false;
+    // Progressive disclosure §3 — usage gate layered on top of the role gates.
+    // Availability / Booking dashboard / Amendments are inventory machinery; for a
+    // leads-only tenant they're absent, not present-and-empty. Loading → false
+    // (hidden until known, same pop-in as isExecMember); errors fail-open inside
+    // the provider so earned rows never vanish on a flaky network.
+    final usesInventory =
+        ref.watch(tenantUsesInventoryProvider).valueOrNull ?? false;
+    final showAvailability = usesInventory;
+    final showBookingDashboard =
+        (role == 'admin' || roleTier == 'team_leader') && usesInventory;
+    final showAmendments = (role == 'admin' || isExecMember) && usesInventory;
+    final showReception = roleTier == 'receptionist' || role == 'admin';
+    final showOrganization = role == 'admin';
     final displayName = email.contains('@') ? email.split('@').first : email;
     final roleLabel = _roleLabel(role);
     final initials = _initials(displayName);
@@ -120,25 +134,35 @@ class YouScreen extends ConsumerWidget {
           const PersonalStatsCard(),
           const MonthlyBestSection(),
 
-          // Workspace rows (builder-ops)
-          const Padding(
-            padding: EdgeInsets.fromLTRB(0, 20, 0, 8),
-            child: Text(
-              'WORKSPACE',
-              style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.26,
-                color: AppColors.inkSecondary,
+          // Workspace rows (builder-ops). §3 edge case: for a leads-only tenant a
+          // plain rep qualifies for ZERO rows — never float the header over nothing.
+          if (showAvailability ||
+              showTeamLeads ||
+              showBookingDashboard ||
+              showAmendments ||
+              showReception ||
+              showOrganization)
+            const Padding(
+              padding: EdgeInsets.fromLTRB(0, 20, 0, 8),
+              child: Text(
+                'WORKSPACE',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.26,
+                  color: AppColors.inkSecondary,
+                ),
               ),
             ),
-          ),
-          _RowItem(
-            icon: Icons.grid_view_rounded,
-            title: 'Availability',
-            subtitle: 'Live unit grid · hold status',
-            onTap: () => context.push('/inventory'),
-          ),
+          // §3 — usage-gated (was the one ungated row): no role axis added, purely
+          // hidden until the tenant has a project to show a grid for.
+          if (showAvailability)
+            _RowItem(
+              icon: Icons.grid_view_rounded,
+              title: 'Availability',
+              subtitle: 'Live unit grid · hold status',
+              onTap: () => context.push('/inventory'),
+            ),
           // Story 12.6-mobile — team-scoped lead visibility (leader/head/partner).
           // Best-effort entry gate; get_team_leads scopes per tier server-side.
           if (showTeamLeads)
@@ -150,7 +174,8 @@ class YouScreen extends ConsumerWidget {
             ),
           // Story 15.5-mobile — booking dashboard (head/leader management view).
           // get_active_holds/get_booking_stats scope by visible_user_ids() server-side.
-          if (role == 'admin' || roleTier == 'team_leader')
+          // §3 — role gate untouched, usage gate layered on top.
+          if (showBookingDashboard)
             _RowItem(
               icon: Icons.event_available_rounded,
               title: 'Booking dashboard',
@@ -160,7 +185,9 @@ class YouScreen extends ConsumerWidget {
           // Story 16.2-mobile — execution-team amendment surface. Shown to a head
           // (who can self-join) OR to anyone already on the execution team (membership
           // read, since it's a table row not a JWT claim). RPCs re-check server-side.
-          if (role == 'admin' || isExecMember)
+          // §3b — amendments.unit_id is NOT NULL (0080): no unit, no amendment, so the
+          // usage gate applies here too.
+          if (showAmendments)
             _RowItem(
               icon: Icons.build_circle_outlined,
               title: 'Amendments',
@@ -169,7 +196,9 @@ class YouScreen extends ConsumerWidget {
             ),
           // Story 13.4-mobile — reception check-in (receptionist, or head).
           // Best-effort cosmetic gate; verify_visit re-checks the tier server-side.
-          if (roleTier == 'receptionist' || role == 'admin')
+          // Deliberately NOT usage-gated: verify_visit resolves a code to a lead —
+          // no unit/project involved; visit tracking is general funnel data (§3).
+          if (showReception)
             _RowItem(
               icon: Icons.how_to_reg_rounded,
               title: 'Reception check-in',
@@ -178,7 +207,7 @@ class YouScreen extends ConsumerWidget {
             ),
           // Story 12.4-mobile — builder-head only. `role == 'admin'` ≡ builder-head;
           // best-effort cosmetic gate (set_user_hierarchy re-checks server-side).
-          if (role == 'admin')
+          if (showOrganization)
             _RowItem(
               icon: Icons.account_tree_rounded,
               title: 'Organization',

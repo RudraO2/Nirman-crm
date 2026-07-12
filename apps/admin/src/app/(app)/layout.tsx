@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { Toaster } from '@/components/ui/sonner'
 import { GlobalSearch } from '@/components/global-search'
 import { AppSidebar } from '@/components/app-sidebar'
+import { InventorySignalProvider } from '@/components/inventory-signal'
 import { PausedRecharge } from '@/components/billing/paused-recharge'
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -19,7 +20,17 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // recharge screen instead of the app. This runs on the server, so it cannot be
   // removed client-side — and the data RPCs behind it fail-closed regardless.
   // Fail-open on a read error (network) — the server chokepoint is still the gate.
-  const { data: billing } = await supabase.rpc('get_my_billing_status')
+  // Progressive disclosure §1 — tenant_uses_inventory fetched alongside billing
+  // (independent; one wasted read on the rare paused-tenant render is cheaper than
+  // a serial round-trip on every navigation). Sidebar + tab strips consume it via
+  // context; router.refresh() after the first project insert re-runs this,
+  // unfolding the Inventory group. Fail-open on a read error (null → true):
+  // never hide earned navigation.
+  const [{ data: billing }, { data: invSignal }] = await Promise.all([
+    supabase.rpc('get_my_billing_status'),
+    supabase.rpc('tenant_uses_inventory'),
+  ])
+  const usesInventory = invSignal !== false
   const b = billing as {
     status?: string
     plan_name?: string | null
@@ -36,6 +47,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     (status === 'active' || status === 'trial') && days != null && days >= 0 && days <= 3
 
   return (
+    <InventorySignalProvider usesInventory={usesInventory}>
     <div className="flex min-h-full bg-ivory">
       <AppSidebar email={user.email} />
       <div className="flex min-w-0 flex-1 flex-col">
@@ -56,5 +68,6 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       </div>
       <Toaster position="bottom-right" />
     </div>
+    </InventorySignalProvider>
   )
 }

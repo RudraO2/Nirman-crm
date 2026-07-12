@@ -27,6 +27,10 @@ export interface NavGroup {
   tabs: NavTab[]
 }
 
+// Single source for the progressively-disclosed group's key — resolveNavGroups
+// and TabStrip's suppression must agree on it (no scattered 'inventory' literals).
+export const INVENTORY_GROUP_KEY = 'inventory'
+
 export const NAV_GROUPS: NavGroup[] = [
   {
     key: 'home',
@@ -79,7 +83,7 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    key: 'inventory',
+    key: INVENTORY_GROUP_KEY,
     label: 'Inventory',
     hint: 'units · holds · updates',
     icon: Building2,
@@ -106,6 +110,27 @@ export const NAV_GROUPS: NavGroup[] = [
     ],
   },
 ]
+
+// Progressive disclosure §2 — the Inventory slot's collapsed state, shown until
+// the tenant creates its first project (tenant_uses_inventory = false). Same key,
+// same icon, same slot position; zero tabs (Holds/Amendments/Updates don't exist
+// yet — not "exist and are empty"); routes to the existing Projects page. Same
+// `match` so a deep link into an inventory route still lights the slot.
+export const INVENTORY_SETUP_GROUP: NavGroup = {
+  key: INVENTORY_GROUP_KEY,
+  label: 'Set up inventory',
+  hint: 'add your first project',
+  icon: Building2,
+  href: '/projects',
+  match: ['/inventory', '/holds', '/amendments', '/developer-updates', '/projects'],
+  tabs: [],
+}
+
+/** NAV_GROUPS with the Inventory slot collapsed until the tenant uses inventory. */
+export function resolveNavGroups(usesInventory: boolean): NavGroup[] {
+  if (usesInventory) return NAV_GROUPS
+  return NAV_GROUPS.map((g) => (g.key === INVENTORY_GROUP_KEY ? INVENTORY_SETUP_GROUP : g))
+}
 
 /** A group is active when the current pathname is one of its routes (or a subroute). */
 export function groupIsActive(group: NavGroup, pathname: string): boolean {

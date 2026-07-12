@@ -1,9 +1,11 @@
 "use client"
 import { useCallback, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { GeneratedPasswordModal } from './generated-password-modal'
 
 interface InvitationRow {
   id: string
@@ -16,10 +18,17 @@ interface InvitationRow {
 }
 
 // Story 8.4 — link-based invites (no email yet; links travel over WhatsApp).
-// "Invite link" mints a single-use 7-day token via create_invitation; the raw
+// "Invite teammate" mints a single-use 7-day token via create_invitation; the raw
 // link is shown ONCE (only its hash is stored). Pending invites list + revoke.
+//
+// Progressive disclosure §4 — this is now the ONE entry point for adding a team
+// member. Link mode is the default; the old "New employee" manual form (admin sets
+// username, server mints a temp password via the create-employee edge fn) lives
+// behind a low-emphasis text link INSIDE this sheet — one door in, with a side room.
 export function InvitePanel() {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [manual, setManual] = useState(false)
   const [label, setLabel] = useState('')
   const [role, setRole] = useState<'employee' | 'admin'>('employee')
   const [loading, setLoading] = useState(false)
@@ -27,6 +36,9 @@ export function InvitePanel() {
   const [freshLink, setFreshLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [invites, setInvites] = useState<InvitationRow[]>([])
+  // Manual mode (fallback: invitee has no phone/data in hand right now)
+  const [username, setUsername] = useState('')
+  const [generatedPassword, setGeneratedPassword] = useState<string | null>(null)
 
   const loadInvites = useCallback(async () => {
     const supabase = createClient()
@@ -61,6 +73,25 @@ export function InvitePanel() {
     loadInvites()
   }
 
+  async function createEmployee(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+    const supabase = createClient()
+    const { data, error: fnError } = await supabase.functions.invoke('create-employee', {
+      body: { username: username.trim() },
+    })
+    setLoading(false)
+    if (fnError || !data?.data?.temp_password) {
+      setError(data?.error?.message ?? fnError?.message ?? 'Failed to create employee')
+      return
+    }
+    setGeneratedPassword(data.data.temp_password)
+    setUsername('')
+    setOpen(false)
+    router.refresh()
+  }
+
   async function revoke(id: string) {
     const supabase = createClient()
     const { error: rpcErr } = await supabase.rpc('revoke_invitation', { p_id: id })
@@ -78,20 +109,22 @@ export function InvitePanel() {
 
   return (
     <>
-      <Button variant="outline" onClick={() => { setOpen(true); setFreshLink(null); setError(null) }}>
-        Invite link
+      <Button onClick={() => { setOpen(true); setManual(false); setFreshLink(null); setError(null) }}>
+        Invite teammate
       </Button>
 
       {open && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-evergreen-3/40 backdrop-blur-sm">
           <div className="z-50 w-full max-w-md space-y-4 rounded-[16px] border border-line bg-paper p-6 shadow-[var(--shadow-lg)]">
-            <h2 className="font-serif text-lg font-medium">Invite an employee</h2>
+            <h2 className="font-serif text-lg font-medium">
+              {manual ? 'Create an account directly' : 'Invite a teammate'}
+            </h2>
 
             {freshLink ? (
               <div className="space-y-3">
                 <p className="text-sm text-ink-2">
-                  Share this link (WhatsApp works well). It creates <b>one</b> employee
-                  account and expires in 7 days. It won&apos;t be shown again.
+                  Share this link (WhatsApp works well). It creates <b>one</b> account
+                  and expires in 7 days. It won&apos;t be shown again.
                 </p>
                 <div className="flex gap-2">
                   <Input readOnly value={freshLink} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
@@ -101,6 +134,42 @@ export function InvitePanel() {
                   <Button variant="outline" type="button" onClick={() => setOpen(false)}>Done</Button>
                 </div>
               </div>
+            ) : manual ? (
+              <form onSubmit={createEmployee} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Username / Email</Label>
+                  <Input
+                    id="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="alice  (or  alice@nirman.com)"
+                    required
+                    minLength={3}
+                    pattern="[a-zA-Z0-9._+\-@]+"
+                    title="Letters, digits, dot, underscore, plus, hyphen, @"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Plain names auto-suffix with @employees.nirman.local for login.
+                    You&apos;ll get a temporary password to hand over.
+                  </p>
+                </div>
+                {error && <p className="text-destructive text-sm">{error}</p>}
+                <div className="flex gap-2">
+                  <Button type="submit" disabled={loading}>
+                    {loading ? 'Creating…' : 'Create employee'}
+                  </Button>
+                  <Button variant="outline" type="button" onClick={() => { setOpen(false); setError(null) }}>
+                    Cancel
+                  </Button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setManual(false); setError(null) }}
+                  className="text-xs text-ink-3 underline underline-offset-2 hover:text-ink"
+                >
+                  ← Back to invite link
+                </button>
+              </form>
             ) : (
               <form onSubmit={createInvite} className="space-y-4">
                 <div className="space-y-2">
@@ -150,10 +219,18 @@ export function InvitePanel() {
                   <Button type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create link'}</Button>
                   <Button variant="outline" type="button" onClick={() => { setOpen(false); setError(null) }}>Cancel</Button>
                 </div>
+                {/* §4 — manual creation stays as an opt-in side room, not a second door */}
+                <button
+                  type="button"
+                  onClick={() => { setManual(true); setError(null) }}
+                  className="text-xs text-ink-3 underline underline-offset-2 hover:text-ink"
+                >
+                  Prefer to set a password yourself? Create the account directly
+                </button>
               </form>
             )}
 
-            {pending.length > 0 && (
+            {!manual && pending.length > 0 && (
               <div className="border-t border-line pt-3">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-3">Pending invites</p>
                 <ul className="space-y-1.5">
@@ -187,6 +264,11 @@ export function InvitePanel() {
           </div>
         </div>
       )}
+
+      <GeneratedPasswordModal
+        password={generatedPassword}
+        onDismiss={() => setGeneratedPassword(null)}
+      />
     </>
   )
 }

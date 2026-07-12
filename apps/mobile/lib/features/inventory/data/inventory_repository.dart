@@ -157,6 +157,15 @@ class InventoryRepository {
     return UnitHold.fromRow(Map<String, dynamic>.from(list.first as Map));
   }
 
+  /// Progressive disclosure §1 — true once the tenant has EVER created a project
+  /// (0115, one-way server-truth marker). Drives the You-tab Availability /
+  /// Booking dashboard / Amendments usage gates. Errors propagate — the provider
+  /// decides the fallback policy.
+  Future<bool> tenantUsesInventory() async {
+    final result = await _supabase.rpc('tenant_uses_inventory');
+    return result as bool? ?? false;
+  }
+
   /// Story 15.4 — confirm a hold as a booking (hold→sold, lead→sold via the shipped
   /// status seam). [paymentVerified] carries the manager's attestation from the
   /// confirm dialog — never a literal, so the RPC receives the actual attested value.

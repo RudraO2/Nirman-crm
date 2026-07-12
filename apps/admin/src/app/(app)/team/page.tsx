@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server'
-import { NewEmployeeForm } from '@/components/auth/new-employee-form'
 import { InvitePanel } from '@/components/auth/invite-panel'
 import { EmployeeActions } from '@/components/auth/employee-actions'
 import { TabStrip } from '@/components/tab-strip'
@@ -33,10 +32,9 @@ export default async function TeamPage() {
             Team
           </h1>
         </div>
-        <div className="flex gap-2">
-          <InvitePanel />
-          <NewEmployeeForm />
-        </div>
+        {/* Progressive disclosure §4 — one primary entry point; the manual
+            "create account directly" form lives inside the invite sheet. */}
+        <InvitePanel />
       </div>
 
       <TabStrip />
@@ -76,7 +74,7 @@ export default async function TeamPage() {
             {(employees ?? []).length === 0 && (
               <TableRow>
                 <TableCell colSpan={4} className="text-center text-ink-3">
-                  No employees yet. Add one above.
+                  No employees yet. Invite your first teammate above.
                 </TableCell>
               </TableRow>
             )}
