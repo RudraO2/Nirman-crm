@@ -92,10 +92,29 @@ ThemeData _buildTheme() {
         color: AppColors.inkSecondary,
       ),
     ),
+    // Eyeball feedback A2 — the old navy/ivory default made the back arrow
+    // ivory-on-ivory on every screen that overrode the bar background to
+    // surfaceBase without also overriding iconTheme (Team leads, Availability,
+    // …). Every real screen uses this palette, so it IS the default now; no
+    // screen can forget the icon color again.
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.navy,
-      foregroundColor: AppColors.surfaceBase,
+      backgroundColor: AppColors.surfaceBase,
+      foregroundColor: AppColors.inkPrimary,
+      iconTheme: IconThemeData(color: AppColors.inkPrimary),
       elevation: 0,
+      scrolledUnderElevation: 0,
+      surfaceTintColor: Colors.transparent,
+    ),
+    // Eyeball feedback A3 — the mark-dead snackbar was WHITE (surfaceRaised)
+    // with Material's default light content text: white-on-white, and its
+    // Undo action barely read. One coherent theme-level spec — dark evergreen
+    // bar, ivory text, brass-bright action — so every snackbar is legible and
+    // no call site needs (or should set) its own colors.
+    snackBarTheme: const SnackBarThemeData(
+      backgroundColor: AppColors.evergreen,
+      contentTextStyle: TextStyle(color: Color(0xFFF2EEE2), fontSize: 14),
+      actionTextColor: AppColors.accentBright,
+      behavior: SnackBarBehavior.floating,
     ),
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: AppColors.accentStrong,

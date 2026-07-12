@@ -35,22 +35,32 @@ class AppShell extends ConsumerWidget {
           orElse: () => 0,
         );
 
-    return Scaffold(
-      backgroundColor: AppColors.surfaceBase,
-      body: Column(
-        children: [
-          if (warnBilling != null)
-            _ExpiryBanner(daysRemaining: warnBilling.daysRemaining),
-          Expanded(child: navigationShell),
-        ],
-      ),
-      bottomNavigationBar: _TabBar(
-        currentIndex: navigationShell.currentIndex,
-        planBadge: overdue,
-        onTap: (i) => navigationShell.goBranch(
-          i,
-          // Re-tapping the active tab pops to its initial location.
-          initialLocation: i == navigationShell.currentIndex,
+    // Eyeball feedback A5 — Leads is the app's home. Phone-back on Plan/You
+    // returns to Leads instead of exiting; back on Leads exits. Pushed
+    // subscreens sit above the shell on the root navigator, so their pops are
+    // handled before this PopScope is ever consulted.
+    return PopScope(
+      canPop: navigationShell.currentIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) navigationShell.goBranch(0);
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.surfaceBase,
+        body: Column(
+          children: [
+            if (warnBilling != null)
+              _ExpiryBanner(daysRemaining: warnBilling.daysRemaining),
+            Expanded(child: navigationShell),
+          ],
+        ),
+        bottomNavigationBar: _TabBar(
+          currentIndex: navigationShell.currentIndex,
+          planBadge: overdue,
+          onTap: (i) => navigationShell.goBranch(
+            i,
+            // Re-tapping the active tab pops to its initial location.
+            initialLocation: i == navigationShell.currentIndex,
+          ),
         ),
       ),
     );

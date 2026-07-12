@@ -8,8 +8,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/data/auth_repository.dart';
 import '../data/models/visit_result.dart';
 import '../data/reception_repository.dart';
 
@@ -48,6 +50,9 @@ class _VerifyVisitScreenState extends ConsumerState<VerifyVisitScreen> {
       final result =
           await ref.read(receptionRepositoryProvider).verifyVisit(entered);
       if (!mounted) return;
+      // A4 — the receptionist is at a desk with the customer watching: make
+      // success felt, not just printed.
+      HapticFeedback.mediumImpact();
       setState(() {
         _lastResult = result;
         _lastCode = entered;
@@ -71,6 +76,17 @@ class _VerifyVisitScreenState extends ConsumerState<VerifyVisitScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // B1 — for a receptionist this screen IS the app (router lands her here;
+    // the 3-tab shell is server-denied for her). She still needs the two You-tab
+    // basics, so they live in a small menu here. Other roles arrive from the
+    // You tab and keep using it; no menu for them.
+    final isReceptionist = ref
+            .read(authRepositoryProvider)
+            .currentSession
+            ?.user
+            .appMetadata['role_tier'] ==
+        'receptionist';
+
     return Scaffold(
       backgroundColor: AppColors.surfaceBase,
       appBar: AppBar(
@@ -87,10 +103,39 @@ class _VerifyVisitScreenState extends ConsumerState<VerifyVisitScreen> {
             color: AppColors.inkPrimary,
           ),
         ),
+        actions: [
+          if (isReceptionist)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded,
+                  color: AppColors.inkSecondary),
+              onSelected: (v) {
+                if (v == 'password') {
+                  context.push('/password-change?forced=false');
+                } else if (v == 'logout') {
+                  ref.read(authRepositoryProvider).signOut();
+                }
+              },
+              itemBuilder: (_) => const [
+                PopupMenuItem(
+                  value: 'password',
+                  child: Text('Change password'),
+                ),
+                PopupMenuItem(
+                  value: 'logout',
+                  child: Text('Log out'),
+                ),
+              ],
+            ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
+          // A4 — success panel at the TOP, unmissable at desk distance.
+          if (_lastResult != null) ...[
+            _VerifiedPanel(result: _lastResult!, code: _lastCode ?? ''),
+            const SizedBox(height: 20),
+          ],
           Text(
             'Enter the code the customer received when they registered. '
             'Verifying records their visit against the right lead.',
@@ -190,11 +235,6 @@ class _VerifyVisitScreenState extends ConsumerState<VerifyVisitScreen> {
             ),
           ),
 
-          // ── Last verified result ────────────────────────────────────
-          if (_lastResult != null) ...[
-            const SizedBox(height: 24),
-            _VerifiedCard(result: _lastResult!, code: _lastCode ?? ''),
-          ],
         ],
       ),
     );
@@ -212,51 +252,59 @@ class _UpperCaseFormatter extends TextInputFormatter {
   }
 }
 
-class _VerifiedCard extends StatelessWidget {
+/// A4 — big, desk-distance success panel. Replaces the old quiet row card:
+/// the receptionist (with the customer watching) must SEE that it worked.
+class _VerifiedPanel extends StatelessWidget {
   final VisitResult result;
   final String code;
-  const _VerifiedCard({required this.result, required this.code});
+  const _VerifiedPanel({required this.result, required this.code});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 26),
       decoration: BoxDecoration(
-        color: AppColors.statusFutureBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.evergreen.withValues(alpha: 0.35)),
+        color: AppColors.evergreen,
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
+      child: Column(
         children: [
           Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: AppColors.evergreen,
-              borderRadius: BorderRadius.circular(14),
+            width: 64,
+            height: 64,
+            decoration: const BoxDecoration(
+              color: AppColors.brassSoft,
+              shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.how_to_reg_rounded,
-                size: 22, color: AppColors.brassBright),
+            child: const Icon(Icons.check_rounded,
+                size: 40, color: Color(0xFF2E5240)),
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Visit recorded',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.inkPrimary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '$code · ${result.ordinalLabel}',
-                  style: TextStyle(fontSize: 13, color: AppColors.inkSecondary),
-                ),
-              ],
+          const SizedBox(height: 14),
+          Text(
+            'Visit verified',
+            style: GoogleFonts.fraunces(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFFF2EEE2),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '$code · ${result.ordinalLabel}',
+            style: GoogleFonts.firaCode(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.brassBright,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Ready for the next customer',
+            style: TextStyle(
+              fontSize: 12.5,
+              color: const Color(0xFFE9E4D6).withValues(alpha: 0.6),
             ),
           ),
         ],

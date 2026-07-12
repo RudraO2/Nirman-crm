@@ -135,11 +135,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 ref.invalidate(myMotivationStatsProvider);
                 if (!context.mounted) return true;
                 ScaffoldMessenger.of(context).showSnackBar(
+                  // A3: colors come from the theme's snackBarTheme (dark bar,
+                  // ivory text, brass action) — the old white-on-white local
+                  // overrides made this unreadable.
                   SnackBar(
                     content: const Text('Marked Dead.'),
                     action: SnackBarAction(
                       label: 'Undo',
-                      textColor: AppColors.accentStrong,
                       onPressed: () async {
                         await ref
                             .read(leadRepositoryProvider)
@@ -148,8 +150,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       },
                     ),
                     duration: const Duration(seconds: 5),
-                    backgroundColor: AppColors.surfaceRaised,
-                    behavior: SnackBarBehavior.floating,
                   ),
                 );
                 return true;

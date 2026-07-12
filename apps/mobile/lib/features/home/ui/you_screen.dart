@@ -245,7 +245,9 @@ class YouScreen extends ConsumerWidget {
             title: 'Change password',
             subtitle: 'Update your login credentials',
             // Query param survives OS route restoration; in-memory extra does not.
-            onTap: () => context.go('/password-change?forced=false'),
+            // push (not go): go replaced the whole stack, killing the back
+            // arrow and making phone-back exit the app (eyeball feedback A5).
+            onTap: () => context.push('/password-change?forced=false'),
           ),
           _RowItem(
             icon: Icons.logout_rounded,

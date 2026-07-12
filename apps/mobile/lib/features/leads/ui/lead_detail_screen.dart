@@ -272,7 +272,14 @@ class _LeadDetailView extends ConsumerWidget {
               ),
             ),
             // Share button: only for owned leads (not when caller is recipient)
-            if (!lead.isShared) ...[
+            // AND only when the caller has someone to share WITH (B2 —
+            // list_employees_for_share is tier/boundary-scoped since 0118; a
+            // solo-agency partner gets an empty list → no dead button).
+            if (!lead.isShared &&
+                ref.watch(employeesForShareProvider).maybeWhen(
+                      data: (e) => e.isNotEmpty,
+                      orElse: () => false,
+                    )) ...[
               const SizedBox(width: 8),
               Expanded(
                 child: _ActionButton(

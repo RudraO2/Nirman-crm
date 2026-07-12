@@ -81,11 +81,27 @@ final appRouter = GoRouter(
           session.user.appMetadata['must_change_password'] as bool? ?? false;
       final mustChange = flag == 'true' || metaFlag;
 
+      // Eyeball feedback B1 — receptionist is gate-not-own: the 3-tab shell is
+      // 2/3 dead for her (server denies all lead reads). Her home IS the
+      // check-in screen. Only an explicit 'receptionist' tier reroutes —
+      // absent tier (12.3 backfill not run) keeps today's shell, fail-safe.
+      final isReceptionist =
+          (session.user.appMetadata['role_tier'] as String?) == 'receptionist';
+
       // On login screen with valid session → route based on flag
-      if (isLoginRoute) return mustChange ? '/password-change' : '/home';
+      if (isLoginRoute) {
+        if (mustChange) return '/password-change';
+        return isReceptionist ? '/reception/verify' : '/home';
+      }
 
       // On any other screen: redirect to password-change if flag still set
       if (mustChange && !isPasswordChangeRoute) return '/password-change';
+
+      // Receptionist landing anywhere in the 3-tab shell → her real home.
+      if (isReceptionist &&
+          (path == '/home' || path == '/followups' || path == '/you')) {
+        return '/reception/verify';
+      }
 
       // Story 9.6 — tenant locked out (subscription lapsed): send every route to
       // the recharge screen. Password-change/alarm-ring stay reachable; /paused
