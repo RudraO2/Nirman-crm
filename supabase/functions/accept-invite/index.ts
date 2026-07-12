@@ -63,7 +63,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     .is("accepted_at", null)
     .is("revoked_at", null)
     .gt("expires_at", new Date().toISOString())
-    .select("id, tenant_id")
+    .select("id, tenant_id, invited_role")
     .maybeSingle();
   if (claimErr) {
     console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", event: "invite_claim_failed", error: claimErr.message }));
@@ -74,6 +74,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
   const inviteId = claimed.id as string;
   const tenantId = claimed.tenant_id as string;
+  // 0113: the role was fixed at mint time by an existing admin of the tenant.
+  const role = (claimed.invited_role as string | undefined) === "admin" ? "admin" : "employee";
 
   const unclaim = async () => {
     const { error } = await adminClient
@@ -101,7 +103,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     email: username,
     password: parsed.data.password,
     email_confirm: true,
-    app_metadata: { tenant_id: tenantId, role: "employee" },
+    app_metadata: { tenant_id: tenantId, role },
     ...(parsed.data.full_name ? { user_metadata: { full_name: parsed.data.full_name } } : {}),
   });
   if (authErr || !authData?.user) {
@@ -136,7 +138,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const { error: profileErr } = await adminClient.from("users").insert({
     id: authUserId,
     tenant_id: tenantId,
-    role: "employee",
+    role,
     email_or_username: username,
     bcrypt_password_hash: bcryptHash,
     must_change_password: false, // they just chose this password themselves
@@ -181,5 +183,5 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // NEVER log username or password
   }));
 
-  return successResponse({ user_id: authUserId, username }, 201);
+  return successResponse({ user_id: authUserId, username, role }, 201);
 });

@@ -13,6 +13,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState<string | null>(null)
+  const [doneRole, setDoneRole] = useState<string>('employee')
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -48,6 +49,7 @@ export function AcceptInviteForm({ token }: { token: string }) {
       return
     }
     setDone(response.data.data.username as string)
+    setDoneRole((response.data.data.role as string | undefined) ?? 'employee')
   }
 
   const fieldCls =
@@ -73,9 +75,15 @@ export function AcceptInviteForm({ token }: { token: string }) {
               You&apos;re in! 🎉
             </h1>
             <p className="mb-8 mt-2 text-[13.5px] text-[rgba(233,228,214,.55)]">
-              Your account is ready. Sign in on the <b>Nirman CRM mobile app</b> with
-              username <span className="font-mono text-brass-bright">{done}</span> and
-              the password you just set.
+              Your account is ready.{' '}
+              {doneRole === 'admin' ? (
+                <>Sign in to the <b>admin dashboard</b> (this site&apos;s login page) or the
+                mobile app with username{' '}</>
+              ) : (
+                <>Sign in on the <b>Nirman CRM mobile app</b> with username{' '}</>
+              )}
+              <span className="font-mono text-brass-bright">{done}</span> and the
+              password you just set.
             </p>
           </>
         ) : (

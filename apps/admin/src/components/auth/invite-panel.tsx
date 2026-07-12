@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 interface InvitationRow {
   id: string
   label: string
+  invited_role: string
   created_at: string
   expires_at: string
   revoked_at: string | null
@@ -20,6 +21,7 @@ interface InvitationRow {
 export function InvitePanel() {
   const [open, setOpen] = useState(false)
   const [label, setLabel] = useState('')
+  const [role, setRole] = useState<'employee' | 'admin'>('employee')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [freshLink, setFreshLink] = useState<string | null>(null)
@@ -30,7 +32,7 @@ export function InvitePanel() {
     const supabase = createClient()
     const { data } = await supabase
       .from('invitations')
-      .select('id, label, created_at, expires_at, revoked_at, accepted_at')
+      .select('id, label, invited_role, created_at, expires_at, revoked_at, accepted_at')
       .order('created_at', { ascending: false })
       .limit(20)
     setInvites((data ?? []) as InvitationRow[])
@@ -45,6 +47,7 @@ export function InvitePanel() {
     const supabase = createClient()
     const { data, error: rpcErr } = await supabase.rpc('create_invitation', {
       p_label: label.trim(),
+      p_role: role,
     })
     setLoading(false)
     if (rpcErr || !data?.token) {
@@ -54,6 +57,7 @@ export function InvitePanel() {
     setFreshLink(`${window.location.origin}/invite/${data.token}`)
     setCopied(false)
     setLabel('')
+    setRole('employee')
     loadInvites()
   }
 
@@ -114,6 +118,33 @@ export function InvitePanel() {
                     Just a note for your own list — they pick their own username and password.
                   </p>
                 </div>
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <div className="flex gap-2">
+                    {(['employee', 'admin'] as const).map((r) => (
+                      <button
+                        key={r}
+                        type="button"
+                        onClick={() => setRole(r)}
+                        aria-pressed={role === r}
+                        className={
+                          'rounded-full border px-3.5 py-1.5 text-sm capitalize transition-colors ' +
+                          (role === r
+                            ? 'border-evergreen bg-evergreen text-white'
+                            : 'border-line bg-paper text-ink-2 hover:text-ink')
+                        }
+                      >
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  {role === 'admin' && (
+                    <p className="text-xs text-muted-foreground">
+                      Admins get full access: this dashboard, team, billing status,
+                      inventory — same powers as you.
+                    </p>
+                  )}
+                </div>
                 {error && <p className="text-destructive text-sm">{error}</p>}
                 <div className="flex gap-2">
                   <Button type="submit" disabled={loading}>{loading ? 'Creating…' : 'Create link'}</Button>
@@ -128,7 +159,14 @@ export function InvitePanel() {
                 <ul className="space-y-1.5">
                   {pending.map((i) => (
                     <li key={i.id} className="flex items-center justify-between gap-2 text-sm">
-                      <span className="truncate">{i.label}</span>
+                      <span className="truncate">
+                        {i.label}
+                        {i.invited_role === 'admin' && (
+                          <span className="ml-1.5 rounded bg-evergreen/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-evergreen">
+                            admin
+                          </span>
+                        )}
+                      </span>
                       <span className="flex items-center gap-2">
                         <span className="whitespace-nowrap text-xs tabular-nums text-ink-3">
                           expires {new Date(i.expires_at).toLocaleDateString()}
