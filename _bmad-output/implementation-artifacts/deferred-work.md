@@ -9,14 +9,22 @@
 
 ## Deferred from: Story 5.2 — Per-Employee Performance Dashboard (2026-05-28)
 
-- **Custom date range picker on Performance page** — The date range filter UI implements
-  Today | Last 7 days | Last 30 days. The "Custom" option is deferred because it requires
-  a date-picker library (date-fns or similar — not yet installed in apps/admin).
-  `get_employee_performance_stats(p_days)` already accepts any integer, so the backend
-  supports arbitrary windows. The UI work is purely frontend.
-  **What's needed:** install `react-day-picker` or `date-fns` + add a custom range
-  button + date picker popover that computes p_days from (today - selected_start) and
-  navigates to `/performance?range=<p_days>` (or a custom param like `from`/`to`).
+- ~~**Custom date range picker on Performance page**~~ **CLOSED 2026-07-11 (Amelia).** Added
+  via the canonical shadcn `calendar` component (`npx shadcn add calendar`, pulling
+  `react-day-picker@^10` + `date-fns@^4` — the same pairing shadcn's own date-picker
+  examples use, not hand-rolled). Popover trigger sits as a 4th segment next to the
+  existing Today/7/30 pills; picking a date computes `p_days` via
+  `differenceInCalendarDays` and navigates to `/performance?range=<p_days>`, exactly as
+  specced. **Found + fixed a latent bug while wiring this in:** both `page.tsx` and
+  `performance-dashboard.tsx` parsed `range` with a closed `'1'|'7'|else-30` ternary —
+  meaning the backend's "accepts any integer" was actually unreachable; any custom value
+  silently collapsed to 30 days everywhere. Replaced with real integer parsing (`Number`
+  + `Number.isInteger`) in both places, capped at 730 days each direction (URL param and
+  the calendar's own `disabled` bounds) so neither a hand-edited URL nor an old date-pick
+  produces a pathological window. `isCustom` is now derived from the validated `p_days`,
+  not the raw string, so malformed input (`range=0`, `range=01`) can't disagree with what's
+  displayed. tsc/build/lint clean (lint = same pre-existing 14-problem baseline, none new
+  — verified via stash A/B). Not committed — left for review per Rudra.
 
 - ~~**D1 (ux): No loading skeleton on range-filter navigation**~~ **CLOSED 2026-07-11 (Amelia).**
   Added `apps/admin/src/app/(app)/performance/loading.tsx` (header + range chips + stat cards + table
@@ -50,7 +58,7 @@
 
 ## Deferred from: Story 6.1 — Excel Bulk Import (2026-05-28)
 
-- **D-6.1-1 (ux): No "Back" navigation in import wizard** — `import-wizard.tsx` is forward-only. Once on Preview or Assign, user cannot return to Map without restarting the file upload. Fix: add Back button to each step; restore prior state on back navigation (mappings, preview result).
+- ~~**D-6.1-1 (ux): No "Back" navigation in import wizard**~~ **CLOSED 2026-07-11 (Amelia).** Added a Back button to Map/Preview/Assign (`import-wizard.tsx`) — pure `setStep()`, no state ever cleared on the way back (mappings/preview/selection all persist), matching the file's existing convention where only `reset()` clears state. 3-lens adversarial review (2 subagents completed; a 3rd hit a session usage cap mid-run, so the acceptance-criteria audit was done inline instead) surfaced two real regressions the Back button newly opened, both fixed: the phone-hash dupe-check effect could resolve out of order if a user bounced back into Preview before an earlier check finished (added an ignore-flag cleanup, standard pattern); Back-to-Upload didn't clear the file input, so re-picking an identical filename silently no-op'd (now cleared, matching `reset()`). tsc/build/lint clean (lint = same pre-existing 14-problem baseline, none new — verified via stash A/B). Not committed — left for review per Rudra.
 
 - ~~**D-6.1-2 (security): xlsx@0.18.5 has known vulnerabilities**~~ **ALREADY DONE (Story 8.7) — verified
   2026-07-11 (Amelia).** `xlsx` is removed from `apps/admin` (not in package.json); the import path uses

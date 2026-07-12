@@ -10,23 +10,33 @@ Repo: `nirman-crm/` (github.com/RudraO2/Nirman-crm, branch `main`). Supabase pro
 
 Definition of done (from §Ops): "demo → `/provision` → hand builder login → collect UPI/cash → record payment in console." Ordered by blocking severity:
 
+🚨 **Read `robustness-audit-2026-07-11.md` (this folder) before touching this list.** A full
+multi-agent read-only audit 2026-07-11 found 4 CRITICAL bugs not previously tracked anywhere in
+this doc, incl. one that will silently break login for every tenant provisioned after V1
+(`supabase/functions/login/index.ts` hard-codes a seed tenant UUID) — i.e. **the first paying
+builder provisioned via `/provision` will not be able to log in** until this is fixed. Also 3
+tenant-wide RLS/GRANT gaps on `leads`/`units`/`unit_holds`/`amendments` letting any authenticated
+tenant employee bypass the entire ownership/hold/booking model via direct REST calls. None of
+these are fixed yet — audit findings only, nothing in this doc's "DONE" items below should be
+read as covering them (see correction on row 10).
+
 | # | Item | Status | Blocks |
 |---|---|---|---|
 | 1 | Ops console Step 5 — verify login/tenant-list/provision/payment loop on the **live Vercel URL** (not just local) | ❌ NOT DONE — only login page load confirmed 2026-07-10 | Selling at all — unverified prod ops flow |
-| 2 | Record the ops console's live `*.vercel.app` URL | ❌ NOT DONE — never pasted into this doc | Rudra can't reach his own tool from a new machine |
+| 2 | Record the ops console's live `*.vercel.app` URL | ❌ NOT DONE — never pasted into this doc; re-confirmed 2026-07-11 that it's genuinely unrecoverable from the repo (no `.vercel/`, no `vercel.json`, no CI config, no URL in any commit message) | Rudra can't reach his own tool from a new machine |
 | 3 | Push migrations `0093` **+ `0094` + `0095`** to prod (`supabase db push --linked`, one push) | ✅ **DONE 2026-07-11** — all three applied in one `db push`, prod head now `0095`, `supabase migration list` confirms local=remote through 0095 | — |
 | 4 | Real pricing numbers (model is locked, ₹ figures deferred) | ❌ NOT DONE | Can't quote a builder |
-| 5 | Real testimonials (marketing site still has fake Luminous names — Maya Okonkwo etc) | ❌ NOT DONE | Credibility on first sales call |
+| 5 | Real testimonials (marketing site still has fake Luminous names — Maya Okonkwo etc) | ❌ NOT DONE — re-confirmed 2026-07-11, `apps/marketing/src/components/luminous/testimonials.tsx` still has "Maya Okonkwo"/"Daniel Rivera"/"Priya Anand", generic agency quotes, stock Unsplash photos | Credibility on first sales call |
 | 6 | Point GoDaddy domain at `apps/marketing` | ❌ NOT DONE — marketing deploy status itself unconfirmed | No professional URL to send a lead to |
-| 7 | Confirm `apps/marketing` is actually deployed (build was local-verified only) | ❌ UNCONFIRMED | Same as #6 |
-| 8 | Vercel env check — no service-role key under `NEXT_PUBLIC_*` (Rudra-only, can't be checked from code) | ❌ NOT CONFIRMED | PII leak risk before wide sale |
-| 9 | Real operator support number (placeholder `910000000000` in `operator_contact.dart`/`operator-contact.ts`) | ❌ NOT DONE | Recharge/lockout screen shows fake number to a real lapsed customer |
-| 10 | Full `SECURITY DEFINER` sweep (~60 DB fns) | ✅ **DONE 2026-07-11 (Amelia)** — full prod-catalog sweep, **NO live vuln**: search_path pinned on every definer fn; cron batch fns service_role-only; `create_lead_with_pii` self-guards. Only least-priv dead-grant cleanup → **migration `0094`** (revoke PUBLIC/anon on `create_lead_with_pii` + 5 helpers/triggers, revoke authenticated on internal helpers). Applied + verified LOCAL Docker (denial + no-regression via sim-JWT). **Prod push bundled with `0093` (#3).** | Security cert before scaling past founder-led trust |
+| 7 | Confirm `apps/marketing` is actually deployed (build was local-verified only) | ❌ UNCONFIRMED — re-checked 2026-07-11, no `.vercel/`/CI/deploy-script evidence in-repo either way; genuinely needs Rudra or Vercel-dashboard access, not resolvable from code | Same as #6 |
+| 8 | Vercel env check — no service-role key under `NEXT_PUBLIC_*` (Rudra-only, can't be checked from code) | ⚠️ PARTIALLY CONFIRMED 2026-07-11 — static grep across apps/admin, apps/ops, apps/marketing source + all committed `.env*` files finds zero `SERVICE_ROLE` references anywhere, and zero `NEXT_PUBLIC_`-prefixed secrets. Codebase itself is clean. Still cannot confirm what's actually *set* on Vercel's dashboard (needs Rudra/Vercel access) | PII leak risk before wide sale |
+| 9 | Real operator support number (placeholder `910000000000` in `operator_contact.dart`/`operator-contact.ts`) | ❌ NOT DONE — re-confirmed 2026-07-11, still the literal placeholder in both files | Recharge/lockout screen shows fake number to a real lapsed customer |
+| 10 | Full `SECURITY DEFINER` sweep (~60 DB fns) | ⚠️ **PARTIAL — scope correction 2026-07-11.** The 2026-07-11 sweep (migration `0094`) covered function-level search_path pinning + EXECUTE grants only and found no vuln in that scope. It did **not** cover table-level RLS/GRANT (the robustness audit's CRITICAL findings — `leads`/`units`/`unit_holds`/`amendments` all grant full INSERT/UPDATE/DELETE to `authenticated` with only tenant-scoped RLS, no ownership/role check) — those are real, unfixed, and outside 0094's scope. See `robustness-audit-2026-07-11.md`. | Security cert before scaling past founder-led trust — **not yet earned** |
 
 **Not blocking money (can ship after first sale):** 9.7 ops MFA/hardening (**MFA/TOTP login core now
 BUILT — local/uncommitted; needs prod-dashboard MFA enabled BEFORE deploy or founder lockout — see §"next
 handles" 9.7**), Razorpay (deferred — not required per Rudra 2026-07-11), full mobile builder-ops UI polish
-(functionally done, see below — just uncommitted + un-look-passed).
+(functionally done AND committed, see below — real remaining gap is a stale release APK, not the commit).
 
 ---
 
@@ -39,7 +49,7 @@ handles" 9.7**), Razorpay (deferred — not required per Rudra 2026-07-11), full
 | **Marketing/landing** | `apps/marketing` | Next.js (Luminous template → branded) | **Built** (hero/pricing/footer; testimonials placeholder). Deploy status unconfirmed |
 | **Landing demo** | `/demo` route in marketing | React shell iframing ui-redesign HTML | **Built** |
 | **Ops console (founder cockpit)** | `apps/ops` | Next 16 + shadcn + Tailwind v4 | Code + migrations `0090/0091` **on prod DB + Vercel-deployed** (2026-07-10). **Login-only verified live — full loop (tenant list/provision/payment) on the live URL NOT yet verified** (see §Ops Step 5, §Money Path #1). Live URL itself unrecorded (§Money Path #2) |
-| **Backend / DB** | `supabase/migrations` + `supabase/functions` | Postgres RLS + edge fns (Deno) | **Prod head = migration `0095`** (0093/0094/0095 pushed 2026-07-11) |
+| **Backend / DB** | `supabase/migrations` + `supabase/functions` | Postgres RLS + edge fns (Deno) | **Prod head = migration `0096`** (0093/0094/0095/0096 pushed 2026-07-11) |
 
 ---
 
@@ -57,13 +67,25 @@ handles" 9.7**), Razorpay (deferred — not required per Rudra 2026-07-11), full
   `0095` = `get_my_projects()` (per-tier project list; closes the 14.3-mobile partner project-picker
   deferred item), verified per-tier via sim-JWT (head/super_admin see all, partner sees agency-shared
   only) prior to push. All three were already live-verified on local Docker before the prod push.
-- **Mobile deferred closures 2026-07-11 (Amelia, LOCAL/uncommitted, pending look-pass):** (1) partner
+- **Mobile deferred closures 2026-07-11 (Amelia).** ✅ **CORRECTED 2026-07-11 (later same day, Amelia)
+  — this whole block was stale: everything below IS committed to `main`** (commit `704e692`,
+  confirmed via fresh `git log`/`git status` — zero uncommitted files under `apps/mobile`), and the
+  "still deferred" agent-filter item below is also closed. (1) partner
   project-picker — `lead_repository.fetchProjects()` swapped to `get_my_projects` (0095); scopes
   leads/inventory/booking pickers. (2) hold lead-picker widened from own-leads to team scope —
   `hold_lead_picker_sheet.dart` now uses the pre-existing `get_team_leads` (0060) via `teamLeadsProvider`
-  + owner labels; NO backend change. Suite **265/265**, analyze 0 errors, +2 widget tests. Still deferred:
-  booking dashboard agent-level filter (15.5 — needs a roster picker; project filter satisfies its AC). Sequence recap: 0056 tenant-status chokepoint · 0057–0086 builder-ops + unit CRUD · 0087 cron-secret auth (8.3) · 0088 prepaid billing seam (9.1) · 0089 ops-console backend (9.2) · 0090 ops_list_plans (9.4) + 0091 provision_tenant (9.5) · **0092 hard_tenant_cutoff (9.6) — DONE on prod: guarded `get_my_leads` on tenant status (closes the last un-gated employee read) + relaxed `get_my_billing_status` to any tenant member. Verified: `get_my_leads` has_guard+calls_chokepoint, billing admin-gate removed, live tenant still `active` (guard is a no-op for active/trial).**
-  - ⚠️ `platform_admins` is **empty on prod (0 rows)** — until one row (your `auth.uid()`) is inserted, NOBODY can log into the ops console. This is the next unlock. See §Ops "Deploy checkpoint".
+  + owner labels; NO backend change. (3) booking dashboard agent-level filter (15.5) — **also closed**,
+  migration `0096` (`get_booking_stats` gains `p_agent_id`), agent chips + client-side filter. Current
+  suite (re-verified fresh 2026-07-11): **268/268 passing, 0 failures**; `flutter analyze`: **0 errors**
+  (6 pre-existing warnings + 291 style/info items — "0 issues" was never literally true, only "0 errors").
+  Sequence recap: 0056 tenant-status chokepoint · 0057–0086 builder-ops + unit CRUD · 0087 cron-secret auth (8.3) · 0088 prepaid billing seam (9.1) · 0089 ops-console backend (9.2) · 0090 ops_list_plans (9.4) + 0091 provision_tenant (9.5) · **0092 hard_tenant_cutoff (9.6) — DONE on prod: guarded `get_my_leads` on tenant status (closes the last un-gated employee read) + relaxed `get_my_billing_status` to any tenant member. Verified: `get_my_leads` has_guard+calls_chokepoint, billing admin-gate removed, live tenant still `active` (guard is a no-op for active/trial).**
+  - ✅ `platform_admins` seeding: this line previously warned "empty on prod (0 rows)" — that was stale
+    against this same doc's own §Ops "Deploy checkpoint" Step 3, which is dated 2026-07-10 and says
+    `admins=1` verified (uid `9a9dc0ba-cf77-4806-ae66-0c6c81fb5618`, note "founder Rudra"). Trust Step 3:
+    seeded, not empty. **Real remaining gap: no release APK reflects any of this.**
+    `apps/mobile/build/app/outputs/apk/release/app-release.apk` is dated 2026-07-08 — three days before
+    commits `dbe2ee6`/`2921d5a`/`704e692`/`c0f2d84`. `pubspec.yaml` is still `version: 1.0.0+1`, never
+    bumped. Need a fresh release build + version bump before this is installable anywhere as "current."
 - **Billing/lifecycle model (Epic 9, LOCKED):** per-project monthly **prepaid**. Access gated purely on `tenants.status` via `auth_tenant_id()` (0056). Money is collected **out-of-band** (UPI/cash); the app only *records* it. Razorpay is later.
 - **The ops RPC surface (0089 + 0090/0091), all `is_platform_admin()`-guarded, audit-logged, RLS-native (NO service-role key in any client):**
   - `ops_list_tenants()` · `ops_list_tenant_payments(tenant)` · `ops_list_audit(limit,offset)` · `ops_list_plans()` (0090)
@@ -105,7 +127,7 @@ Goal: ops console live on the web so Rudra can provision paying builders from an
 - [x] **Step 4 — Deploy apps/ops to Vercel.** DONE 2026-07-10. Separate Vercel project, **same repo** `RudraO2/Nirman-crm`, **Root Directory = `apps/ops`** (npm-workspaces monorepo, single root lockfile; same per-app pattern as admin/marketing). Env (Production): `NEXT_PUBLIC_SUPABASE_URL=https://vhgruadourflpxuzuxfn.supabase.co` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=<prod anon public>` (NO service-role). Ops console is on the **free `*.vercel.app`** URL by design (founder-only cockpit, no custom domain — GoDaddy domain reserved for customer-facing marketing/admin). Live URL: **<TODO: paste vercel.app URL>**. Prior "internal server error" was env-var related; resolved.
 - [ ] **Step 5 — Verify end-to-end on prod URL:** login gate (Rudra's account passes `is_platform_admin`), tenant list loads, provision a test builder, confirm that new builder-admin signs into the mobile/admin app + record a payment. **Login page loads (2026-07-10); full flow verify pending.**
 
-**Tooling note (2026-07-10):** Vercel hosted MCP (`https://mcp.vercel.com`) added to Claude Code **user scope** (`~/.claude.json`). Needs one-time OAuth (`/mcp` → vercel → authenticate) + a session restart to load tools. Once active, an agent can read Vercel build/runtime logs directly instead of guessing.
+**Tooling note (2026-07-10):** Vercel hosted MCP (`https://mcp.vercel.com`) added to Claude Code **user scope** (`~/.claude.json`). Needs one-time OAuth (`/mcp` → vercel → authenticate) + a session restart to load tools. Once active, an agent can read Vercel build/runtime logs directly instead of guessing. **Still not authenticated as of 2026-07-11** — re-checked this session, only the auth-flow tools are exposed, no project/deployment tools yet.
 
 After Step 5: fully sellable — demo → `/provision` → hand builder their login → collect UPI/cash → record payment in console.
 
@@ -136,7 +158,7 @@ colour-coded grid → tap unit → hold for a lead (amber + live countdown) → 
   in `features/home/ui/you_screen.dart`. `fake_async` added to dev_dependencies.
 - **Gates:** `flutter analyze` 0 errors · full suite **175/175** (32 inventory tests) · guards verified
   LIVE on local Docker via simulated-JWT (margin scoping, hold race/receptionist denial, confirm
-  sold/payment/forbidden). **No backend touched. Not committed** (commit when you decide).
+  sold/payment/forbidden). **No backend touched.** ✅ Committed 2026-07-11 via `dbe2ee6` (was stale here — verified via `git log`/`git status`, zero uncommitted files under `apps/mobile`).
 
 ### 🔑 Demo seed (LOCAL ONLY — gitignored via `*.local.sql`)
 `nirman-crm/supabase/demo-builder-ops.local.sql` seeds role-tiered **loginable** users in tenant
@@ -205,14 +227,21 @@ Stories `12-4-mobile-hierarchy` + `12-6-mobile-team-sandbox` (both `done`). No b
 **Slice 3 gates:** `flutter analyze` 0 errors · full suite **243/243** (was 204 after Slice 2: +10
 reception, +11 booking, +18 amendments) · all guards verified live on local Docker (simulated JWT). No
 backend touched. Local-only seeds `demo-booking-holds.local.sql` + `demo-amendments.local.sql`
-(gitignored). **Not committed** (commit after Rudra's on-device look-pass, per Slice 1–2 posture).
+(gitignored). ✅ Committed 2026-07-11 via `dbe2ee6` (was stale here — same correction as Slice 1 above).
+Current suite (re-verified fresh 2026-07-11, after later same-day commits too): **268/268**, analyze 0
+errors (+291 pre-existing style/info items, +6 pre-existing warnings — unrelated to this diff).
 
 ## BMAD story records (source of truth = `_bmad-output/implementation-artifacts/sprint-status.yaml`)
 
 - `9-1-prepaid-access-gating-seam` — **done, prod** (0088).
 - `9-2-ops-console-backend` — **done, prod** (0089).
-- `9-4-ops-console-web-ui` — **review**, local only. Story file: `9-4-ops-console-web-ui.md`.
-- `9-5-provision-builder` — **review**, local only. Story file: `9-5-provision-builder.md`.
+- `9-4-ops-console-web-ui` — **review**, ✅ committed+pushed `ad0bbe4` (2026-07-10) — "local only" here was stale, matches §Ops Deploy checkpoint Step 1. Story file: `9-4-ops-console-web-ui.md`.
+- `9-5-provision-builder` — **review**, ✅ committed+pushed `ad0bbe4` (2026-07-10), same correction. Story file: `9-5-provision-builder.md`.
+- The 9.7 MFA/step-up bundle (`mfa-step.tsx`, `lib/step-up.ts`, `(app)/layout.tsx`, `(auth)/login/page.tsx`
+  changes, local `config.toml` MFA enable) is the one genuinely still-uncommitted piece here — confirmed
+  via fresh `git status` 2026-07-11. Held deliberately, ships when Rudra says go. Files read fresh
+  2026-07-11 and confirmed complete (proper TOTP enroll/challenge flow, error/loading states, server-side
+  AAL2 gate as sole authority) — not a half-written stub.
 - Design docs: `9-ops-console-design.md` (§10 UX direction), `9-2-ops-console-backend.md`.
 - The two `_bmad-output/` copies (workspace root + `nirman-crm/_bmad-output/`) are synced as of this snapshot.
 
@@ -221,9 +250,12 @@ backend touched. Local-only seeds `demo-booking-holds.local.sql` + `demo-amendme
 ## Next handles (NOT built — names to hand Amelia later)
 
 Ask by story key so a fresh chat has context:
-- ~~9.6 tenant-side recharge/lockout screen~~ — **BUILT 2026-07-10 (status `review`, commit `933f647`).** Mobile `features/billing` (repo+provider+`PausedScreen`) gated at `AppShell`; admin web server-layout billing gate + `PausedRecharge`. Server-enforced (0056), UI display-only + fail-open. 10/10 mobile tests, analyze clean, admin tsc+next build green. NO migration. **Left:** device/browser look-pass, live authed AC#1 run on local stack, set real `OperatorContact` support number, then code-review. Story: `9-6-tenant-side-recharge-lockout.md`.
-- ~~Commit + deploy the ops console~~ — **Steps 1–4 DONE (see §Ops "Deploy checkpoint"): code pushed ✓, 0090/0091 on prod ✓, platform_admins seeded ✓, Vercel live ✓.** Left = Step 5 (verify login + provision loop on the live URL). Record the vercel.app URL in §Ops (still a TODO).
-- ~~Mobile builder-ops UI~~ — **Slices 1–3 functionally COMPLETE 2026-07-11** (see §"Mobile builder-ops UI" below: inventory, hierarchy/team, reception, booking dashboard, amendments — 243/243 tests, analyze 0, guards verified live on local Docker). **Left:** on-device look-pass, then commit to git. Migrations 0093/0094/0095 already pushed to prod 2026-07-11 (§Money Path #3).
+- ~~9.6 tenant-side recharge/lockout screen~~ — **BUILT 2026-07-10 (status `review`, commit `933f647`).** Mobile `features/billing` (repo+provider+`PausedScreen`) gated at `AppShell`; admin web server-layout billing gate + `PausedRecharge`. Server-enforced (0056), UI display-only + fail-open. 10/10 mobile tests, analyze clean, admin tsc+next build green. NO migration. **Left:** device/browser look-pass, live authed AC#1 run on local stack, set real `OperatorContact` support number (still `910000000000` as of 2026-07-11), then code-review. Story: `9-6-tenant-side-recharge-lockout.md`.
+- ~~Commit + deploy the ops console~~ — **Steps 1–4 DONE (see §Ops "Deploy checkpoint"): code pushed ✓, 0090/0091 on prod ✓, platform_admins seeded ✓, Vercel live ✓.** Left = Step 5 (verify login + provision loop on the live URL). Record the vercel.app URL in §Ops (still a TODO, confirmed genuinely unrecorded 2026-07-11).
+- ~~Mobile builder-ops UI~~ — **Slices 1–3 functionally COMPLETE 2026-07-11, committed (`dbe2ee6` +
+  follow-ups), 268/268 tests.** Migrations 0093/0094/0095/0096 all pushed to prod. **Left:** on-device
+  look-pass (esp. Story 10.4's OEM auto-start/kill-warning, unverified on real Xiaomi/Oppo/Vivo per its
+  own completion notes) + a fresh release build (current APK predates all of this — see §Backend state).
 - **9.7 ops hardening** — ✅ **MFA/TOTP on login DONE 2026-07-11 (Amelia), LOCAL/uncommitted.** TOTP is now
   mandatory for the ops console: login page branches after the password + `is_platform_admin` gate into a
   TOTP step (`apps/ops/src/components/mfa-step.tsx` — enroll w/ QR+secret first time, else challenge), and
@@ -246,3 +278,20 @@ Ask by story key so a fresh chat has context:
   sweep already done separately (0094).
 - **Razorpay** — bolts onto `renew_tenant()` (zero rework by design); the mobile "recharge" screen.
 - **Landing polish** — real testimonials, real pricing numbers, confirm marketing deploy + point domain at it. See §Money Path #4–7.
+
+## Open backend deferred items (re-verified against actual latest migration SQL, 2026-07-11 — none stale)
+
+- **F-2 date-filter off-by-one** — `get_funnel_stats` (latest def: migration `0069`) and
+  `get_employee_performance_stats` (latest def: `0054`) both still let `p_days=1` span 2 calendar days
+  (unbounded-above date filter / `followup_window` CTE respectively). Confirmed still present, not
+  fixed by any later migration.
+- **`ERRCODE='42501'` missing** on `permission_denied` in all 6 named functions (`get_builder_home_metrics`,
+  `get_employee_activity_stats`, `get_employee_performance_stats`, `get_funnel_stats`,
+  `get_lead_status_distribution`, `get_pipeline_activity_14d`) — confirmed still bare `RAISE EXCEPTION`
+  with no ERRCODE in their latest definitions (0054/0069).
+- **"Active lead" status filter, 3 different formulations** across `get_employee_active_lead_count`,
+  `get_employee_active_lead_counts`, `get_employee_performance_stats` — confirmed still inconsistent as
+  of migration `0054`.
+- **Story 10.4 (alarm OEM hardening) missing from this doc + `deferred-work.md`** — confirmed still absent
+  from both as of 2026-07-11 (only lives in `sprint-status.yaml`, status `review`). Its own file's status
+  lives as plain body text `Status: review`, not YAML frontmatter.
