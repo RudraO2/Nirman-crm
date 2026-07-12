@@ -403,6 +403,10 @@ verify_jwt = false
 verify_jwt = false
 [functions.streak-at-risk]
 verify_jwt = false
+# Story 8.4 — the invitee has no session yet; the single-use invite token is the
+# in-function credential (sha256-matched, atomically claimed).
+[functions.accept-invite]
+verify_jwt = false
 
 [analytics]
 enabled = true

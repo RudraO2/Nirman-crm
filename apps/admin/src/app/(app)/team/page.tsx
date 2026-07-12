@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NewEmployeeForm } from '@/components/auth/new-employee-form'
+import { InvitePanel } from '@/components/auth/invite-panel'
 import { EmployeeActions } from '@/components/auth/employee-actions'
 import { TabStrip } from '@/components/tab-strip'
 import {
@@ -32,7 +33,10 @@ export default async function TeamPage() {
             Team
           </h1>
         </div>
-        <NewEmployeeForm />
+        <div className="flex gap-2">
+          <InvitePanel />
+          <NewEmployeeForm />
+        </div>
       </div>
 
       <TabStrip />

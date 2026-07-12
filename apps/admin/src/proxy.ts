@@ -38,7 +38,10 @@ async function handle(request: NextRequest) {
 
   const isAuthRoute =
     request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/auth')
+    request.nextUrl.pathname.startsWith('/auth') ||
+    // Story 8.4 — invite acceptance is PUBLIC by design: the invitee has no
+    // session yet; the single-use token in the URL is the credential.
+    request.nextUrl.pathname.startsWith('/invite')
 
   // Redirect unauthenticated users to login
   if (!user && !isAuthRoute) {
