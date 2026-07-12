@@ -103,6 +103,10 @@ export function ConfirmModal({
               id="confirm-name"
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
+              // Typing, not pasting, is the friction that makes this rail work
+              // (audit medium: copy-pasting the name shown above defeated it).
+              onPaste={(e) => e.preventDefault()}
+              onDrop={(e) => e.preventDefault()}
               autoComplete="off"
               placeholder={tenantName}
               aria-invalid={typed.length > 0 && !matches}
