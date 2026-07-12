@@ -41,6 +41,22 @@ Warm ivory ground, near-black green ink, evergreen for committed actions.
 - Success moments: evergreen panel + brassSoft check circle (verify-visit
   pattern) — reuse, don't invent new celebration idioms.
 
+## Composition rules (learned from Rudra's eyeball rounds, 2026-07-13)
+- **One dark anchor per tab.** Each mobile tab gets exactly ONE evergreen
+  element that carries its identity: Leads = the work queue, You = the
+  profile card, reception = the verified panel. Never two dark blocks on
+  one screen; never zero if the tab has a natural anchor.
+- **One-signal lead cards.** Name + status pill, one grey meta line, at most
+  ONE flag in ONE color. Red = overdue only; amber = needs action; grey =
+  context. The most actionable thing wins; never stack colored flags.
+- **Queues are rows, not tiles.** Tappable counts render as full-width rows
+  (icon · full label · count pill · chevron), only when non-zero. No boxed
+  stat grids that truncate their own labels.
+- **Context is text.** Dates, scores, streaks = one quiet uncontained line,
+  not a decorated band.
+- **Insights are visual.** Boss-facing numbers = charts/bands (momentum
+  bars, stacked status band), not repeated stat boxes.
+
 ## Bans (project-specific, on top of impeccable's)
 - No serif/display fonts anywhere in app UI.
 - No confetti/gamification beyond the existing Sold celebration seam.
