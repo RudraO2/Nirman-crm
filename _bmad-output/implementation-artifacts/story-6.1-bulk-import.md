@@ -1,7 +1,7 @@
 # Story 6.1 — Excel Bulk Import with Column Synonym Matching and Distribution
 
 **Epic:** 6 — Bulk Data Operations  
-**Status:** in_progress  
+**Status:** done  <!-- 2026-07-12 (audit M): was stale "in_progress" — shipped long ago per git + sprint-status.yaml (epic-6: done) -->  
 **Stack:** apps/admin (Next.js) + Supabase migration 0052
 
 ## Acceptance Criteria

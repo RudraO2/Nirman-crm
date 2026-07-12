@@ -1,6 +1,6 @@
 # Story 9.4: Platform Ops Console — web UI (founder billing/lifecycle cockpit)
 
-Status: review  <!-- Ralph-loop: written -> coded -> 3-lens review -> fixed. tsc + next build clean; full read/mutation/auth path verified through the local API gateway. FREE/LOCAL only — NOT committed to git, NOT pushed to prod. -->
+Status: review  <!-- 2026-07-12 (audit M): status text refreshed — committed+pushed to git main (ad0bbe4) 2026-07-10; migrations 0090/0091 ON PROD. Remaining: seed platform_admins row + Vercel deploy (Rudra). Earlier note "FREE/LOCAL only — NOT committed" is obsolete. -->
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 

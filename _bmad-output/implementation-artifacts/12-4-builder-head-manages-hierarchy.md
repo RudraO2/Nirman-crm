@@ -1,6 +1,6 @@
 # Story 12.4: builder head manages the reporting hierarchy
 
-Status: review  (migration 0059 + manage-employee block written + self-reviewed; web UI deferred; live apply deferred)
+Status: review  (migration 0059 + manage-employee block written + self-reviewed; web UI deferred. 2026-07-12 audit note: "live apply deferred" was stale — 0059 has been ON PROD since 2026-07-07; mobile UI slice committed dbe2ee6)
 
 ## Story
 
