@@ -55,8 +55,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-8 py-2.5 text-sm text-amber-800">
             <span aria-hidden="true">⚠️</span>
             <span>
-              आपका subscription <strong>{days} din</strong> में समाप्त हो रहा है — कृपया recharge करें।
-              <span className="ml-1 text-amber-700/80">(Subscription ends in {days} day{days === 1 ? '' : 's'}.)</span>
+              Your subscription ends in <strong>{days} day{days === 1 ? '' : 's'}</strong> — please recharge to keep access.
             </span>
           </div>
         )}

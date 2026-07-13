@@ -28,7 +28,7 @@ class OperatorContact {
   /// call/WhatsApp affordances that would dial a dead line.
   static const isPlaceholder = phoneE164 == '910000000000';
 
-  /// Prefilled WhatsApp message (Hindi-first) when a builder taps "recharge".
+  /// Prefilled WhatsApp message when a builder taps "recharge".
   static const whatsappMessage =
-      'नमस्ते, मुझे अपना Nirman CRM subscription recharge करना है।';
+      'Hello, my Nirman CRM subscription has ended. I would like to recharge.';
 }

@@ -34,7 +34,10 @@ class PausedRouteScreen extends ConsumerWidget {
 
 /// Story 9.6 — the friendly "account paused → recharge" face shown when a tenant
 /// is locked out. The real lockout is server-side (0056 + 0092); this screen only
-/// explains it and offers a way back. Warm amber, Hindi-first.
+/// explains it and offers a way back. Warm amber, English copy (product decision
+/// 2026-07-13: English reads professional to this market — no Hindi UI copy).
+/// The support number renders for ADMINS ONLY — employees are told to contact
+/// their admin, never given the operator line.
 class PausedScreen extends ConsumerWidget {
   const PausedScreen({super.key, required this.gate});
 
@@ -59,8 +62,8 @@ class PausedScreen extends ConsumerWidget {
                   const SizedBox(height: 24),
                   Text(
                     isAdmin
-                        ? 'आपका subscription समाप्त हो गया है'
-                        : 'यह workspace अभी paused है',
+                        ? 'Your subscription has ended'
+                        : 'This workspace is paused',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 22,
@@ -72,24 +75,15 @@ class PausedScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                   Text(
                     isAdmin
-                        ? 'आपके CRM का access अभी रुका हुआ है। दोबारा शुरू करने के लिए recharge करें।'
-                        : 'कृपया अपने admin से संपर्क करें। उनके recharge करते ही यह फिर से चालू हो जाएगा।',
+                        ? 'Access is paused until you recharge. Your data is '
+                            'safe — everything resumes exactly where you left off.'
+                        : 'Please contact your admin. Access resumes as soon '
+                            'as the subscription is renewed.',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 15,
                       color: AppColors.inkSecondary,
                       height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isAdmin
-                        ? 'Your subscription has lapsed — recharge to continue.'
-                        : 'Workspace paused. Please contact your admin.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.inkDisabled,
                     ),
                   ),
                   if (isAdmin && gate.billing != null) ...[
@@ -102,7 +96,7 @@ class PausedScreen extends ConsumerWidget {
                   TextButton(
                     onPressed: () => ref.invalidate(billingGateProvider),
                     child: const Text(
-                      'मैंने payment कर दी — दोबारा जाँचें',
+                      'I have paid — check again',
                       style: TextStyle(
                         color: AppColors.accentStrong,
                         fontWeight: FontWeight.w600,
@@ -218,7 +212,7 @@ class _RechargeButtons extends StatelessWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'संपर्क नहीं खुल सका। कृपया कॉल करें: ${OperatorContact.phoneDisplay}',
+            'Could not open. Please call ${OperatorContact.phoneDisplay}.',
           ),
         ),
       );
@@ -238,7 +232,7 @@ class _RechargeButtons extends StatelessWidget {
           border: Border.all(color: AppColors.borderHairline),
         ),
         child: const Text(
-          'Recharge के लिए अपने Nirman operator से संपर्क करें।',
+          'To renew your subscription, please contact support.',
           textAlign: TextAlign.center,
           style: TextStyle(fontSize: 14, color: AppColors.inkPrimary),
         ),
@@ -260,7 +254,7 @@ class _RechargeButtons extends StatelessWidget {
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           icon: const Icon(Icons.chat_outlined, size: 20),
-          label: const Text('WhatsApp पर recharge करें'),
+          label: const Text('Recharge on WhatsApp'),
         ),
         const SizedBox(height: 10),
         OutlinedButton.icon(

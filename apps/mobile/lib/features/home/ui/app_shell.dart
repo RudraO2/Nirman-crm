@@ -118,7 +118,7 @@ class _ExpiryBanner extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Subscription $d din में समाप्त हो रहा है — कृपया recharge करें।',
+                  'Subscription ends in $d ${d == 1 ? "day" : "days"} — please recharge.',
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,

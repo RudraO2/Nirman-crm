@@ -34,7 +34,8 @@ class UpdateRequiredRouteScreen extends ConsumerWidget {
 /// The friendly "new version required" face (migration 0119). Framed as good
 /// news — a new version is ready — never as an error. The backend simply stops
 /// being compatible with retired builds; this screen is the calm path forward.
-/// Hindi-first, same warm tone as the 9.6 paused screen.
+/// English copy (product decision 2026-07-13), same warm tone as the 9.6
+/// paused screen.
 class UpdateRequiredScreen extends ConsumerWidget {
   const UpdateRequiredScreen({super.key});
 
@@ -54,8 +55,8 @@ class UpdateRequiredScreen extends ConsumerWidget {
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Play Store नहीं खुल सका। कृपया Play Store में '
-              '"Nirman CRM" खोजें।'),
+          content: Text('Could not open the Play Store. Please search for '
+              '"Nirman CRM" on the Play Store to update.'),
         ),
       );
     }
@@ -92,7 +93,7 @@ class UpdateRequiredScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   const Text(
-                    'नया version आ गया है',
+                    'A new version is available',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 22,
@@ -103,23 +104,14 @@ class UpdateRequiredScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 10),
                   const Text(
-                    'App का यह version अब पुराना हो गया है। आगे बढ़ने के लिए '
-                    'Play Store से update करें — बस एक मिनट लगेगा, आपका सारा '
-                    'data सुरक्षित है।',
+                    'This version of the app is out of date. Update from the '
+                    'Play Store to continue — it only takes a minute, and '
+                    'your data is safe.',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 15,
                       color: AppColors.inkSecondary,
                       height: 1.45,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'A newer version is required to continue.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: AppColors.inkDisabled,
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -129,13 +121,13 @@ class UpdateRequiredScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                     icon: const Icon(Icons.shop_outlined, size: 20),
-                    label: const Text('Play Store पर update करें'),
+                    label: const Text('Update on Play Store'),
                   ),
                   const SizedBox(height: 12),
                   TextButton(
                     onPressed: () => ref.invalidate(updateRequiredProvider),
                     child: const Text(
-                      'Update हो गया — दोबारा जाँचें',
+                      'Updated — check again',
                       style: TextStyle(
                         color: AppColors.accentStrong,
                         fontWeight: FontWeight.w600,

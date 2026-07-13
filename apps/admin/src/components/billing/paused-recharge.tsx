@@ -9,7 +9,8 @@ import { OPERATOR_CONTACT } from '@/lib/operator-contact'
  * Access is cut in Postgres by the `auth_tenant_id()` chokepoint (0056); this
  * component is rendered by the SERVER layout in place of the app, and even if it
  * were removed client-side, every data RPC still fails-closed on the server.
- * Warm amber, Hindi-first.
+ * Warm amber, English copy (product decision 2026-07-13). This surface is
+ * admin-only, so showing the support number here is intended.
  */
 export function PausedRecharge({
   planName,
@@ -53,13 +54,14 @@ export function PausedRecharge({
         </div>
 
         <h1 className="mt-5 text-center text-xl font-bold text-neutral-900">
-          आपका subscription समाप्त हो गया है
+          Your subscription has ended
         </h1>
         <p className="mt-2 text-center text-sm text-neutral-600">
-          आपके CRM का access अभी रुका हुआ है। दोबारा शुरू करने के लिए recharge करें।
+          Access is paused until you recharge. Your data is safe — everything
+          resumes exactly where you left off.
         </p>
         <p className="mt-1 text-center text-xs text-neutral-400">
-          Your subscription has lapsed — recharge to continue.
+          To renew, please contact {OPERATOR_CONTACT.phoneDisplay}.
         </p>
 
         <dl className="mt-6 space-y-2 rounded-xl border border-neutral-200 p-4 text-sm">
@@ -74,7 +76,7 @@ export function PausedRecharge({
           rel="noopener noreferrer"
           className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white hover:bg-green-700"
         >
-          WhatsApp पर recharge करें
+          Recharge on WhatsApp
         </a>
         <a
           href={tel}
@@ -88,7 +90,7 @@ export function PausedRecharge({
           onClick={() => window.location.reload()}
           className="mt-4 w-full text-center text-sm font-semibold text-amber-700 hover:underline"
         >
-          मैंने payment कर दी — दोबारा जाँचें
+          I have paid — check again
         </button>
       </div>
     </div>
