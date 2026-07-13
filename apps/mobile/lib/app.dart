@@ -10,6 +10,7 @@ import 'core/theme/app_theme.dart';
 import 'features/alarms/data/models/follow_up_alarm.dart';
 import 'features/alarms/ui/alarm_ring_screen.dart';
 import 'features/billing/providers/billing_providers.dart';
+import 'features/update_gate/providers/update_gate_providers.dart';
 import 'router/app_router.dart';
 
 class NirmanApp extends ConsumerStatefulWidget {
@@ -69,6 +70,12 @@ class _NirmanAppState extends ConsumerState<NirmanApp> {
     // the whole MaterialApp on each billing change.
     ref.listen(billingGateProvider, (_, next) {
       next.whenData((g) => billingLockNotifier.value = g.isLockedOut);
+    });
+    // 0119 — same pattern for the force-update gate: mirror into the router's
+    // notifier so a retired build is bounced to /update-required from ANY route,
+    // signed in or not. Fail-open (provider resolves false on any error).
+    ref.listen(updateRequiredProvider, (_, next) {
+      next.whenData((required) => updateRequiredNotifier.value = required);
     });
 
     return MaterialApp.router(

@@ -7,6 +7,7 @@ import '../features/alarms/ui/alarm_ring_screen.dart';
 import '../features/alarms/ui/alarm_settings_screen.dart';
 import '../features/auth/ui/login_screen.dart';
 import '../features/billing/ui/paused_screen.dart';
+import '../features/update_gate/ui/update_required_screen.dart';
 import '../features/auth/ui/password_change_screen.dart';
 import '../features/auth/utils/auth_validators.dart';
 import '../features/home/ui/app_shell.dart';
@@ -53,20 +54,41 @@ final _authNotifier = _SupabaseAuthNotifier();
 /// a raw error screen. Wired as a `refreshListenable` so flipping it re-runs redirect.
 final billingLockNotifier = ValueNotifier<bool>(false);
 
+/// Force-update gate (0119) — set by the app root (which watches
+/// `updateRequiredProvider`) to true when this build is below the server
+/// minimum. Outranks every gate below (including login): a retired build must
+/// not talk to the backend at all. Only the alarm ring screen is exempt — it
+/// reads no network and must fire even on a retired build.
+final updateRequiredNotifier = ValueNotifier<bool>(false);
+
 final appRouter = GoRouter(
   initialLocation: '/login',
-  refreshListenable: Listenable.merge([_authNotifier, billingLockNotifier]),
+  refreshListenable:
+      Listenable.merge([_authNotifier, billingLockNotifier, updateRequiredNotifier]),
   redirect: (context, state) async {
     final session = Supabase.instance.client.auth.currentSession;
     final path = state.matchedLocation;
     final isLoginRoute = path == '/login';
     final isPasswordChangeRoute = path == '/password-change';
     final isPausedRoute = path == '/paused';
+    final isUpdateRequiredRoute = path == '/update-required';
     // The full-screen ring screen must show even on cold-start before the
     // persisted session is restored (the alarm fires precisely when the app was
     // killed/locked). It carries its own payload and reads no network, so it is
     // exempt from the auth gate. Tapping through to a lead still hits the gate.
     final isAlarmRingRoute = path == '/alarm-ring';
+
+    // Force-update gate (0119): block every route — signed in or not — except
+    // the offline alarm ring. Server data may be incompatible with this build.
+    if (updateRequiredNotifier.value &&
+        !isUpdateRequiredRoute &&
+        !isAlarmRingRoute) {
+      return '/update-required';
+    }
+    // Updated (or gate lowered / recheck passed) → leave the update screen.
+    if (!updateRequiredNotifier.value && isUpdateRequiredRoute) {
+      return session == null ? '/login' : '/home';
+    }
 
     // No session → force to login
     if (session == null && !isLoginRoute && !isAlarmRingRoute) return '/login';
@@ -123,6 +145,11 @@ final appRouter = GoRouter(
     GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
     // Story 9.6 — recharge/lockout screen (tenant subscription lapsed).
     GoRoute(path: '/paused', builder: (_, __) => const PausedRouteScreen()),
+    // 0119 — force-update screen (build below server minimum).
+    GoRoute(
+      path: '/update-required',
+      builder: (_, __) => const UpdateRequiredRouteScreen(),
+    ),
     // UI redesign §6.2 — 3-tab bottom shell hosting the existing screens.
     // indexedStack keeps every branch mounted so HomeScreen's alarm-sync
     // listener / resume observer keep firing regardless of the active tab.
